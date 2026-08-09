@@ -68,19 +68,22 @@ export default function WriterPage() {
         ideaContext: `${incomingIdea.angle}\nHook: ${incomingIdea.hook}`,
         length: incomingIdea.suggestedLength
       })
-      setScene((prev) => ({
-        title: incomingIdea.title,
-        body: prev.body || ''
-      }))
+      if (typeof setScene === 'function') {
+        setScene((prev) => ({
+          title: incomingIdea.title,
+          body: (prev && prev.body) || ''
+        }))
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingIdea?.id])
 
   useEffect(() => {
+    if (typeof setScene !== 'function') return
     setScene((prev) => {
       const shouldUpdateTitle =
-        prev.title === '' || prev.title === writer.topic || prev.title === writer.script?.title
-      const shouldUpdateBody = prev.body === '' || prev.body === writer.body
+        (prev && prev.title === '') || prev.title === writer.topic || prev.title === writer.script?.title
+      const shouldUpdateBody = (prev && prev.body === '') || prev.body === writer.body
       if (!shouldUpdateTitle && !shouldUpdateBody) return prev
       return {
         title: shouldUpdateTitle ? writer.script?.title || writer.topic : prev.title,
@@ -136,7 +139,9 @@ export default function WriterPage() {
         styles: writer.styles
       })
       setWriter({ script: result, body: result.body, thumbnailBrief: null })
-      setScene({ title: result.title || writer.topic, body: result.body })
+      if (typeof setScene === 'function') {
+        setScene({ title: result.title || writer.topic, body: result.body })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script')
     } finally {
