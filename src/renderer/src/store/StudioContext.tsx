@@ -30,11 +30,6 @@ export interface WriterState {
   thumbnailBrief: string | null
 }
 
-export interface SceneState {
-  title: string
-  body: string
-}
-
 const DEFAULT_IDEAS: IdeasState = {
   focusArea: 'Pakistan economy & personal finance',
   audienceNote: '',
@@ -55,10 +50,14 @@ const DEFAULT_WRITER: WriterState = {
   thumbnailBrief: null
 }
 
-const DEFAULT_SCENE: SceneState = {
-  title: '',
-  body: ''
+interface SceneState {
+  title: string
+  body: string
+  // images or other scene metadata can be added later; keep minimal for compatibility
+  images?: any[]
 }
+
+const DEFAULT_SCENE: SceneState = { title: '', body: '', images: [] }
 
 interface StudioContextValue {
   ideas: IdeasState
@@ -72,9 +71,13 @@ interface StudioContextValue {
    */
   setWriter: (patch: Partial<WriterState> | ((prev: WriterState) => Partial<WriterState>)) => void
   clearWriter: () => void
+  /**
+   * Shared scene state to allow Ideas → Writer → Scene Studio handoff. Kept
+   * backwards-compatible: always present and never undefined so older pages
+   * won't crash if they read it.
+   */
   scene: SceneState
   setScene: (patch: Partial<SceneState> | ((prev: SceneState) => Partial<SceneState>)) => void
-  clearScene: () => void
   /** Autosave status for a "Saving…/Saved ✓" indicator. */
   saveStatus: SaveStatus
 }
@@ -129,9 +132,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     writer,
     setWriter: (patch) => setWriterState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
     clearWriter: () => setWriterState(DEFAULT_WRITER),
-    scene,
-    setScene: (patch) => setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
-    clearScene: () => setSceneState(DEFAULT_SCENE),
     saveStatus
   }
 
