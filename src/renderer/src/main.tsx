@@ -17,7 +17,7 @@ try {
     window.addEventListener = function (ev, fn, ...args) {
       try {
         console.log('[WIN-ADD-EVENT-LISTENER] event=', ev, 'stack=', (new Error().stack || '').split('\n').slice(2,6).join(' | '))
-      } catch (_) {}
+      } catch (e) { /* ignore */ }
       return origAdd(ev, fn, ...args)
     }
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -25,7 +25,7 @@ try {
     window.removeEventListener = function (ev, fn, ...args) {
       try {
         console.log('[WIN-REMOVE-EVENT-LISTENER] event=', ev, 'stack=', (new Error().stack || '').split('\n').slice(2,6).join(' | '))
-      } catch (_) {}
+      } catch (e) { /* ignore */ }
       return origRemove(ev, fn, ...args)
     }
     // mark hooked so we don't double-wrap on HMR/dev
