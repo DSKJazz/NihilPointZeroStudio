@@ -14,6 +14,12 @@ UPDATE BY HAND .... open the app. If a blue "A newer version exists" notice appe
                     WHOLE WORKSHOP TOO? double-click UPDATE-MY-STUDIO.cmd in the code folder
                     - that also refreshes the code folder, your Desktop folder and GitHub.
                     5-10 min, walk away.
+UPDATE IT ......... double-click UPDATE-MY-STUDIO.cmd in the workshop code folder. That
+                    is the whole procedure - it gets the new code, builds it, copies it to
+                    your Desktop folder and updates the installed app. 5-10 min, walk away.
+                    NO code folder? Download the finished app instead:
+                    github.com/DSKJazz/NihilPointZeroStudio/releases/latest -> Assets ->
+                    NIHILPOINTZERO-OS-setup.exe -> double-click it.
 RUN IT ............ EITHER double-click NIHILPOINTZERO-OS-portable.exe (portable; unpacks ~40-60s)
                     OR run NIHILPOINTZERO-OS-setup.exe ONCE to install -> opens in ~2s from then on,
                     taskbar pins are SAFE, and it uses the SAME data folder (same videos/settings).

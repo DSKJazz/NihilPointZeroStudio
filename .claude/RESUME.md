@@ -84,6 +84,7 @@ the scaler's per-beat round+clamp let the 2s floor push a "606s" film to 986s re
 seconds. Fix: target decides beat count (~6s/shot), largest-remainder distribution sums
 to the target EXACTLY. Pinned in src/shared/storyboard.test.ts — do not weaken the
 "sums to the requested total EXACTLY" test.
+Last updated: **2026-08-02** (after PR #21).
 
 ---
 
@@ -203,6 +204,10 @@ checking in. See DO NOT ASK in `CLAUDE.md` for the three narrow exceptions.
 | PR | What |
 |---|---|
 | #23 | **P3 — the YouTube key walkthrough.** The last of the approved four. Also fixed the defect underneath it: five different empty-read reasons all printed one wrong sentence |
+## Done in the 2026-08-02 run (all merged)
+
+| PR | What |
+|---|---|
 | #21 | Backup nudge — his work is on one disk and 8 files already went missing once |
 | #20 | Honour `Retry-After` on image 429s (backoff already existed; my earlier diagnosis was wrong) |
 | #19 | Rescue a dead brain — switch an EXISTING install off a permanently-refusing provider |
@@ -257,6 +262,7 @@ Three were real bugs that would have reached the user:
 **The lesson: my own tests confirm what I already believed.** Where a test is built from an
 assumed response shape, it certifies the assumption. Use real payloads, and get an
 adversarial reader onto anything that classifies an external service's replies.
+1551 tests passing, 0 lint errors, five clean typechecks, build green.
 
 ## BLOCKED FROM THIS SANDBOX — do not attempt blind
 
@@ -284,6 +290,9 @@ before adding it. Do not guess.
    key-refused, offline AND empty-channel alike, and all three panels printed
    "check the YouTube key and channel ID in Settings" for all five. `readMyChannel()`
    now carries a `ChannelReadProblem` and they are told apart.
+1. **P3 — in-app YouTube API key walkthrough.** Free, 10k units/day. Without it the whole
+   Your Channel tab and every evidence/trend feature is inert. THE LAST ONE LEFT of the
+   approved four.
 2. ~~P4 image backoff~~ — done in #20.
 3. ~~P5 backup nudge~~ — done in #21.
 4. ~~Dead-brain switch~~ — done in #19. Original note kept for context: **Dead-brain switch notice.** When the active provider refuses permanently (the hosted

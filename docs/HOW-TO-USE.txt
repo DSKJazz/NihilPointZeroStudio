@@ -296,6 +296,11 @@ HOW TO UPDATE THE WHOLE WORKSHOP TOO (only if you have the code folder)
    UPDATE-MY-STUDIO.cmd. This does more than the button above: as well as the app,
    it refreshes the code folder and your Desktop studio folder and pushes to GitHub.
    Five to ten minutes, and you can walk away while it runs.
+HOW TO UPDATE, WITHOUT TYPING ANYTHING
+   Open the NihilPointZeroStudio-workshop folder on your PC and double-click
+   UPDATE-MY-STUDIO.cmd. That is the whole procedure. It fetches the new code,
+   builds it, copies it into your Desktop studio folder, updates the installed app
+   and pushes to GitHub. Five to ten minutes, and you can walk away while it runs.
 
    It checks its tools first and tells you by name if something is missing. If any
    step fails it STOPS and says so in plain words rather than leaving things

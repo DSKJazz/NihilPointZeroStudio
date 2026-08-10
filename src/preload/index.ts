@@ -714,6 +714,17 @@ const api = {
     markSeen: (ids: string[]): Promise<import('../shared/whatsNew').WhatsNewReport> =>
       ipcRenderer.invoke(IPC.whatsNewMarkSeen, ids)
   },
+  // The credit check before publishing. NOT a copyright detector — see
+  // shared/copyrightCheck.ts for why nothing on this PC can be one.
+  copyright: {
+    check: (
+      videoId: string,
+      description?: string
+    ): Promise<
+      | ({ found: true } & import('../shared/copyrightCheck').CopyrightReport)
+      | { found: false; error: string }
+    > => ipcRenderer.invoke(IPC.copyrightCheck, videoId, description)
+  },
   // Cut the dead air out of a take. Plan first (cheap, no encode, nothing changed), then
   // apply — which writes a NEW video and never touches the original.
   silence: {
@@ -747,6 +758,10 @@ const api = {
     /** Scores a proposed title against your own history, with the reasons. */
     scoreTitle: (title: string): Promise<import('../shared/channelLearning').TitleScore> =>
       ipcRenderer.invoke(IPC.channelScoreTitle, title),
+    /** Subjects other channels get views on that this one has never covered. */
+    gaps: (): Promise<
+      import('../shared/competitorGap').GapReport & { myVideos: number; competitorVideos: number; queries: string[] }
+    > => ipcRenderer.invoke(IPC.channelGaps),
     /** The questions your comments keep asking, quoted verbatim and ranked. */
     comments: (
       videoLimit?: number
