@@ -83,6 +83,7 @@ export default function MusicTrackBar({
   function endDrag(e: React.PointerEvent): void {
     if (!drag) return
     const wasNew = drag === 'new'
+    const wasMove = drag === 'move'
     setDrag(null)
     original.current = null
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
@@ -93,6 +94,12 @@ export default function MusicTrackBar({
       const end = Math.min(duration, region.startSec + Math.min(30, duration))
       onChange({ ...region, endSec: end })
       if (!region.track) onPick()
+    }
+    // Tapping INSIDE an existing trackless region must honour its own label
+    // ("Tap to choose a track…") — it used to start a 'move' drag that, on a
+    // plain tap, did nothing at all.
+    if (wasMove && !region.track && Math.abs(secAt(e.clientX) - dragFrom.current) < 0.2) {
+      onPick()
     }
   }
 

@@ -49,7 +49,10 @@ const DENIED_CHANNELS = new Set<string>([
   'chart:price-file',
   'export:text',
   'thumbnail:save',
-  'psx:live-excel'
+  'psx:live-excel',
+  // Runs the Windows installer and quits the app. From the phone that would kill the
+  // very connection the phone is using, with no way to start the PC app again remotely.
+  'update:install'
 ])
 
 export function isRemoteAllowed(channel: string): boolean {

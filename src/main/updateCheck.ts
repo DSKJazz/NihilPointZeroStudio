@@ -18,10 +18,33 @@ export function getAvailableUpdate(): { remoteTag: string; localTag: string } | 
 
 /** Parses the "yyyy-MM-dd HH:mm" timestamp out of a build tag; null if absent. */
 export function tagDate(tag: string): number | null {
-  const m = /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/.exec(tag)
+  const m = /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}(?::\d{2})?)/.exec(tag)
   if (!m) return null
-  const t = Date.parse(`${m[1]}T${m[2]}:00`)
+  const t = Date.parse(`${m[1]}T${m[2].length === 5 ? `${m[2]}:00` : m[2]}`)
   return Number.isNaN(t) ? null : t
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+export function buildTagFromRelease(release: {
+  body?: string
+  tag_name?: string
+  published_at?: string | null
+  created_at?: string | null
+}): string | null {
+  const buildLine = /Build (v[^\n*]+)/.exec(release.body ?? '')?.[1]?.trim()
+  if (buildLine) return buildLine
+
+  const dateString = release.published_at ?? release.created_at
+  if (!release.tag_name || !dateString) return null
+  const publishedAt = Date.parse(dateString)
+  if (Number.isNaN(publishedAt)) return null
+
+  const when = new Date(publishedAt)
+  const localStamp = `${when.getFullYear()}-${pad2(when.getMonth() + 1)}-${pad2(when.getDate())} ${pad2(when.getHours())}:${pad2(when.getMinutes())}`
+  return `${release.tag_name.trim()} · ${localStamp} · published`
 }
 
 /** True when the remote tag is meaningfully newer than the local one (>2 min — the
@@ -58,9 +81,20 @@ export async function checkForUpdate(): Promise<void> {
       signal: AbortSignal.timeout(10_000)
     })
     if (!res.ok) return
-    const rel = (await res.json()) as { body?: string }
-    const remote = /Build (v[^\n*]+)/.exec(rel.body ?? '')?.[1]?.trim()
-    if (!remote || !isNewer(__BUILD_TAG__, remote)) return
+    const rel = (await res.json()) as { body?: string; tag_name?: string; published_at?: string | null }
+    const remote = buildTagFromRelease(rel)
+    if (!remote) {
+      try {
+        logActivity(
+          'ai',
+          'Could not read the version on the download page — the update check found no readable build stamp'
+        )
+      } catch {
+        // The check must stay silent-failing overall; logging cannot be allowed to throw.
+      }
+      return
+    }
+    if (!isNewer(__BUILD_TAG__, remote)) return
     available = { remoteTag: remote, localTag: __BUILD_TAG__ }
     logActivity(
       'ai',

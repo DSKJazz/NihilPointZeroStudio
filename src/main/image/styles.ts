@@ -127,13 +127,37 @@ export function stylesByFamily(family: StyleFamily): StyleSpec[] {
  * phone app can bundle it and preview a scene with the byte-identical prompt the PC
  * will render from. ./index re-exports it, so every existing caller is unchanged.
  */
+/**
+ * Does this scene actually ask for a human being in frame?
+ *
+ * Why it matters: the free image model, given any abstract finance prompt, defaults to
+ * inventing a person — almost always a woman, often inappropriately dressed — because
+ * that is what its training data over-represents. A whole institutional-analysis video
+ * came out "ninety percent women" for scripts that never mentioned a person at all. So
+ * unless the scene TEXT names one, the prompt now forbids people outright, and the image
+ * has to be about the things the scene describes: markets, charts, buildings, documents.
+ */
+export function sceneWantsPerson(scene: string): boolean {
+  return /\b(man|men|woman|women|person|people|face|portrait|worker|farmer|trader|investor|banker|analyst|presenter|anchor|host|crowd|family|child|children|boy|girl|couple|businessman|businesswoman|official|minister|ceo|chairman|speaker|customer|shopkeeper|vendor|labou?rer|employee|human|figure|character|silhouette of a)\b/i.test(
+    scene
+  )
+}
+
 export function sceneImagePrompt(style: string, scene: string, title: string): string {
   // LEAD with the user's own visual concept so the image matches their bracketed direction
   // (its subject, mood AND colours) instead of being overridden by a fixed dark "dramatic"
   // style string — that override was why images looked mismatched and washed-out/dark.
   const styleText = styleById(style).prompt
   const subject = [scene, title].filter(Boolean).join('. ')
-  return `${subject}. Style: ${styleText}. Accurate rich colour, high detail, professional, no text, no watermark, no letters, no captions, no subtitles.`
+  // Two guards, chosen by what the scene asks for:
+  //  - no person mentioned → people are BANNED, so the model cannot fall back to its
+  //    favourite subject instead of the one requested;
+  //  - a person IS mentioned → they are professionally, modestly dressed, in a setting
+  //    that matches the scene. This is a finance channel; wardrobe is never the topic.
+  const peopleClause = sceneWantsPerson(subject)
+    ? 'Any people shown are fully and modestly dressed in professional attire appropriate to the setting.'
+    : 'No people, no faces, no human figures — the image is about the places, objects, charts, documents and city described.'
+  return `${subject}. Style: ${styleText}. ${peopleClause} Accurate rich colour, high detail, professional, no text, no watermark, no letters, no captions, no subtitles.`
 }
 
 /** The image endpoint both the desktop renderer and the phone preview call. */
@@ -152,6 +176,10 @@ export function sceneImageUrl(
     width: String(opts.width),
     height: String(opts.height),
     nologo: 'true',
+    // The service's own strict content filter. It was never being sent, which is how
+    // undressed strangers ended up inside an institutional finance video. Belt (this)
+    // and braces (the people clause in sceneImagePrompt) — neither alone is reliable.
+    safe: 'true',
     model: opts.model || 'flux',
     referrer: 'nihilpointzero-studio'
   })

@@ -17,10 +17,12 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    window.api.library.list().then((list) => {
-      setEntries(list)
-      setLoading(false)
-    })
+    window.api.library
+      .list()
+      .then(setEntries)
+      .catch(() => toast('Could not load your Library — try reopening this tab.', 'error'))
+      // finally, not then: a failed load used to show "Loading…" forever.
+      .finally(() => setLoading(false))
   }, [])
 
   const trashCount = entries.filter((e) => e.trashedAt).length
@@ -34,15 +36,24 @@ export default function LibraryPage() {
     if (!keepSelection) setSelected(null)
   }
 
+  // Every mutation is wrapped: after the user confirms a destructive action, a
+  // failed write must SAY so — silence is indistinguishable from a broken button.
+  async function tryUpdate(run: () => Promise<LibraryEntry[]>, okMsg: string, okTone: 'info' | 'success'): Promise<void> {
+    try {
+      applyUpdate(await run())
+      toast(okMsg, okTone)
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'That change could not be saved — try again.', 'error')
+    }
+  }
+
   /** Reversible: only moves the item into the Trash Can. */
   async function handleTrash(id: string): Promise<void> {
-    applyUpdate(await window.api.library.remove(id))
-    toast('Moved to Trash — restore it any time from the Trash view', 'info')
+    await tryUpdate(() => window.api.library.remove(id), 'Moved to Trash — restore it any time from the Trash view', 'info')
   }
 
   async function handleRestore(id: string): Promise<void> {
-    applyUpdate(await window.api.library.restore(id))
-    toast('Restored', 'success')
+    await tryUpdate(() => window.api.library.restore(id), 'Restored', 'success')
   }
 
   async function handleDeleteForever(id: string): Promise<void> {
@@ -52,8 +63,7 @@ export default function LibraryPage() {
       danger: true
     })
     if (!ok) return
-    applyUpdate(await window.api.library.removeForever(id))
-    toast('Deleted forever', 'info')
+    await tryUpdate(() => window.api.library.removeForever(id), 'Deleted forever', 'info')
   }
 
   async function handleEmptyTrash(): Promise<void> {
@@ -63,8 +73,7 @@ export default function LibraryPage() {
       danger: true
     })
     if (!ok) return
-    applyUpdate(await window.api.library.emptyTrash())
-    toast('Trash emptied', 'info')
+    await tryUpdate(() => window.api.library.emptyTrash(), 'Trash emptied', 'info')
   }
 
   async function handleExport(entry: LibraryEntry): Promise<void> {

@@ -21,6 +21,44 @@ function Step([string]$name, [scriptblock]$block) {
     if ($LASTEXITCODE) { throw "FAILED: $name (exit $LASTEXITCODE)" }
 }
 
+# ── THE GUARD THAT WOULD HAVE CAUGHT A REAL, SHIPPED FAILURE ─────────────────────────
+#
+# On 2026-08-01 the teleprompter was committed at 04:13 and the studio was shipped at
+# 04:30. The user's installed app did not have it — 18 tabs where the code had 20 —
+# because the ship was built from a line of work that did NOT contain that commit. It
+# was written, tested, reported done, and then built without.
+#
+# Nothing failed. Tests passed (they were testing the tree being built), the exe was
+# valid, the badge was honest. The only symptom was a user asking "where is the
+# teleprompter?" days later.
+#
+# So: refuse to build when the remote's main has commits this tree does not. Building
+# from behind is never what anyone means to do, and the cost of being wrong is an exe
+# that silently lacks finished work.
+Step 'Refuse to build from a tree that is behind main' {
+    git fetch origin main --quiet
+    if ($LASTEXITCODE) {
+        Write-Host '   (could not reach GitHub - skipping the behind-main check)' -ForegroundColor Yellow
+        $global:LASTEXITCODE = 0
+        return
+    }
+    # Commits on origin/main that are NOT in HEAD. Zero is the only acceptable answer.
+    $missing = (git rev-list --count HEAD..origin/main)
+    if ($LASTEXITCODE) { return }
+    if ([int]$missing -gt 0) {
+        Write-Host ''
+        Write-Host "  STOPPED: $missing commit(s) are on GitHub but not in this folder." -ForegroundColor Red
+        Write-Host '  Building now would produce an app MISSING finished work - which has' -ForegroundColor Red
+        Write-Host '  happened before (the teleprompter shipped missing this way).' -ForegroundColor Red
+        Write-Host ''
+        Write-Host '  Fix it with:  git pull origin main' -ForegroundColor Yellow
+        Write-Host '  Then run this again. Your own work is untouched either way.' -ForegroundColor Yellow
+        Write-Host ''
+        throw 'Behind origin/main - refusing to ship an incomplete build.'
+    }
+    Write-Host '   up to date with origin/main' -ForegroundColor DarkGray
+}
+
 Step 'Tests' { npm run test }
 
 Step 'Typecheck the phone bridge and the phone app' {
@@ -50,6 +88,10 @@ Step 'UI click-through of the REAL app (every tab must respond, a video must bui
 $ver = (Get-Content (Join-Path $repo 'package.json') -Raw | ConvertFrom-Json).version
 $dot = [char]0x00B7  # the badge's middle-dot separator, kept out of this file's literal text
 $stamp = "v$ver $dot $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+
+Step 'Refresh the changelog' {
+    npm run changelog:update
+}
 
 Step 'Stamp build identity into the diagnostic report' {
     # Keeps the doc's "## Build:" line matching the sidebar badge's version+date prefix,
@@ -193,6 +235,8 @@ Step 'Deploy docs to Desktop studio' {
     }
     # The setup guide lives at the repo root (it covers building from source too).
     Copy-Item (Join-Path $repo 'SETUP_GUIDE.md') $studio -Force
+    # Keep the release changelog next to the release docs so the Desktop copy matches GitHub.
+    Copy-Item (Join-Path $repo 'CHANGELOG.md') $studio -Force
     # The one-click backup tool the docs point at — must exist wherever the studio does.
     Copy-Item (Join-Path $repo 'BACKUP-NOW.cmd') $studio -Force
     # The one-click UPDATER. It has to travel with the studio for the same reason the

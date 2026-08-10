@@ -323,7 +323,13 @@ export function storyboardFromScript(input: {
     }
   }
 
-  // 3) Plain prose → ~2-sentence beats; the text narrates itself and drives the visual.
+  // 3) Plain prose → beats sized to fit. THE 493-SHOT INCIDENT: a long Roman-Urdu
+  // script of short sentences, paired two-per-beat, produced 493 beats against a
+  // 606-second target; the scaler squeezed each ~7s beat to 1s, the 2s floor pushed
+  // every one back up, and the "606s" film was 493 flashes totalling 986s. The number
+  // of beats has to be decided BY the target first (a shot needs ~6s to register and
+  // to carry its narration), and only then are the sentences dealt into that many
+  // groups. With no target, beat count follows the narration itself as before.
   if (!beats.length) {
     const clean = brief
       .replace(/^\s*#{1,6}.*$/gm, ' ')
@@ -333,16 +339,27 @@ export function storyboardFromScript(input: {
       .replace(/\s+/g, ' ')
       .trim()
     const sentences = clean.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.split(' ').length >= 3)
-    for (let i = 0; i < sentences.length; i += 2) {
-      const text = sentences.slice(i, i + 2).join(' ')
-      const words = text.split(/\s+/).length
-      beats.push({
-        durationSec: clamp(Math.round(words / 2.5), 4, 30),
-        visual: text,
-        narration: text,
-        motion: i % 4 === 0 ? 'in' : i % 4 === 2 ? 'left' : 'right',
-        transitionSec: 0.8
-      })
+    if (sentences.length) {
+      const TARGET_SHOT_SEC = 6
+      // How many beats this video can actually hold. Without a target: the old pace,
+      // two sentences per beat.
+      const maxByTarget = input.totalSeconds && input.totalSeconds > 0
+        ? Math.max(1, Math.round(input.totalSeconds / TARGET_SHOT_SEC))
+        : Math.ceil(sentences.length / 2)
+      const beatCount = Math.min(Math.ceil(sentences.length / 2), maxByTarget)
+      const per = Math.ceil(sentences.length / beatCount)
+      for (let i = 0; i < sentences.length; i += per) {
+        const text = sentences.slice(i, i + per).join(' ')
+        const words = text.split(/\s+/).length
+        const beatIndex = beats.length
+        beats.push({
+          durationSec: clamp(Math.round(words / 2.5), 4, 120),
+          visual: text,
+          narration: text,
+          motion: beatIndex % 4 === 0 ? 'in' : beatIndex % 4 === 2 ? 'left' : 'right',
+          transitionSec: 0.8
+        })
+      }
     }
   }
 
@@ -357,13 +374,34 @@ export function storyboardFromScript(input: {
     })
   }
 
-  // Scale to the requested total length, if any.
-  if (input.totalSeconds && input.totalSeconds > 0) {
-    const sum = beats.reduce((a, b) => a + (b.durationSec as number), 0)
-    if (sum > 0) {
-      const factor = input.totalSeconds / sum
-      for (const b of beats) b.durationSec = clamp(Math.round((b.durationSec as number) * factor), 2, 120)
+  // Scale to the requested total length EXACTLY. The old version multiplied each beat
+  // by a factor, rounded, then clamped to a 2s floor — three separate places for the
+  // sum to drift away from the target, and with many beats the floor made the target
+  // mathematically unreachable (493 beats x 2s floor = 986s "for" a 606s film). The
+  // largest-remainder method distributes the seconds proportionally to each beat's
+  // share and hands the leftover whole seconds to the largest fractions, so the sum
+  // equals the target to the second, always: the floors give away exactly
+  // total - sum(floor) seconds, each remainder gets at most one, and nothing rounds.
+  if (input.totalSeconds && input.totalSeconds > 0 && beats.length) {
+    const total = Math.round(input.totalSeconds)
+    const weights = beats.map((b) => Math.max(1, b.durationSec as number))
+    const weightSum = weights.reduce((a, w) => a + w, 0)
+    const exact = weights.map((w) => (total * w) / weightSum)
+    const floors = exact.map((x) => Math.floor(x))
+    let leftover = total - floors.reduce((a, x) => a + x, 0)
+    // Hand the leftover seconds to the beats that lost the most in flooring.
+    const order = exact
+      .map((x, i) => ({ i, frac: x - floors[i] }))
+      .sort((a, b) => b.frac - a.frac)
+    for (const { i } of order) {
+      if (leftover <= 0) break
+      floors[i] += 1
+      leftover -= 1
     }
+    for (let i = 0; i < beats.length; i++) beats[i].durationSec = Math.max(1, floors[i])
+    // Beat-count capping above keeps every share >= ~4s in the prose path, so the
+    // 1s guard here is a corner-case backstop (e.g. 3 timed beats asked to fit 2s),
+    // not a working range. It can overshoot the target only in that degenerate case.
   }
 
   return { title: input.title || 'Untitled', language: input.language, beats }

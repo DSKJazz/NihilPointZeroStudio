@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type {
   DirectorAction,
@@ -12,6 +12,7 @@ import MicButton, { appendDictation } from '../components/MicButton'
 const BRAIN_LABEL: Record<LLMProviderId, string> = {
   free: 'Free online AI (no key)',
   ollama: 'Free local AI (Ollama)',
+  gemini: 'Gemini (free key)',
   anthropic: 'Claude (paid)',
   openai: 'OpenAI (paid)'
 }
@@ -60,6 +61,11 @@ export default function DirectorPage({ embedded = false }: { embedded?: boolean 
     })()
   }, [])
 
+  // The video the current plan was interpreted FOR. apply() must edit THIS one:
+  // it used to send whatever the dropdown pointed at by apply-time, so changing
+  // the selection after interpreting silently edited the wrong video.
+  const planVideoIdRef = useRef<string | null>(null)
+
   async function interpret(): Promise<void> {
     if (!videoId || !instruction.trim()) return
     setThinking(true)
@@ -68,6 +74,7 @@ export default function DirectorPage({ embedded = false }: { embedded?: boolean 
     setPlan(null)
     try {
       setPlan(await window.api.director.interpret(videoId, instruction.trim()))
+      planVideoIdRef.current = videoId
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The AI could not process that.')
     } finally {
@@ -77,12 +84,19 @@ export default function DirectorPage({ embedded = false }: { embedded?: boolean 
 
   async function apply(): Promise<void> {
     if (!plan || plan.kind !== 'edit') return
+    const targetId = planVideoIdRef.current
+    if (!targetId) return
+    if (targetId !== videoId) {
+      setError('This plan was made for a different video. Interpret again for the one now selected.')
+      setPlan(null)
+      return
+    }
     setApplying(true)
     setError(null)
     setStage('Starting…')
     const unsub = window.api.video.onProgress((s) => setStage(s))
     try {
-      const job = await window.api.director.execute(videoId, plan.actions)
+      const job = await window.api.director.execute(targetId, plan.actions)
       setNote(`Done — created “${job.title}”. Find it in the Video Studio tab (with Download & Trim).`)
       setPlan(null)
       setInstruction('')

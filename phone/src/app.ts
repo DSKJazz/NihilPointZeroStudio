@@ -27,6 +27,7 @@ import * as Scenes from './scenesUi'
 import { openProjectFile, pushToPc, saveToPhone, shareProject, type SendResult } from './send'
 import { forgetPromptPack, hasPromptPack, loadPromptPack, syncPromptPack } from './promptCache'
 import { ping } from './pc'
+import { decideHandover, isServedByPc, safeStudioUrl, statusLine, type HandoverInputs } from './handover'
 import { openPrompter, wirePrompter } from './prompterUi'
 import { onMediaPicked } from './scenesUi'
 
@@ -495,14 +496,66 @@ function wire(): void {
   showTab('ideas')
 }
 
-/** Says plainly whether this phone can currently write with the PC switched off. */
-function renderPackState(): void {
-  const sub = document.querySelector('header .sub')
-  if (sub) {
-    sub.textContent = hasPromptPack()
-      ? 'on your phone · writes without your PC'
-      : 'on your phone · writing needs your PC'
+/** Remembered for this session only: the user chose the small app deliberately. */
+let preferSmallThisTime = false
+
+function handoverInputs(pcReachable: boolean): HandoverInputs {
+  return {
+    pcLink: getPcLink(),
+    pcReachable,
+    preferSmallThisTime,
+    alreadyOnPc: isServedByPc(location.hostname)
   }
+}
+
+/**
+ * Says which of the two apps you are looking at, and what to do about it.
+ *
+ * The old line — "writing needs your PC" — described a limitation and never hinted that
+ * the FULL studio is available over the network. That is exactly how the user came to
+ * compare six tabs against the desktop's eighteen and conclude the phone had not been
+ * upgraded. Every state now names itself.
+ */
+function renderPackState(pcReachable = false): void {
+  const sub = document.querySelector('header .sub')
+  if (!sub) return
+  const i = handoverInputs(pcReachable)
+  if (i.alreadyOnPc || i.pcLink.trim()) {
+    sub.textContent = statusLine(i)
+    return
+  }
+  // Never connected: still say the full studio exists, alongside the offline state.
+  sub.textContent = hasPromptPack()
+    ? 'writes without your PC · connect your PC for the full studio'
+    : statusLine(i)
+}
+
+/**
+ * Hands over to the real studio when the PC is on.
+ *
+ * Deliberately at startup and deliberately quick: a two-second probe, and on any doubt
+ * the small app loads as before. Being slow to open would be a worse bug than landing in
+ * the smaller app, so the timeout is short and every failure falls through.
+ */
+async function maybeHandOver(): Promise<boolean> {
+  const link = safeStudioUrl(getPcLink())
+  if (!link || isServedByPc(location.hostname) || preferSmallThisTime) return false
+  let reachable = false
+  try {
+    await ping()
+    reachable = true
+  } catch {
+    reachable = false
+  }
+  if (decideHandover(handoverInputs(reachable)) !== 'full-studio') {
+    renderPackState(reachable)
+    return false
+  }
+  renderPackState(true)
+  // replace(), not assign(): Back should return to wherever they came from, not bounce
+  // them into this decision again.
+  location.replace(link)
+  return true
 }
 
 /**
@@ -522,6 +575,9 @@ async function start(): Promise<void> {
   wirePersistence()
   // The plan lives in IndexedDB (it can hold megabytes of photos and recordings), so
   // it arrives after the first paint. Re-render once it's here.
+  // Before anything else is drawn: if the PC is on, this icon should open the REAL
+  // studio, not this smaller app. Only if that is not possible do we carry on here.
+  if (await maybeHandOver()) return
   await Promise.all([P.loadProject(), loadPromptPack()])
   renderPackState()
   void Scenes.loadStyleLabels().then(() => Scenes.renderVideoSettings())
