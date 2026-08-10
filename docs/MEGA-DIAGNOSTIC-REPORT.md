@@ -248,6 +248,23 @@ last and each was verified against the real bundled ffmpeg rather than only in t
 
 Undo already existed for the Timeline and Storyboard and was extended to the Scene Studio
 rather than a second undo being written alongside it.
+**Four** of the twenty-seven are still not built, and they are the four that need real
+work inside the render pipeline rather than a new screen:
+
+- **Resuming a failed render.** A twenty-minute render that dies at minute eighteen starts
+  again from nothing. Fixing it properly means keeping the half-finished pieces instead of
+  deleting them, and skipping the stages already done — a change to the part of the app
+  where a mistake loses somebody a finished video. Worth doing carefully, not quickly.
+- **A render queue.** Line several videos up and walk away. Batch already exists and does
+  part of this; a real queue that survives a restart does not.
+- **Proxy editing.** Edit against a small stand-in file and apply the cuts to the
+  full-quality one at the end, so scrubbing a 4K video stops being slow.
+- **Scene preview.** Watch a single scene before committing to the whole render.
+
+Since the morning list, four more landed and are described above: thumbnail testing,
+competitor topic gaps, dual-language upload metadata, and the credit check. The crash
+reporter landed too. Undo already existed for the Timeline and Storyboard and has now been
+extended to the Scene Studio, rather than a second undo being written alongside it.
 
 On **thumbnail A/B specifically**, one thing is worth being straight about: a properly
 automated test is not possible from this app. YouTube does not expose click-through per

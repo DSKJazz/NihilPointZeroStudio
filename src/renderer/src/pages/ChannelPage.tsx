@@ -29,6 +29,7 @@ type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
 
 type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
 type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
+type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
 
 export default function ChannelPage(): React.JSX.Element {
   const [learned, setLearned] = useState<Learned | null>(null)
@@ -48,7 +49,7 @@ export default function ChannelPage(): React.JSX.Element {
   const [score, setScore] = useState<Awaited<ReturnType<typeof window.api.channel.scoreTitle>> | null>(null)
   const [openSeries, setOpenSeries] = useState<Series | null>(null)
 
-  async function run(which: 'learn' | 'comments'): Promise<void> {
+  async function run(which: 'learn' | 'comments' | 'gaps'): Promise<void> {
     setBusy(which)
     setError(null)
     try {
@@ -278,6 +279,11 @@ export default function ChannelPage(): React.JSX.Element {
         )}
 
         {gaps && (!gaps.problem || gaps.problem.kind === 'partial') && (
+          {gaps
+            ? gaps.headline
+            : 'Trending tells you what is popular. This tells you what is popular that YOU have never made — demonstrated demand, with nothing of your own competing for it.'}
+        </p>
+        {gaps && (
           <div className="text-[11px] text-ink-600 mt-1">
             Compared {gaps.myVideos} of your videos against {gaps.competitorVideos} from other channels
             {gaps.unmatched > 0 && `, ${gaps.unmatched} of which were about something outside finance`}.

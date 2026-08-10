@@ -392,6 +392,7 @@ export default function SceneStudioPage(): React.JSX.Element {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-serif text-gold-400">Scene Studio</h1>
           <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
+          <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={sceneHistory.undo}
