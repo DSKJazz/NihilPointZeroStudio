@@ -22,8 +22,47 @@ let target: ProducerTarget | null = null
 let listeners: (() => void)[] = []
 
 export function registerProducerTarget(t: ProducerTarget | null): void {
+  // Diagnostic logging for E2E investigation: which page registers as the Producer target
+  try {
+    if (t && typeof t.label === 'string') console.log('[PRODUCER] registerProducerTarget:', t.label, t.kind)
+    else if (t === null) console.log('[PRODUCER] registerProducerTarget: null (cleared)')
+  } catch (_) {}
   target = t
-  listeners.forEach((l) => l())
+  try {
+    // Invoke listeners asynchronously to avoid re-entrancy during routing/hashchange handling in E2E scenarios.
+    console.log('[PRODUCER] scheduling listeners, count=', listeners.length)
+    try { window.requestAnimationFrame(() => {
+      try {
+        console.log('[PRODUCER] invoking listeners (async), count=', listeners.length)
+        listeners.forEach((l, i) => {
+          try {
+            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) {}
+            l()
+          } catch (err) {
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+          }
+        })
+      } catch (err) {
+        try { console.log('[PRODUCER] failed invoking listeners (async)', err && err.message ? err.message : String(err)) } catch (_) {}
+      }
+    }) } catch (_) { queueMicrotask(() => {
+      try {
+        console.log('[PRODUCER] invoking listeners (async-fallback), count=', listeners.length)
+        listeners.forEach((l, i) => {
+          try {
+            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) {}
+            l()
+          } catch (err) {
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+          }
+        })
+      } catch (err) {
+        try { console.log('[PRODUCER] failed invoking listeners (async-fallback)', err && err.message ? err.message : String(err)) } catch (_) {}
+      }
+    }) }
+  } catch (err) {
+    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) {}
+  }
 }
 export function getProducerTarget(): ProducerTarget | null {
   return target
