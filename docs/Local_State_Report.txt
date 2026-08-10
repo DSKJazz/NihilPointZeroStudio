@@ -1,0 +1,49 @@
+﻿Local State Report - 2026-08-10T02:32:13.6221494+05:00
+Repository: C:/Users/Shoaib Khan/Documents/GitHub/NihilPointZeroStudio
+Branch: main
+Status: ?? docs/Local_State_Report.txt ?? history_aiza.txt ?? history_privatekey.txt ?? quarantine-prep/
+Recent commits (local->HEAD 10):
+e5d43a7 2026-08-10 02:32:12 +0500 chore(ai): add AI agent policy files with Global Efficiency Rule (local commit)
+ff77553 2026-08-10 02:12:35 +0500 docs: record Phase 8 history-scan result and add CI workflow note in plan.md (local commit)
+04e7eb8 2026-08-10 02:12:08 +0500 ci(build): add GitHub Actions workflow to build Windows artifacts and create draft release (local commit)
+e358787 2026-08-10 02:05:46 +0500 tests(phone): increase timeout for flaky phone PC test\n\nFixes a Vitest 4 timeout race in phone test by using the new options signature. Tests re-run green locally.
+31c326b 2026-08-10 01:04:13 +0500 Merge pull request #76 from DSKJazz/backup/main-prepatch-2026-08-08
+a03bc3e 2026-08-10 01:02:00 +0500 Merge pull request #75 from DSKJazz/main
+f34aeba 2026-08-10 00:31:20 +0500 Merge pull request #74 from DSKJazz/backup/main-prepatch-2026-08-08
+5667ed2 2026-08-10 00:30:21 +0500 Merge pull request #73 from DSKJazz/main
+d658a4f 2026-08-10 00:22:53 +0500 Merge pull request #72 from DSKJazz/backup/main-prepatch-2026-08-08
+29fdcb4 2026-08-09 14:16:39 +0500 Merge pull request #71 from DSKJazz/main
+Untracked files:
+docs/Local_State_Report.txt
+history_aiza.txt
+history_privatekey.txt
+quarantine-prep/1786308249479-copilot-tool-output-20292-c69e4a85-44e9-45e6-823e-c41641f573f2.txt
+quarantine-prep/QA-REPORT.md
+quarantine-prep/history_scan_aws_access_key.txt
+quarantine-prep/history_scan_aws_session.txt
+quarantine-prep/history_scan_github_pat.txt
+quarantine-prep/history_scan_google_api.txt
+quarantine-prep/history_scan_openai_sk.txt
+quarantine-prep/history_scan_private_key_pem.txt
+quarantine-prep/history_scan_slack.txt
+quarantine-prep/quarantine-prep.zip
+Quarantine-prep contents:
+
+Name                                                                             Length
+----                                                                             ------
+1786308249479-copilot-tool-output-20292-c69e4a85-44e9-45e6-823e-c41641f573f2.txt  59881
+history_scan_aws_access_key.txt                                                     122
+history_scan_aws_session.txt                                                        119
+history_scan_github_pat.txt                                                         122
+history_scan_google_api.txt                                                         124
+history_scan_openai_sk.txt                                                          120
+history_scan_private_key_pem.txt                                                    102
+history_scan_slack.txt                                                              116
+QA-REPORT.md                                                                       9736
+quarantine-prep.zip                                                               11581
+
+
+Test output tail:
+ Test Files  128 passed | 1 skipped (129)       Tests  1686 passed | 1 skipped (1687)    Start at  02:32:23    Duration  25.20s (transform 67.19s, setup 0ms, import 131.07s, tests 12.72s, environment 9.66s) 
+
+Full test output saved to docs/test_run_output.txt

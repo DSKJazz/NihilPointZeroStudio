@@ -44,7 +44,7 @@ import { buildAdvisorSystemPrompt } from './prompts'
 import { importPhoneProject, importPhoneProjectJson } from './project/import'
 import { closeTeleprompter, openTeleprompter, setTeleprompterProtection, teleprompterState } from './teleprompter/window'
 import { APP_GUIDE } from './appGuide'
-import { diskIsNewerThanRunning, getAvailableUpdate, tagDate } from './updateCheck'
+import { buildTagFromRelease, diskIsNewerThanRunning, getAvailableUpdate, tagDate } from './updateCheck'
 import { fetchLatestRelease, runSelfUpdate, type SelfUpdateDeps } from './selfUpdate'
 import { applyOpenAtLogin } from './autoStart'
 import { describeUpdateStatus } from './updateStatus'
@@ -928,7 +928,7 @@ export function registerIpcHandlers(): void {
    */
   ipcMain.handle(IPC.updateStatus, async () => {
     const rel = await fetchLatestRelease()
-    const published = rel.ok ? (/Build (v[^\n*]+)/.exec(rel.body)?.[1]?.trim() ?? null) : null
+    const published = rel.ok ? buildTagFromRelease({ body: rel.body, tag_name: rel.tag_name, published_at: rel.published_at }) : null
     return { ...describeUpdateStatus(__BUILD_TAG__, published), checkedAt: new Date().toISOString() }
   })
 

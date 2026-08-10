@@ -50,7 +50,7 @@ const styleOptions: { value: ScriptStyle; label: string }[] = [
 export default function WriterPage() {
   const location = useLocation()
   const incomingIdea = (location.state as { idea?: VideoIdea } | null)?.idea
-  const { writer, setWriter, clearWriter, saveStatus } = useStudio()
+  const { writer, setWriter, clearWriter, setScene, saveStatus } = useStudio()
 
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
   useProducerTarget({
@@ -68,9 +68,26 @@ export default function WriterPage() {
         ideaContext: `${incomingIdea.angle}\nHook: ${incomingIdea.hook}`,
         length: incomingIdea.suggestedLength
       })
+      setScene((prev) => ({
+        title: incomingIdea.title,
+        body: prev.body || ''
+      }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingIdea?.id])
+
+  useEffect(() => {
+    setScene((prev) => {
+      const shouldUpdateTitle =
+        prev.title === '' || prev.title === writer.topic || prev.title === writer.script?.title
+      const shouldUpdateBody = prev.body === '' || prev.body === writer.body
+      if (!shouldUpdateTitle && !shouldUpdateBody) return prev
+      return {
+        title: shouldUpdateTitle ? writer.script?.title || writer.topic : prev.title,
+        body: shouldUpdateBody ? writer.body : prev.body
+      }
+    })
+  }, [writer.body, writer.script?.title, writer.topic, setScene])
 
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
@@ -119,6 +136,7 @@ export default function WriterPage() {
         styles: writer.styles
       })
       setWriter({ script: result, body: result.body, thumbnailBrief: null })
+      setScene({ title: result.title || writer.topic, body: result.body })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script')
     } finally {

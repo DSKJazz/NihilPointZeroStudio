@@ -7,6 +7,7 @@ import MicButton, { appendDictation } from '../components/MicButton'
 import { useAutosave } from '../hooks/useAutosave'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/Confirm'
+import { useStudio } from '../store/StudioContext'
 
 import { fileUrl, pathFromFileUrl as plainPath } from '../../../shared/mediaUrl'
 
@@ -42,8 +43,9 @@ function parsePct(stage: string | null): number | null {
  */
 export default function SceneStudioPage(): React.JSX.Element {
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
+  const { scene, setScene, saveStatus } = useStudio()
+  const title = scene.title
+  const body = scene.body
   const [style, setStyle] = useState<VideoStyle>('cinematic')
   const [direction, setDirection] = useState('')
   const [resolution, setResolution] = useState<VideoResolution>('1080p')
@@ -60,24 +62,6 @@ export default function SceneStudioPage(): React.JSX.Element {
   // go; any card can still be edited afterwards to run longer or shorter than the rest.
   // Empty = automatic pacing (the total always stretches to fit the narration).
   const [everySceneSec, setEverySceneSec] = useState<number | ''>('')
-
-  // Autosave the script + settings (not the generated images, which are files).
-  const inputs = useMemo(
-    () => ({ title, body, style, direction, resolution, aspect, template, fast, soundEffects }),
-    [title, body, style, direction, resolution, aspect, template, fast, soundEffects]
-  )
-  const saveStatus = useAutosave('scene-inputs', inputs, (v) => {
-    const o = (v ?? {}) as Partial<typeof inputs>
-    if (typeof o.title === 'string') setTitle(o.title)
-    if (typeof o.body === 'string') setBody(o.body)
-    if (o.style) setStyle(o.style)
-    if (typeof o.direction === 'string') setDirection(o.direction)
-    if (o.resolution) setResolution(o.resolution)
-    if (o.aspect) setAspect(o.aspect)
-    if (o.template) setTemplate(o.template)
-    if (typeof o.fast === 'boolean') setFast(o.fast)
-    if (typeof o.soundEffects === 'boolean') setSoundEffects(o.soundEffects)
-  })
 
   const [scenes, setScenes] = useState<Scene[]>([])
   // Undo/redo over the scene list. Scene Studio was the one editing surface without it:
@@ -172,8 +156,8 @@ export default function SceneStudioPage(): React.JSX.Element {
 
   async function useScriptPad(): Promise<void> {
     const pad = await window.api.scriptpad.get()
-    if (pad.title) setTitle(pad.title)
-    if (pad.body) setBody(pad.body)
+    if (pad.title) setScene((prev) => ({ ...prev, title: pad.title }))
+    if (pad.body) setScene((prev) => ({ ...prev, body: pad.body }))
   }
 
   async function plan(): Promise<void> {
@@ -204,14 +188,37 @@ export default function SceneStudioPage(): React.JSX.Element {
   async function genOne(index: number, seedBump = 0): Promise<void> {
     const s = scenesRef.current.find((x) => x.index === index)
     if (!s) return
+
+    const retryable = (err: unknown): boolean => {
+      const msg = err instanceof Error ? err.message : String(err)
+      return /429|rate[- ]limit|too many requests|service busy|busy right now|queue/i.test(msg)
+    }
+
+    const delay = (attempt: number): Promise<void> =>
+      new Promise((resolve) => setTimeout(resolve, 2000 * Math.pow(2, attempt) + Math.round(Math.random() * 800)))
+
     patchScene(index, { status: 'generating', msg: undefined })
-    try {
-      const img = s.photo
-        ? await window.api.scene.generateFromPhoto(index, s.prompt, s.photo, strengthRef.current)
-        : await window.api.scene.generate(s.prompt, index + 1 + seedBump, fastRef.current)
-      patchScene(index, { img: `${fileUrl(img)}?t=${Date.now()}`, status: 'done', msg: undefined })
-    } catch (err) {
-      patchScene(index, { status: 'error', msg: err instanceof Error ? err.message : 'failed' })
+    let attempt = 0
+    while (true) {
+      try {
+        const img = s.photo
+          ? await window.api.scene.generateFromPhoto(index, s.prompt, s.photo, strengthRef.current)
+          : await window.api.scene.generate(s.prompt, index + 1 + seedBump, fastRef.current)
+        patchScene(index, { img: `${fileUrl(img)}?t=${Date.now()}`, status: 'done', msg: undefined })
+        return
+      } catch (err) {
+        if (!retryable(err) || attempt >= 2) {
+          patchScene(index, { status: 'error', msg: err instanceof Error ? err.message : 'failed' })
+          return
+        }
+        attempt += 1
+        const retryMsg = err instanceof Error ? err.message : String(err)
+        patchScene(index, {
+          status: 'generating',
+          msg: `Rate-limited; retrying in ${Math.round(2 * Math.pow(2, attempt) + 0.5)}s…`
+        })
+        await delay(attempt)
+      }
     }
   }
 
@@ -416,24 +423,24 @@ export default function SceneStudioPage(): React.JSX.Element {
         <div className="flex gap-2">
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setScene((prev) => ({ ...prev, title: e.target.value }))}
             placeholder="Title"
             className="flex-1 rounded-md bg-ink-950 border border-ink-800 px-3 py-2 text-sm text-ink-100"
           />
-          <MicButton onText={(t) => setTitle((prev) => appendDictation(prev, t))} className="px-3 py-2" />
+          <MicButton onText={(t) => setScene((prev) => ({ ...prev, title: appendDictation(prev.title, t) }))} className="px-3 py-2" />
           <button onClick={useScriptPad} className="rounded-md border border-ink-700 px-3 text-xs text-ink-300 hover:border-gold-500">
             Use Script Pad
           </button>
         </div>
         <textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => setScene((prev) => ({ ...prev, body: e.target.value }))}
           placeholder="Paste your script. Put [SECTION HEADERS] on their own lines to define scenes."
           rows={4}
           className="w-full resize-y rounded-md bg-ink-950 border border-ink-800 px-3 py-2 text-sm text-ink-100"
         />
         <div className="flex justify-end -mt-1">
-          <MicButton onText={(t) => setBody((prev) => appendDictation(prev, t))} />
+          <MicButton onText={(t) => setScene((prev) => ({ ...prev, body: appendDictation(prev.body, t) }))} />
         </div>
         <div className="flex gap-2 items-start">
           <input

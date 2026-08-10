@@ -54,6 +54,9 @@ jobs:
       - name: Run the tests
         run: npm run test
 
+      - name: Refresh the changelog
+        run: npm run changelog:update
+
       - name: Lint
         run: npm run lint
 
@@ -124,9 +127,10 @@ jobs:
           # earlier — the worst combination, because the docs then describe features the
           # user cannot find, or omit the ones that are there.
           #
-          # SIX documents, not four (user's instruction, 2026-08-01): SETUP_GUIDE.md and
-          # UPDATE-MY-STUDIO.cmd are maintained on exactly the same footing as the four,
-          # so they can never go stale next to the others.
+          # Eight documents, not four (user's instruction, 2026-08-01): CHANGELOG.md,
+          # QA-REPORT.md, SETUP_GUIDE.md and UPDATE-MY-STUDIO.cmd are maintained on the
+          # same footing as the four core studio docs so they can never go stale next to
+          # the others.
           gh release upload "$TAG" \
             "release/NIHILPOINTZERO-OS-setup.exe" \
             "release/NIHILPOINTZERO-OS-portable.exe" \
@@ -134,6 +138,8 @@ jobs:
             "docs/NIHILPOINTZERO-GUIDE.txt" \
             "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
             "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "docs/QA-REPORT.md" \
+            "CHANGELOG.md" \
             "SETUP_GUIDE.md" \
             "UPDATE-MY-STUDIO.cmd" \
             "BACKUP-NOW.cmd" \

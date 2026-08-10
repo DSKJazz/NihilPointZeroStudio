@@ -30,6 +30,11 @@ export interface WriterState {
   thumbnailBrief: string | null
 }
 
+export interface SceneState {
+  title: string
+  body: string
+}
+
 const DEFAULT_IDEAS: IdeasState = {
   focusArea: 'Pakistan economy & personal finance',
   audienceNote: '',
@@ -50,6 +55,11 @@ const DEFAULT_WRITER: WriterState = {
   thumbnailBrief: null
 }
 
+const DEFAULT_SCENE: SceneState = {
+  title: '',
+  body: ''
+}
+
 interface StudioContextValue {
   ideas: IdeasState
   setIdeas: (patch: Partial<IdeasState> | ((prev: IdeasState) => Partial<IdeasState>)) => void
@@ -62,6 +72,9 @@ interface StudioContextValue {
    */
   setWriter: (patch: Partial<WriterState> | ((prev: WriterState) => Partial<WriterState>)) => void
   clearWriter: () => void
+  scene: SceneState
+  setScene: (patch: Partial<SceneState> | ((prev: SceneState) => Partial<SceneState>)) => void
+  clearScene: () => void
   /** Autosave status for a "Saving…/Saved ✓" indicator. */
   saveStatus: SaveStatus
 }
@@ -72,6 +85,7 @@ const DRAFT_KEY = 'studio'
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [ideas, setIdeasState] = useState<IdeasState>(DEFAULT_IDEAS)
   const [writer, setWriterState] = useState<WriterState>(DEFAULT_WRITER)
+  const [scene, setSceneState] = useState<SceneState>(DEFAULT_SCENE)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const loaded = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -81,23 +95,24 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const d = await window.api.drafts.get(DRAFT_KEY)
-        const cur = d?.current as { ideas?: IdeasState; writer?: WriterState } | undefined
+        const cur = d?.current as { ideas?: IdeasState; writer?: WriterState; scene?: SceneState } | undefined
         if (cur?.ideas) setIdeasState((p) => ({ ...p, ...cur.ideas }))
         if (cur?.writer) setWriterState((p) => ({ ...p, ...cur.writer }))
+        if (cur?.scene) setSceneState((p) => ({ ...p, ...cur.scene }))
       } finally {
         loaded.current = true
       }
     })()
   }, [])
 
-  // Autosave (debounced) whenever Ideas/Writer change.
+  // Autosave (debounced) whenever Ideas/Writer/Scene change.
   useEffect(() => {
     if (!loaded.current) return
     setSaveStatus('saving')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       window.api.drafts
-        .set(DRAFT_KEY, { ideas, writer })
+        .set(DRAFT_KEY, { ideas, writer, scene })
         .then(() => setSaveStatus('saved'))
         // A failed write must not sit on "Saving…" forever pretending to work.
         .catch(() => setSaveStatus('error'))
@@ -105,7 +120,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [ideas, writer])
+  }, [ideas, writer, scene])
 
   const value: StudioContextValue = {
     ideas,
@@ -114,6 +129,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     writer,
     setWriter: (patch) => setWriterState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
     clearWriter: () => setWriterState(DEFAULT_WRITER),
+    scene,
+    setScene: (patch) => setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
+    clearScene: () => setSceneState(DEFAULT_SCENE),
     saveStatus
   }
 

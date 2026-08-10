@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:e2e": "npm run build && node scripts/e2e-smoke.mjs",
     "lint": "eslint src",
+    "changelog:update": "node scripts/update-changelog.mjs",
     "dist:win": "npm run build && electron-builder --win --publish never",
     "ship": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ship.ps1",
     "typecheck:phone": "tsc -p tsconfig.phone.json --noEmit && tsc -p tsconfig.phone-test.json --noEmit",

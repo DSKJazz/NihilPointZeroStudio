@@ -143,8 +143,3 @@ reach you.
 
 _Regenerate this confidence at any time: `npm run test` then `npm run test:e2e` â€”
 or just ship, which runs both and refuses to proceed on any failure._
-
-## Phase 8 pre-push notes (automated) - 2026-08-10T02:12:00Z
-- Final history secret scan performed: no matches for private-key, Google API or AWS access key patterns across git history (see history_*.txt outputs).
-- Working-tree pattern scan (tracked files) still shows token-shaped placeholders only in docs and tests (intended fixtures). Recommend manual human review of scripts/ship.ps1 and any test fixtures before push. No push performed — awaiting explicit approval per Phase 8 gate.
-
