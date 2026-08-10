@@ -1262,6 +1262,21 @@ export function registerIpcHandlers(): void {
     return { found: true as const, ...report }
   })
 
+  // THE CREDIT CHECK BEFORE PUBLISHING. Not a copyright detector — only YouTube's Content
+  // ID can answer that, and pretending otherwise would be worse than silence because the
+  // user would trust it. This checks the PAPERWORK for what the app fetched itself: a
+  // licence that obliges a credit, and whether that credit actually reached the
+  // description. A missing credit on a CC-BY track is what turns a free track into a claim.
+  ipcMain.handle(IPC.copyrightCheck, (_e, videoId: string, description?: string) => {
+    const job = listVideos().find((j) => j.id === videoId)
+    if (!job) return { found: false as const, error: 'Video not found — build it again first.' }
+    // A video built before this shipped has no recorded provenance at all. "Nothing to
+    // check" is the truthful answer there — it is not a claim that the video is clear, and
+    // the report's own wording never implies one.
+    const report = checkCopyright(job.credits ?? [], typeof description === 'string' ? description : '')
+    return { found: true as const, ...report }
+  })
+
   // WHAT OTHER CHANNELS COVERED THAT THIS ONE HAS NOT. Searches this channel's own beats
   // plus subjects it has never touched — searching only what it already covers can never
   // find a gap, it can only confirm coverage.
