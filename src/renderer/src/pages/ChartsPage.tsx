@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PriceSeries } from '../../../shared/types'
 import { useAutosave } from '../hooks/useAutosave'
 
+import { lineProgress, progressAtFrame, totalFrames, type AnimationSpec } from '../../../shared/chartAnimation'
+
+/** How the draw-on plays. 25fps to match the render pipeline, so a screen-recorded
+ *  chart and a rendered one move at the same speed. */
+const DRAW_SPEC: AnimationSpec = { durationSec: 4, fps: 25, holdSec: 1 }
+
 const W = 960
 const PRICE_H = 360
 const RSI_H = 130
@@ -11,6 +17,10 @@ const PAD_T = 12
 const MAX_BARS = 150
 
 export default function ChartsPage(): React.JSX.Element {
+  // Draw-on animation. A chart that appears all at once is a picture; a chart that
+  // draws itself while you talk over it is the explanation. `frame` is null when idle,
+  // which is what makes the static chart the default — nothing moves unless asked.
+  const [frame, setFrame] = useState<number | null>(null)
   const [series, setSeries] = useState<PriceSeries | null>(null)
   const [name, setName] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -159,6 +169,25 @@ export default function ChartsPage(): React.JSX.Element {
   // degenerate 1px candles.
   const closeOnly = n > 0 && bars.every((b) => b.open === b.close && b.high === b.low)
 
+  // Frame-indexed rather than time-indexed: the shared module works in frames because
+  // the video renderer does, and converting back and forth is where the last frame ends
+  // up at 0.98 and the chart sits permanently, subtly unfinished.
+  useEffect(() => {
+    if (frame === null) return
+    const last = totalFrames(DRAW_SPEC)
+    if (frame >= last) return
+    const id = requestAnimationFrame(() => setFrame((f) => (f === null ? null : f + 1)))
+    return () => cancelAnimationFrame(id)
+  }, [frame])
+
+  /** How many points of a series to show at the current frame. Everything when idle. */
+  function visibleCount(total: number): number {
+    if (frame === null) return total
+    const { points, partial } = lineProgress(frame, total, DRAW_SPEC)
+    return Math.min(total, points + (partial > 0 ? 1 : 0))
+  }
+  const drawProgress = frame === null ? 1 : progressAtFrame(frame, DRAW_SPEC)
+
   return (
     <div className="max-w-5xl mx-auto p-8">
       <div className="flex items-start justify-between gap-4">
@@ -221,6 +250,15 @@ export default function ChartsPage(): React.JSX.Element {
             )}
             <span className="text-[11px] text-gold-400">— SMA20</span>
             <span className="text-[11px] text-sky-400">— SMA50</span>
+            {/* A chart that appears all at once is a picture. One that draws itself while
+                you talk over it is the explanation — record the screen while it plays. */}
+            <button
+              onClick={() => setFrame(frame === null ? 0 : null)}
+              className="ml-auto rounded-md border border-gold-500/40 text-gold-400 hover:bg-gold-500/10 text-[11px] px-2.5 py-1 transition-colors"
+              title="Draws the chart on screen over four seconds, then holds — record the screen while it plays and lay it over your narration"
+            >
+              {frame === null ? '▶ Draw it on' : `Drawing… ${Math.round(drawProgress * 100)}%`}
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -238,9 +276,14 @@ export default function ChartsPage(): React.JSX.Element {
               })}
               {/* Close line (live PSX / close-only) OR candlesticks (OHLC files) */}
               {closeOnly ? (
-                <polyline points={linePoints(bars.map((b) => b.close))} fill="none" stroke="#e5e7eb" strokeWidth={1.5} />
+                <polyline
+                  points={linePoints(bars.map((b) => b.close).slice(0, visibleCount(bars.length)))}
+                  fill="none"
+                  stroke="#e5e7eb"
+                  strokeWidth={1.5}
+                />
               ) : (
-                bars.map((b, i) => {
+                bars.slice(0, visibleCount(bars.length)).map((b, i) => {
                   const up = b.close >= b.open
                   const color = up ? '#26a69a' : '#ef5350'
                   const bodyTop = yPrice(Math.max(b.open, b.close))
@@ -255,14 +298,15 @@ export default function ChartsPage(): React.JSX.Element {
                 })
               )}
               {/* SMA overlays */}
-              <polyline points={linePoints(sma20)} fill="none" stroke="#E8B923" strokeWidth={1.5} />
-              <polyline points={linePoints(sma50)} fill="none" stroke="#38bdf8" strokeWidth={1.5} />
+              <polyline points={linePoints(sma20.slice(0, visibleCount(sma20.length)))} fill="none" stroke="#E8B923" strokeWidth={1.5} />
+              <polyline points={linePoints(sma50.slice(0, visibleCount(sma50.length)))} fill="none" stroke="#38bdf8" strokeWidth={1.5} />
 
               {/* RSI panel */}
               {(() => {
                 const top = PRICE_H + 24
                 const yR = (v: number): number => top + (100 - v) / 100 * RSI_H
                 const pts = rsi14
+                  .slice(0, visibleCount(rsi14.length))
                   .map((v, i) => (v === null ? null : `${xCenter(i).toFixed(1)},${yR(v).toFixed(1)}`))
                   .filter(Boolean)
                   .join(' ')
@@ -282,7 +326,10 @@ export default function ChartsPage(): React.JSX.Element {
         </div>
       )}
 
-      {series && n > 0 && (
+      {/* Also shown when only a RESTORED script exists: `script` is autosaved but
+          `series` is not, so after a restart the script was invisible and
+          unreachable even though it was still on disk. */}
+      {((series && n > 0) || script) && (
         <div className="mt-4 rounded-lg border border-ink-800 bg-ink-900 p-3">
           <div className="text-sm text-ink-200 font-medium">Turn this chart into a narration script (optional)</div>
           <div className="text-[11px] text-ink-500 mt-0.5 mb-2">
@@ -303,7 +350,14 @@ export default function ChartsPage(): React.JSX.Element {
               <option>Roman Urdu</option>
               <option>Urdu</option>
             </select>
-            <button onClick={generateScript} disabled={!!genBusy} className="ml-auto rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950">✍ Generate script</button>
+            <button
+              onClick={generateScript}
+              disabled={!!genBusy || !series || n === 0}
+              title={!series || n === 0 ? 'Import or load a chart first — the script is written from its figures.' : undefined}
+              className="ml-auto rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950"
+            >
+              ✍ Generate script
+            </button>
           </div>
           {genBusy && <div className="mt-2 text-sm text-gold-300">{genBusy}{progress ? ` — ${progress}` : ''}</div>}
           {note && <div className="mt-2 rounded-md border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">{note}</div>}

@@ -1,0 +1,1 @@
+﻿Scanning pattern: -----BEGIN PRIVATE KEY----- -> quarantine-prep/history_scan_private_key_pem.txt

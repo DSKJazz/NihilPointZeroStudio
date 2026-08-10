@@ -5,7 +5,10 @@
  * message when there is no signal. AI requests are never cached — an answer is
  * always generated fresh, and a stale one would be worse than none.
  *
- * Bump CACHE when the shell changes so old phones pick up the new version.
+ * CACHE carries the build stamp, written in by scripts/build-phone.mjs. That is not
+ * cosmetic: with a fixed name the previous version's files sit in the cache forever
+ * under the same key, and an old app can outlive a publish. A new name means the
+ * activate handler below deletes the old one outright.
  */
 const CACHE = 'npz-phone-v1'
 const SHELL = ['./', './index.html', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png']
@@ -27,6 +30,15 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(async () => {
+        // Taking control is not the same as being SEEN. A tab that is already open
+        // keeps running the old code it parsed at load, so the user goes on looking at
+        // the previous version with no hint that anything changed. Tell every open tab
+        // a new build has landed; the app decides what to do about it.
+        for (const client of await self.clients.matchAll({ type: 'window' })) {
+          client.postMessage({ type: 'npz-updated', cache: CACHE })
+        }
+      })
   )
 })
 

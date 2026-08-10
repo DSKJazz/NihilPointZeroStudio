@@ -4,6 +4,9 @@ import { join } from 'path'
 import { makeFfmpegProgressLogger, runFfmpeg } from './ffmpeg'
 import { chooseEncoderForJob, encoderLabel, isHardware, runEncodeWithFallback } from './encoder'
 import { finishingChain, templateFor, titleAlphaExpr, type VideoTemplate } from './templates'
+import { YOUTUBE_LOUDNESS } from './onePass'
+import { buildAutoZoomFilter, planShots } from './autoZoom'
+import { pace } from '../../shared/pacing'
 import type { ImageShot, SceneTransition, VideoStyle } from '../../shared/types'
 
 export type VideoResolution = '1080p' | '1440p' | '4k' | '8k'
@@ -167,8 +170,14 @@ export function buildAudioFilter(opts: {
   const wave = `showwaves=s=${layout.waveW}x${layout.waveH}:mode=cline:rate=25:colors=${waveColor}`
   const needMix = hasMusic || sfxTimesSec.length > 0
   if (!needMix) {
-    // Narration only — identical to the long-verified path.
-    return { chains: [`[1:a]${wave}[wave]`], audioMap: '1:a', extraInputs: [] }
+    // Narration only. The waveform needs the audio and so does the output, so the input
+    // is split — an input pad cannot feed two filters — and the output side is levelled
+    // to YouTube's own target on the way out.
+    return {
+      chains: [`[1:a]asplit=2[awave][anarr]`, `[awave]${wave}[wave]`, `[anarr]${YOUTUBE_LOUDNESS}[aout]`],
+      audioMap: '[aout]',
+      extraInputs: []
+    }
   }
 
   // Normalise every mix input to one sample-rate + layout first — Piper narration is
@@ -200,8 +209,12 @@ export function buildAudioFilter(opts: {
   // normalize=0 keeps narration at its authored level; the summed narration + ducked music
   // + whoosh(es) can still exceed 0 dBFS, so a final peak limiter (level=disabled = attenuate
   // overs only, never make-up gain) prevents encoder clipping.
+  // …and then the whole mix is levelled to YouTube's target, LAST in the chain. YouTube
+  // normalises every upload to about -14 LUFS: deliver louder and it simply turns you
+  // down, which loses the dynamics you mixed rather than the loudness you wanted. TP=-1.5
+  // also caps the true peak, so the limiter above it becomes belt-and-braces.
   chains.push(
-    `${mixLabels.join('')}amix=inputs=${mixLabels.length}:duration=first:normalize=0[amx];[amx]alimiter=limit=0.95:level=disabled[aout]`
+    `${mixLabels.join('')}amix=inputs=${mixLabels.length}:duration=first:normalize=0[amx];[amx]alimiter=limit=0.95:level=disabled,${YOUTUBE_LOUDNESS}[aout]`
   )
   return { chains, audioMap: '[aout]', extraInputs }
 }
@@ -240,7 +253,11 @@ export function buildFfmpegArgs(params: {
       ? ['-f', 'lavfi', '-i', `color=c=${bg.color}:s=${layout.w}x${layout.h}:d=${dur.toFixed(2)}`]
       : bg.kind === 'animated'
         ? ['-f', 'lavfi', '-i', bg.source]
-        : ['-i', bg.path]
+        : // Loop a file background: the output uses -shortest, so a background even
+          // slightly shorter than the narration (stock B-roll with a failed segment,
+          // a short AI clip) used to silently cut off the END of the user's video.
+          // Looping makes the narration the governing duration in every case.
+          ['-stream_loop', '-1', '-i', bg.path]
   const args = ['-y', ...bgInput, '-i', audioPath]
   if (musicPath) args.push('-stream_loop', '-1', '-i', musicPath)
   for (let i = 0; i < sfxCount; i++) args.push('-i', whooshPath as string)
@@ -428,10 +445,25 @@ export interface SlideshowShot {
  */
 export function planSlideshowShots(imageCount: number, durationSec: number): SlideshowShot[] {
   const imgs = Math.max(1, imageCount)
+  // The image floor must WIN over the 12-shot pacing cap: with the old
+  // min(12, max(imgs, …)) ordering, a 30-image build silently discarded every
+  // image past the 12th — images the app had just spent minutes generating.
+  const target = Math.max(imgs, Math.min(12, Math.round(Math.max(1, durationSec) / 6)))
   const target = Math.min(12, Math.max(imgs, Math.round(Math.max(1, durationSec) / 6)))
+  // Shot lengths TIGHTEN toward the end instead of every shot getting an equal slice.
+  // The last third of a finance video is where people leave, and an even 6-6-6 split
+  // makes the end feel exactly as slow as the beginning when it needs to feel faster.
+  // `pace` normalises its weights so the seconds still sum to the full duration — the
+  // narration must stay in sync, which is why the total is preserved exactly rather
+  // than approximately.
+  const paced = pace(durationSec, target)
   const shots: SlideshowShot[] = []
   for (let i = 0; i < target; i++) {
-    shots.push({ imageIndex: i % imgs, motion: KEN_BURNS_MOTIONS[i % KEN_BURNS_MOTIONS.length] })
+    shots.push({
+      imageIndex: i % imgs,
+      motion: KEN_BURNS_MOTIONS[i % KEN_BURNS_MOTIONS.length],
+      seconds: paced[i]?.seconds
+    })
   }
   return shots
 }
@@ -504,6 +536,43 @@ export function buildCustomSlideshowFilter(
 }
 
 /**
+ * Turns per-shot seconds into per-shot FRAME counts that sum to exactly the right total.
+ *
+ * Rounding each shot independently loses up to half a frame per shot, and a twelve-shot
+ * video is then several frames short of its own narration — small, but it is the same
+ * class of drift that ends with audio running past picture. So the remainder is carried
+ * and the leftover frames go to the longest shots, where one extra frame shows least.
+ *
+ * A missing or nonsensical seconds value falls back to an equal share rather than
+ * throwing: a shot with no length is a planning gap, not a reason to lose the render.
+ */
+export function framesForShots(secondsList: (number | undefined)[], dur: number, fps: number): number[] {
+  const n = secondsList.length
+  if (!n) return []
+  const totalFrames = Math.max(n, Math.round(Math.max(1, dur) * Math.max(1, fps)))
+  const clean = secondsList.map((s) => (typeof s === 'number' && Number.isFinite(s) && s > 0 ? s : null))
+  const sum = clean.reduce((a: number, b) => a + (b ?? 0), 0)
+  const weights = clean.map((s) => (sum > 0 && s !== null ? s / sum : 1 / n))
+  // Every shot needs at least one frame, or zoompan emits nothing at all for it.
+  const counts = weights.map((w) => Math.max(1, Math.floor(totalFrames * w)))
+  let remainder = totalFrames - counts.reduce((a, b) => a + b, 0)
+  const longestFirst = counts.map((c, i) => ({ c, i })).sort((a, b) => b.c - a.c)
+  for (let k = 0; remainder > 0; k = (k + 1) % longestFirst.length) {
+    counts[longestFirst[k].i]++
+    remainder--
+  }
+  // An overshoot can only come from the one-frame floor, so it comes back off the
+  // longest shots — and never below one frame, which would drop a shot entirely.
+  for (let guard = 0; remainder < 0 && guard < totalFrames + n; guard++) {
+    const victim = longestFirst.find(({ i }) => counts[i] > 1)
+    if (!victim) break
+    counts[victim.i]--
+    remainder++
+  }
+  return counts
+}
+
+/**
  * Renders a Ken-Burns slideshow of the given images to `outPath` at the layout size
  * for `dur` seconds. Each shot cover-scales, crops to frame, then applies a varied
  * camera move (see planSlideshowShots). Pure ffmpeg — no paid service.
@@ -543,9 +612,15 @@ export async function makeSlideshow(
   }
   const shots = planSlideshowShots(images.length, dur)
   const n = shots.length
-  const slot = Math.max(1, dur / n)
   const fps = 25
-  const frames = Math.round(slot * fps)
+  // Per-shot frame counts, so the tightening pacing from planSlideshowShots actually
+  // reaches the picture. The old code computed ONE `slot = dur / n` and gave every shot
+  // the same length, which is why every video paced identically from start to finish.
+  const frameCounts = framesForShots(
+    shots.map((s) => s.seconds),
+    dur,
+    fps
+  )
   const inputs: string[] = []
   shots.forEach((shot) => {
     // Feed EXACTLY ONE frame per shot; zoompan (below, d=frames) expands that single
@@ -558,7 +633,7 @@ export async function makeSlideshow(
   })
   const segs = shots.map((shot, i) =>
     `[${i}:v]scale=${layout.w}:${layout.h}:force_original_aspect_ratio=increase,` +
-    `crop=${layout.w}:${layout.h},setsar=1,${zoompanExpr(shot.motion, frames, layout.w, layout.h)}[s${i}]`
+    `crop=${layout.w}:${layout.h},setsar=1,${zoompanExpr(shot.motion, frameCounts[i], layout.w, layout.h)}[s${i}]`
   )
   const concatInputs = shots.map((_, i) => `[s${i}]`).join('')
   const filter = `${segs.join(';')};${concatInputs}concat=n=${n}:v=1:a=0[v]`
@@ -635,10 +710,19 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
       opts.animatedBg === false
         ? { kind: 'color', color: theme.bgColor }
         : { kind: 'animated', source: buildGradientSource(theme, layout.w, layout.h, dur) }
+    // Set only for footage backgrounds — see the comment where it is assigned.
+    let footageZoom: string | null = null
     const slideshowImages = opts.imageShots?.length ? opts.imageShots.map((s) => s.path) : opts.images
     if (opts.backgroundVideo) {
-      // Pre-assembled footage (e.g. stock B-roll) — use it directly.
+      // Pre-assembled footage (stock B-roll, or generated clips) — use it directly.
+      //
+      // Footage was the one background that sat completely still. Stills already get
+      // Ken-Burns moves through makeSlideshow; a video clip got nothing, and a locked-off
+      // frame for a whole minute is the single thing that most makes a video look cheap.
+      // planShots cuts it into wide/mid/close beats with a slow push in or pull out on
+      // each, alternating direction so it never creeps one way for the whole video.
       background = { kind: 'file', path: opts.backgroundVideo }
+      footageZoom = buildAutoZoomFilter(planShots({ durationSec: dur, boundaries: sfxTimesSec }), layout.w, layout.h, 25)
     } else if (slideshowImages && slideshowImages.length) {
       // One corrupt/truncated image must not abort the whole build — fall back to the
       // animated gradient (the storyboard path already does this; the main path didn't).
@@ -678,14 +762,28 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
     // "Clean copy": nothing drawn over the picture — no title, no section cards.
     // The waveform stays (it's decoration, not text) and the finishing look stays.
     const showText = opts.textOverlays !== false
+
+    // The slow camera move on footage goes FIRST, before any text is drawn. Zooming
+    // after the title was drawn would zoom the title too — it would drift and soften
+    // along with the picture, which is exactly the amateur look this is meant to remove.
+    let base = '0:v'
+    if (footageZoom) {
+      chains.push(`[0:v]${footageZoom}[bgz]`)
+      base = 'bgz'
+    }
+
     if (showText) {
       const titleAlpha = tpl.animateTitle ? `:alpha='${titleAlphaExpr()}'` : ''
       chains.push(
-        `[0:v]drawtext=fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
+        // expansion=none: drawtext expands %-sequences even in a textfile, so a headline
+        // like "OIL UP 40%!" kills the whole build with "Stray %". Nothing here uses
+        // text expansion, so it is switched off rather than escaped around.
+        `[${base}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
+        `[${base}]drawtext=fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
       )
       chains.push(`[v0][wave]overlay=x=0:y=H-h-${layout.waveMargin}[v1]`)
     } else {
-      chains.push(`[0:v][wave]overlay=x=0:y=H-h-${layout.waveMargin}[v1]`)
+      chains.push(`[${base}][wave]overlay=x=0:y=H-h-${layout.waveMargin}[v1]`)
     }
 
     let prev = 'v1'
@@ -711,14 +809,14 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
             `enable='between(t,${s},${end})'[${bar}]`
         )
         chains.push(
-          `[${bar}]drawtext=fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.bgColor}:fontsize=${Math.round(cardFont * 0.5)}:` +
+          `[${bar}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.bgColor}:fontsize=${Math.round(cardFont * 0.5)}:` +
             `x='${-barW}+${travel}*${slide}':y=${barY + Math.round(barH * 0.28)}:enable='between(t,${s},${end})'[${next}]`
         )
       } else {
         // Kinetic centered card: fade in while sliding up ~40px.
         const y = `(h-th)/2 + 40*(1-min((t-${s})/0.6,1))`
         chains.push(
-          `[${prev}]drawtext=fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.cardColor}:fontsize=${cardFont}:` +
+          `[${prev}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.cardColor}:fontsize=${cardFont}:` +
             `x=(w-tw)/2:y='${y}':alpha='${alpha}':enable='between(t,${s},${end})'[${next}]`
         )
       }

@@ -52,7 +52,10 @@ export default function TrimTimeline({
   }
 
   function moveMarker(which: Exclude<Drag, null>, sec: number): void {
-    const snapped = Math.round(sec * 100) / 100
+    // Clamp to the video itself: the keyboard path can push values past either end,
+    // where the handle sits frozen at the edge while the real numbers keep drifting
+    // (and disagree with the times shown on screen).
+    const snapped = Math.min(duration, Math.max(0, Math.round(sec * 100) / 100))
     if (which === 'start') onChange(Math.min(snapped, end - MIN_SPAN), end)
     else onChange(start, Math.max(snapped, start + MIN_SPAN))
   }

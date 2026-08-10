@@ -27,8 +27,16 @@ import * as Scenes from './scenesUi'
 import { openProjectFile, pushToPc, saveToPhone, shareProject, type SendResult } from './send'
 import { forgetPromptPack, hasPromptPack, loadPromptPack, syncPromptPack } from './promptCache'
 import { ping } from './pc'
+import { decideHandover, isServedByPc, safeStudioUrl, statusLine, type HandoverInputs } from './handover'
 import { openPrompter, wirePrompter } from './prompterUi'
 import { onMediaPicked } from './scenesUi'
+
+/**
+ * Stamped in at build time by scripts/build-phone.mjs. The fallback is what a
+ * hand-run bundle without the define would show — never a lie about being current.
+ */
+declare const __PHONE_BUILD__: string
+const BUILD_TAG = typeof __PHONE_BUILD__ === 'string' ? __PHONE_BUILD__ : 'unstamped build'
 
 type TabName = 'ideas' | 'writer' | 'scenes' | 'video' | 'prompter' | 'advisor' | 'saved' | 'settings'
 
@@ -368,6 +376,29 @@ function wireScenes(): void {
     }
   })
 
+  // Which version this handset is actually running — the phone's equivalent of the
+  // desktop's gold sidebar badge, and the only way to tell a fresh app from a cached
+  // old one, since they look identical.
+  $('st-build').textContent = BUILD_TAG
+
+  $('st-refresh').addEventListener('click', async () => {
+    const out = $('st-refresh-out')
+    out.innerHTML = '<div class="muted">Looking…</div>'
+    if (!('serviceWorker' in navigator)) {
+      out.innerHTML = '<div class="muted">This browser cannot store the app, so it is always the newest one.</div>'
+      return
+    }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      await reg?.update()
+      // A newer version reloads the page by itself (see the registration below), so
+      // reaching this line means there was nothing new.
+      out.innerHTML = '<div class="muted">You already have the newest version.</div>'
+    } catch {
+      out.innerHTML = '<div class="err">Could not check — you may be offline.</div>'
+    }
+  })
+
   $('st-open').addEventListener('click', () => $<HTMLInputElement>('pick-plan').click())
   $('pick-plan').addEventListener('change', async (e) => {
     const input = e.target as HTMLInputElement
@@ -465,14 +496,66 @@ function wire(): void {
   showTab('ideas')
 }
 
-/** Says plainly whether this phone can currently write with the PC switched off. */
-function renderPackState(): void {
-  const sub = document.querySelector('header .sub')
-  if (sub) {
-    sub.textContent = hasPromptPack()
-      ? 'on your phone · writes without your PC'
-      : 'on your phone · writing needs your PC'
+/** Remembered for this session only: the user chose the small app deliberately. */
+let preferSmallThisTime = false
+
+function handoverInputs(pcReachable: boolean): HandoverInputs {
+  return {
+    pcLink: getPcLink(),
+    pcReachable,
+    preferSmallThisTime,
+    alreadyOnPc: isServedByPc(location.hostname)
   }
+}
+
+/**
+ * Says which of the two apps you are looking at, and what to do about it.
+ *
+ * The old line — "writing needs your PC" — described a limitation and never hinted that
+ * the FULL studio is available over the network. That is exactly how the user came to
+ * compare six tabs against the desktop's eighteen and conclude the phone had not been
+ * upgraded. Every state now names itself.
+ */
+function renderPackState(pcReachable = false): void {
+  const sub = document.querySelector('header .sub')
+  if (!sub) return
+  const i = handoverInputs(pcReachable)
+  if (i.alreadyOnPc || i.pcLink.trim()) {
+    sub.textContent = statusLine(i)
+    return
+  }
+  // Never connected: still say the full studio exists, alongside the offline state.
+  sub.textContent = hasPromptPack()
+    ? 'writes without your PC · connect your PC for the full studio'
+    : statusLine(i)
+}
+
+/**
+ * Hands over to the real studio when the PC is on.
+ *
+ * Deliberately at startup and deliberately quick: a two-second probe, and on any doubt
+ * the small app loads as before. Being slow to open would be a worse bug than landing in
+ * the smaller app, so the timeout is short and every failure falls through.
+ */
+async function maybeHandOver(): Promise<boolean> {
+  const link = safeStudioUrl(getPcLink())
+  if (!link || isServedByPc(location.hostname) || preferSmallThisTime) return false
+  let reachable = false
+  try {
+    await ping()
+    reachable = true
+  } catch {
+    reachable = false
+  }
+  if (decideHandover(handoverInputs(reachable)) !== 'full-studio') {
+    renderPackState(reachable)
+    return false
+  }
+  renderPackState(true)
+  // replace(), not assign(): Back should return to wherever they came from, not bounce
+  // them into this decision again.
+  location.replace(link)
+  return true
 }
 
 /**
@@ -492,6 +575,9 @@ async function start(): Promise<void> {
   wirePersistence()
   // The plan lives in IndexedDB (it can hold megabytes of photos and recordings), so
   // it arrives after the first paint. Re-render once it's here.
+  // Before anything else is drawn: if the PC is on, this icon should open the REAL
+  // studio, not this smaller app. Only if that is not possible do we carry on here.
+  if (await maybeHandOver()) return
   await Promise.all([P.loadProject(), loadPromptPack()])
   renderPackState()
   void Scenes.loadStyleLabels().then(() => Scenes.renderVideoSettings())
@@ -501,10 +587,41 @@ async function start(): Promise<void> {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void start())
 else void start()
 
-// Offline shell caching. Registration failing is not fatal — the app still runs
-// online, it just won't open without a connection.
+/**
+ * Offline shell caching, and — the part that matters more — making sure a NEW version
+ * actually replaces the old one.
+ *
+ * The problem this solves: a phone app lives in the handset's cache. Publish a new
+ * one and the browser can carry on running the old one indefinitely. The user sees
+ * last week's app with no way to tell, which is exactly what happened once.
+ *
+ * Registration failing is not fatal — the app still runs online, it just won't open
+ * without a connection.
+ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => undefined)
+    void navigator.serviceWorker
+      .register('./sw.js')
+      .then((reg) => {
+        // Ask straight away rather than waiting for the browser's own schedule, and
+        // again each time the app is brought back to the front.
+        void reg.update()
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') void reg.update()
+        })
+      })
+      .catch(() => undefined)
+
+    // One reload, and only one: a loop here would be far worse than a stale app.
+    let reloaded = false
+    const refresh = (): void => {
+      if (reloaded) return
+      reloaded = true
+      location.reload()
+    }
+    navigator.serviceWorker.addEventListener('message', (e: MessageEvent) => {
+      if ((e.data as { type?: string })?.type === 'npz-updated') refresh()
+    })
+    navigator.serviceWorker.addEventListener('controllerchange', refresh)
   })
 }

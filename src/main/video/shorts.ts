@@ -39,11 +39,32 @@ const HOOK_WORDS = [
   'but', 'actually', 'never', 'always', 'nobody', 'everyone', 'secret', 'mistake',
   'why', 'how', 'truth', 'wrong', 'billion', 'million', 'crore', 'lakh', 'percent',
   'crash', 'surge', 'boom', 'collapse', 'warning', 'danger', 'profit', 'loss',
-  'remember', 'imagine', 'listen', 'here is', 'the reason', 'most people'
+  'remember', 'imagine', 'listen', 'here is', 'the reason', 'most people',
+  // ROMAN URDU. This channel is spoken in mixed Roman Urdu and English, so an
+  // English-only list was blind to roughly half of every script's best moments —
+  // the contradiction ("lekin", "magar", "asal", "haqiqat"), the question ("kyun",
+  // "kaise"), the stake ("aap", "nuqsan", "faida"), the urgency ("abhi", "aaj").
+  'lekin', 'magar', 'asal', 'haqiqat', 'kyun', 'kyu', 'kaise', 'kya',
+  'aap', 'apna', 'apki', 'nuqsan', 'faida', 'abhi', 'aaj', 'fisad', 'feesad',
+  'arab', 'kharab', 'maslah', 'wajah',
+  // Named institutions: specific, checkable, and they signal a real claim.
+  'state bank', 'sbp', 'psx', 'kse', 'nccpl', 'imf', 'fbr', 'secp'
 ]
+
+/**
+ * Housekeeping. Never the opening line of a Short, whatever else it scores.
+ *
+ * Without this, "Subscribe today and you could save 50 percent right now" scores well
+ * — it has a hook word, a number and urgency — and a Short that opens with a plug is
+ * dead on arrival. The override has to beat every other rule, not just subtract from
+ * them, which is why it returns immediately.
+ */
+const BOILERPLATE =
+  /\b(?:subscribe|like and share|as i (?:said|mentioned)|in (?:this|today'?s) video|welcome back|link in (?:the )?description|hit the bell|channel ko)\b/i
 
 /** Scores one segment as the OPENING line of a short. Pure. */
 export function scoreSegment(text: string): { score: number; reason: string } {
+  if (BOILERPLATE.test(text)) return { score: -100, reason: 'housekeeping — never opens a short' }
   const t = text.toLowerCase()
   let score = 0
   const reasons: string[] = []

@@ -10,6 +10,7 @@ import CommandPalette from './components/CommandPalette'
 import ToastHost from './components/Toast'
 import ConfirmHost from './components/Confirm'
 import TodayPage from './pages/TodayPage'
+import ChannelPage from './pages/ChannelPage'
 import IdeasPage from './pages/IdeasPage'
 import AgentPage from './pages/AgentPage'
 import SceneStudioPage from './pages/SceneStudioPage'
@@ -43,6 +44,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<TodayPage />} />
             <Route path="/ideas" element={<IdeasPage />} />
+            <Route path="/channel" element={<ChannelPage />} />
             <Route path="/agent" element={<AgentPage />} />
             <Route path="/scenes" element={<SceneStudioPage />} />
             <Route path="/writer" element={<WriterPage />} />

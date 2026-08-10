@@ -29,7 +29,12 @@ interface SoundSource {
   resolve: () => Promise<string>
 }
 
-let clipSeq = 0
+// Random-suffix ids: a plain counter reset to 0 on every app start while the
+// autosaved timeline still holds clip-0, clip-1… — so the first sound added
+// after a restart collided with an existing clip and edits hit the wrong one.
+function newClipId(): string {
+  return `clip-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
 
 export default function DjStationPage({
   embedded = false,
@@ -159,7 +164,7 @@ export default function DjStationPage({
     try {
       const path = await resolveCached(src)
       const clip: AudioClip = {
-        id: `clip-${clipSeq++}`,
+        id: newClipId(),
         src: path,
         label: src.label,
         atSec: 0,
@@ -265,6 +270,15 @@ export default function DjStationPage({
           <DualDecks initialFile={deckFile} />
         </div>
       </details>
+
+      {/* Errors surface ABOVE both columns: they used to render only at the very
+          bottom of the right-hand column, so a failed Listen/＋Timeline click in
+          the left column gave no visible feedback at all. */}
+      {error && (
+        <div className={`${embedded ? '' : 'mt-4 '}rounded-md border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-300`}>
+          {error}
+        </div>
+      )}
 
       <div className={`${embedded ? '' : 'mt-6 '}grid grid-cols-1 lg:grid-cols-2 gap-6`}>
         {/* Library */}

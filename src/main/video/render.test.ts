@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { extractCards, computeLayout, dimensionsFor, buildAudioFilter, buildFfmpegArgs } from './render'
+import { extractCards, computeLayout, dimensionsFor, buildAudioFilter, buildFfmpegArgs, planSlideshowShots, framesForShots } from './render'
+import { buildAutoZoomFilter, planShots } from './autoZoom'
 
 describe('computeLayout', () => {
   it('1080p is 1920x1080 with base sizes', () => {
@@ -50,12 +51,42 @@ describe('dimensionsFor (aspect ratios)', () => {
 
 describe('buildAudioFilter', () => {
   const layout = computeLayout('1080p')
-  it('narration only: maps the input stream directly, just the waveform', () => {
+  it('narration only: waveform plus the YouTube level, no mixing', () => {
     const a = buildAudioFilter({ hasMusic: false, sfxTimesSec: [], dur: 10, layout })
-    expect(a.audioMap).toBe('1:a')
-    expect(a.chains.join(';')).toContain('showwaves')
-    expect(a.chains.join(';')).not.toContain('amix')
+    expect(a.audioMap).toBe('[aout]')
+    const f = a.chains.join(';')
+    expect(f).toContain('showwaves')
+    expect(f).toContain('asplit=2[awave][anarr]') // the audio feeds the waveform AND the output
+    expect(f).not.toContain('amix')
     expect(a.extraInputs).toEqual([])
+  })
+
+  it('levels every video to what YouTube actually wants', () => {
+    // YouTube normalises every upload to about -14 LUFS. Delivering louder does not make
+    // the video louder — it makes YouTube turn it down, which costs the dynamics that
+    // were mixed in and gains nothing. This must hold on BOTH paths, because most videos
+    // on this channel are narration-only.
+    for (const opts of [
+      { hasMusic: false, sfxTimesSec: [] as number[] },
+      { hasMusic: true, sfxTimesSec: [] as number[] },
+      { hasMusic: true, sfxTimesSec: [5, 10] }
+    ]) {
+      const f = buildAudioFilter({ ...opts, dur: 30, layout }).chains.join(';')
+      expect(f, JSON.stringify(opts)).toContain('loudnorm=I=-14:TP=-1.5:LRA=11')
+    }
+  })
+
+  it('levels LAST, after the limiter — order is the whole point', () => {
+    // loudnorm's TP=-1.5 caps the true peak, so it has to be the final word on level.
+    // Putting it before the limiter would let the limiter pull peaks back down and undo it.
+    const f = buildAudioFilter({ hasMusic: true, sfxTimesSec: [5], dur: 30, layout }).chains.join(';')
+    expect(f.indexOf('alimiter')).toBeLessThan(f.indexOf('loudnorm'))
+  })
+
+  it('never levels the waveform branch — that is a picture, not sound', () => {
+    const a = buildAudioFilter({ hasMusic: false, sfxTimesSec: [], dur: 10, layout })
+    const waveChain = a.chains.find((c) => c.includes('showwaves'))!
+    expect(waveChain).not.toContain('loudnorm')
   })
   it('with music: splits narration, lowers + fades music, mixes with normalize=0', () => {
     const a = buildAudioFilter({ hasMusic: true, sfxTimesSec: [], dur: 30, layout })
@@ -97,6 +128,13 @@ describe('buildFfmpegArgs', () => {
     const inputCount = args.filter((a, i) => a === '-i' && args[i + 1] === 'wh.wav').length
     expect(inputCount).toBe(3)
   })
+  // Regression: -shortest governs the output, so a file background even slightly
+  // shorter than the narration used to silently cut off the end of the video.
+  it('loops a file background so -shortest is governed by the narration', () => {
+    const args = buildFfmpegArgs({ ...base, background: { kind: 'file', path: 'bg.mp4' }, audioMap: '1:a' })
+    expect(args.join(' ')).toContain('-stream_loop -1 -i bg.mp4')
+    expect(args).toContain('-shortest')
+  })
 })
 
 describe('extractCards', () => {
@@ -128,5 +166,119 @@ describe('extractCards', () => {
     const cards = extractCards(body, 'Supercycle')
     expect(cards.length).toBeGreaterThan(20)
     expect(cards.length).toBeLessThanOrEqual(40)
+  })
+})
+
+describe('the slow camera move that renderVideo puts on footage', () => {
+  // renderVideo itself needs ffmpeg and a disk, so what is asserted here is the CONTRACT
+  // it relies on. The wiring bug this catches was real and silent: the call passed
+  // `totalSeconds` where planShots wants `durationSec`, so it planned ZERO shots and the
+  // filter came out as `zoompan=z='1'` — a filter that costs a full re-encode of every
+  // frame and moves nothing. Nothing failed. The video just looked exactly as flat as
+  // before, which is the hardest kind of bug to notice.
+  it('plans real shots for the durations a video actually is', () => {
+    for (const durationSec of [12, 45, 120, 600]) {
+      const shots = planShots({ durationSec })
+      expect(shots.length, `${durationSec}s planned nothing`).toBeGreaterThan(0)
+    }
+  })
+
+  it('never plans a shot that does not move', () => {
+    // fromScale === toScale is a frozen frame, which is the thing this replaces.
+    for (const durationSec of [12, 30, 45, 90, 600]) {
+      for (const s of planShots({ durationSec })) {
+        expect(s.fromScale, `${durationSec}s: ${JSON.stringify(s)}`).not.toBe(s.toScale)
+      }
+    }
+  })
+
+  it('the filter it builds names the exact output size, so the frame never changes shape', () => {
+    // A crop-based move changes the frame size at each cut and the encoder rejects the
+    // stream. zoompan scales back to a fixed size; the size must be the project's.
+    for (const [w, h] of [
+      [1920, 1080],
+      [1080, 1920],
+      [3840, 2160]
+    ]) {
+      const f = buildAutoZoomFilter(planShots({ durationSec: 45 }), w, h, 25)
+      expect(f).toContain(`s=${w}x${h}`)
+      expect(f).toContain('d=1') // every frame processed — the footage, not-a-still setting
+    }
+  })
+
+  it('stays well inside the command-line length a filter has to fit in', () => {
+    // A ten-minute video is 45 shots, and the whole filter_complex shares one command
+    // line (Windows caps that at 32767 characters).
+    expect(buildAutoZoomFilter(planShots({ durationSec: 600 }), 1920, 1080, 25).length).toBeLessThan(8000)
+  })
+})
+
+describe('slideshow shot lengths: tightening pace, exact total', () => {
+  // The bug this guards is the one that made the pacing module pointless for months of
+  // renders: planSlideshowShots computed the lengths, and makeSlideshow threw them away
+  // by using one `slot = dur / n` for every shot. Nothing failed; every video just paced
+  // identically from first frame to last.
+  it('gives later shots less time than earlier ones', () => {
+    const shots = planSlideshowShots(4, 120)
+    const secs = shots.map((s) => s.seconds!)
+    expect(secs.every((s) => typeof s === 'number')).toBe(true)
+    expect(secs[secs.length - 1]).toBeLessThan(secs[0])
+  })
+
+  it('still adds up to the narration length exactly — this is the sync guarantee', () => {
+    for (const dur of [30, 60, 120, 600, 1500]) {
+      const total = planSlideshowShots(5, dur).reduce((n, s) => n + (s.seconds ?? 0), 0)
+      expect(total, `${dur}s`).toBeCloseTo(dur, 1)
+    }
+  })
+
+  it('the FRAME counts also add up exactly, so the video is never short', () => {
+    for (const dur of [30, 60, 120, 600, 1500]) {
+      const shots = planSlideshowShots(5, dur)
+      const frames = framesForShots(shots.map((s) => s.seconds), dur, 25)
+      expect(frames.reduce((a, b) => a + b, 0), `${dur}s`).toBe(Math.round(dur * 25))
+      expect(frames.every((f) => f >= 1), `${dur}s has an empty shot`).toBe(true)
+    }
+  })
+
+  it('the frame counts still tighten, not just the seconds', () => {
+    const shots = planSlideshowShots(4, 120)
+    const frames = framesForShots(shots.map((s) => s.seconds), 120, 25)
+    expect(frames[frames.length - 1]).toBeLessThan(frames[0])
+  })
+
+  it('falls back to an equal split rather than throwing on missing lengths', () => {
+    const frames = framesForShots([undefined, undefined, undefined], 30, 25)
+    expect(frames.reduce((a, b) => a + b, 0)).toBe(750)
+    expect(new Set(frames).size).toBe(1)
+    expect(framesForShots([], 30, 25)).toEqual([])
+    expect(framesForShots([NaN, -5, 0], 30, 25).reduce((a, b) => a + b, 0)).toBe(750)
+  })
+
+  it('survives more shots than there are frames', () => {
+    // A pathological case, but it must not return a zero-frame shot.
+    const frames = framesForShots(Array.from({ length: 100 }, () => 0.01), 1, 25)
+    expect(frames.every((f) => f >= 1)).toBe(true)
+  })
+})
+
+describe('drawtext never re-enables % expansion', () => {
+  // THE INCIDENT: a headline containing "40%" killed the whole build — ffmpeg's drawtext
+  // expands %-sequences even when the text comes from a textfile, and a stray % is a
+  // hard filtergraph error ("Stray % near ..."), reported to the user as "ffmpeg exited
+  // with code null". Finance titles are FULL of percent signs, so this was not an edge
+  // case, it was the main case. Every drawtext that renders user text must therefore
+  // carry expansion=none. The chain is built inline inside renderVideo, so this pins the
+  // source itself — crude, but it fails the moment someone adds a drawtext without it.
+  it('every textfile drawtext in render.ts and thumbnail.ts carries expansion=none', async () => {
+    const { readFileSync } = await import('fs')
+    for (const file of ['src/main/video/render.ts', 'src/main/video/thumbnail.ts']) {
+      const src = readFileSync(file, 'utf-8')
+      for (const line of src.split('\n')) {
+        if (line.includes('drawtext=') && line.includes('textfile=')) {
+          expect(line, `${file}: ${line.trim().slice(0, 80)}`).toContain('drawtext=expansion=none')
+        }
+      }
+    }
   })
 })

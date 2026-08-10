@@ -155,6 +155,47 @@ export function makeFfmpegProgressLogger(
   }
 }
 
+/**
+ * Actually RUNS ffmpeg and returns its version banner.
+ *
+ * Deliberately an execution rather than an existsSync: antivirus quarantine leaves the
+ * file exactly where it was and refuses to run it, so "the file is there" is not the
+ * check. This is what the preflight uses to tell a missing ffmpeg from a blocked one.
+ * Bypasses the cancel machinery on purpose — it is not part of any render session.
+ */
+export function ffmpegVersionText(): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn(ffmpegPath, ['-version'])
+    let out = ''
+    proc.stdout.on('data', (d) => {
+      out += d.toString()
+    })
+    proc.on('error', reject)
+    proc.on('exit', (code) => (code === 0 ? resolve(out) : reject(new Error(`ffmpeg -version exited ${code}`))))
+  })
+}
+
+/**
+ * Runs ffmpeg and returns its FULL stderr, for the filters that report by printing.
+ *
+ * `silencedetect` and `ebur128` have no output file — the answer is the log. runFfmpeg
+ * only keeps the last 2000 characters for error messages, which on a long recording
+ * throws away most of the silences it found, so those readings need their own runner.
+ * Resolves on a non-zero exit too: a partial reading is worth more than an exception,
+ * and the caller can see whether it got anything usable.
+ */
+export function runFfmpegCapture(args: string[]): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn(ffmpegPath, args)
+    let err = ''
+    proc.stderr.on('data', (d) => {
+      err += d.toString()
+    })
+    proc.on('error', reject)
+    proc.on('exit', () => resolve(err))
+  })
+}
+
 /** Runs ffmpeg with the given args; streams stderr to onLog. Rejects on non-zero exit. */
 export function runFfmpeg(args: string[], onLog?: (line: string) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {

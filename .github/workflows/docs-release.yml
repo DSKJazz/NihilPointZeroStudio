@@ -1,0 +1,64 @@
+# Keeps every shipped document on the GitHub download page current.
+#
+# WHY THIS IS A SEPARATE WORKFLOW
+# The Windows build deliberately SKIPS documentation-only pushes: it takes 10-15 minutes
+# on a runner that bills at 2x, and a wording fix does not change the exe. But the download
+# page serves the docs alongside the exes, so with the skip in place a doc fix would never
+# reach anyone — the page would keep serving days-old instructions next to a current app,
+# which is the worst pairing of the two. The docs then describe features the user cannot
+# find, or leave out the ones that are there.
+#
+# This job does only the upload. Ubuntu, no build, no install, a few seconds, 1x billing —
+# so keeping the docs current costs effectively nothing and the expensive skip can stay.
+name: Refresh the docs on the download page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/HOW-TO-USE.txt'
+      - 'docs/NIHILPOINTZERO-GUIDE.txt'
+      - 'docs/NIHILPOINTZERO-CHEATSHEET.txt'
+      - 'docs/MEGA-DIAGNOSTIC-REPORT.md'
+      - 'SETUP_GUIDE.md'
+      - 'UPDATE-MY-STUDIO.cmd'
+      - 'BACKUP-NOW.cmd'
+  workflow_dispatch:
+
+permissions:
+  contents: write # to replace the assets on the rolling release
+
+# A second push while this is running should win; the docs are small and idempotent.
+concurrency:
+  group: docs-release
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload the docs to the rolling release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=latest
+          # If the release does not exist yet there is no exe to sit beside, and the
+          # Windows build creates it. Do nothing rather than create an empty one.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "No '$TAG' release yet — the Windows build creates it. Nothing to do."
+            exit 0
+          fi
+          gh release upload "$TAG" \
+            "docs/HOW-TO-USE.txt" \
+            "docs/NIHILPOINTZERO-GUIDE.txt" \
+            "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
+            "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
+            --clobber
+          echo "Docs on the download page now match main."

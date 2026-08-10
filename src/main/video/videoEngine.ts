@@ -13,8 +13,8 @@
  *    module stays pure enough to unit-test with fakes and swapping vendors is a
  *    config change, not a rewrite.
  */
-import { dirname, join, sep } from 'path'
-import { rmSync, writeFileSync } from 'fs'
+import { basename, dirname, extname, join, sep } from 'path'
+import { copyFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { generateImage, sceneImagePrompt } from '../image'
 import { makeSlideshow, type Layout } from './render'
@@ -105,7 +105,22 @@ export async function generateMotionSceneAssets(
           height: o.height,
           seed: i + 1
         })
-        assets.push({ index: i, kind: 'video', path: clip })
+        // Adopt the clip into this build's scratch: every generator writes into its
+        // own single-file %TEMP%\ai-* dir that nothing cleans afterwards, so a build
+        // used to leak one temp directory per motion scene. (Only dirs matching the
+        // generators' known ai- prefix are removed — never arbitrary parents.)
+        let clipPath = clip
+        const clipParent = dirname(clip)
+        if (!clip.startsWith(o.scratch + sep) && /^ai-/.test(basename(clipParent))) {
+          clipPath = join(o.scratch, `motion-${i}${extname(clip) || '.mp4'}`)
+          copyFileSync(clip, clipPath)
+          try {
+            rmSync(clipParent, { recursive: true, force: true })
+          } catch {
+            /* cleanup is best-effort */
+          }
+        }
+        assets.push({ index: i, kind: 'video', path: clipPath })
         motionCount++
         consecutiveFailures = 0
         continue

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import RenderQueuePanel from '../components/RenderQueuePanel'
 import { useLocation } from 'react-router-dom'
 import { useAutosave } from '../hooks/useAutosave'
 import type {
@@ -121,6 +122,9 @@ export default function VideoPage() {
   const [winVoiceId, setWinVoiceId] = useState('')
   const [previewing, setPreviewing] = useState(false)
   const [musicPath, setMusicPath] = useState<string | null>(null)
+  // The music EXAMPLES: 3 full-length beds to listen through, each with its why.
+  const [musicExamples, setMusicExamples] = useState<{ mood: string; why: string; path: string }[]>([])
+  const [makingExamples, setMakingExamples] = useState(false)
   const [soundEffects, setSoundEffects] = useState(true)
   // Default to the free per-scene AI engine so the visuals actually follow the script
   // (a real generated image per section) instead of plain text cards over a gradient.
@@ -136,6 +140,11 @@ export default function VideoPage() {
     () => ({ title, body, engine, style, resolution, aspect, template }),
     [title, body, engine, style, resolution, aspect, template]
   )
+  // True once the autosave restore has put real user content into the editor.
+  // The source-list loader below MUST NOT seed title/body over it: that seeding
+  // used to run after every restore (mount order makes it deterministic) and
+  // silently destroyed the user's pasted/typed script on every return to this tab.
+  const restoredContentRef = useRef(false)
   useAutosave('video-editor', editorPersist, (v) => {
     if (v.engine != null && v.engine in ENGINE_INFO) setEngine(v.engine)
     if (typeof v.style === 'string' && v.style) setStyle(v.style as VideoStyle)
@@ -145,6 +154,7 @@ export default function VideoPage() {
     if (wantScriptPad) return
     if (v.title != null) setTitle(v.title)
     if (v.body != null) setBody(v.body)
+    restoredContentRef.current = Boolean((v.title ?? '').trim() || (v.body ?? '').trim())
   })
   const [images, setImages] = useState<string[]>([])
   const [useStock, setUseStock] = useState(false)
@@ -209,6 +219,16 @@ export default function VideoPage() {
   const [watermarkLogo, setWatermarkLogo] = useState<string | null>(null)
   const [watermarkPos, setWatermarkPos] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-right')
   const [watermarkBusyId, setWatermarkBusyId] = useState<string | null>(null)
+  // Dead-air removal: the PLAN is shown before anything is cut, because a silence
+  // remover that just does it to a finished take is one nobody trusts.
+  const [silenceBusyId, setSilenceBusyId] = useState<string | null>(null)
+  const [silencePlan, setSilencePlan] = useState<{ id: string; headline: string; cuts: number } | null>(null)
+  // The credit check. Not a copyright detector — it checks the paperwork for what the app
+  // fetched itself, and says plainly when it cannot vouch for something.
+  const [creditsBusyId, setCreditsBusyId] = useState<string | null>(null)
+  const [creditReport, setCreditReport] = useState<
+    ({ id: string } & import('../../../shared/copyrightCheck').CopyrightReport) | null
+  >(null)
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [savedNote, setSavedNote] = useState<string | null>(null)
@@ -344,6 +364,13 @@ export default function VideoPage() {
         if (c.hasPixabay) setUseStock(true)
       })
       if (selectedKey) return
+      // A restored draft owns the editor: select the paste slate WITHOUT touching
+      // title/body. (drafts.get is sent before this effect's requests and every
+      // handler is synchronous, so the restore has already landed by now.)
+      if (restoredContentRef.current) {
+        setSelectedKey(PASTE_KEY)
+        return
+      }
       // If the user arrived via the Script Pad's "Send to Video Generator", start
       // on that. Otherwise prefer a real script (Writer/Library/Pad) over the
       // blank slate, falling back to the blank slate when nothing else exists.
@@ -358,11 +385,68 @@ export default function VideoPage() {
   }, [])
 
   function handleSelect(key: string): void {
-    setSelectedKey(key)
+    if (key === selectedKey) return
     const src = sources.find((s) => s.key === key)
-    if (src) {
-      setTitle(src.title)
-      setBody(src.body)
+    if (!src) {
+      setSelectedKey(key)
+      return
+    }
+    // Park the editor's current content on the source it belongs to before
+    // switching. Without this, re-selecting "Paste / write my own" re-read the
+    // frozen empty PASTE_SOURCE constant and wiped everything the user had
+    // typed, pasted, or imported — with no confirm and no undo.
+    setSources((prev) => prev.map((s) => (s.key === selectedKey ? { ...s, title, body } : s)))
+    setSelectedKey(key)
+    setTitle(src.title)
+    setBody(src.body)
+  }
+
+  /**
+   * Every setting on this page, as one build request.
+   *
+   * Shared by "Build Video" and "Add to the queue" deliberately: two copies of this object
+   * would drift, and the queued video would quietly come out with different settings from
+   * the one the user was looking at when they pressed the button.
+   */
+  function currentBuildRequest(effectiveTitle: string): Parameters<typeof window.api.video.build>[0] {
+    return {
+      title: effectiveTitle,
+      body,
+      resolution,
+      aspect,
+      template,
+      narrationVoice,
+      captionsAndChapters,
+      winVoiceId: narrationVoice === 'winnatural' ? winVoiceId : undefined,
+      musicPath: musicPath ?? undefined,
+      soundEffects,
+      engine,
+      style,
+      images: engine === 'presets' && images.length ? images : undefined,
+      useStock: engine === 'presets' && useStock && hasStockKey
+    }
+  }
+
+  /** The same title-derivation Build uses, so a queued item is named the same way. */
+  function derivedTitle(): string {
+    return (
+      title.trim() ||
+      body.replace(/^[\s#*[\]]+/, '').split(/[\n.!?]/)[0].split(/\s+/).slice(0, 8).join(' ').slice(0, 60) ||
+      'My Video'
+    )
+  }
+
+  async function handleAddToQueue(): Promise<void> {
+    if (!body.trim()) {
+      toast('The script box is empty — write or pick the words to be spoken first.', 'error')
+      scriptBoxRef.current?.focus()
+      return
+    }
+    try {
+      await window.api.queue.add(currentBuildRequest(derivedTitle()))
+      toast('Added to the queue ✓ — you can close the app, it will not be lost', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not add it to the queue', 'error')
     }
   }
 
@@ -388,22 +472,7 @@ export default function VideoPage() {
     const unsubscribe = window.api.video.onProgress((s) => setStage(s))
     const unsubPreview = window.api.video.onPreview((png) => setBuildPreview(`${fileUrl(png)}?t=${Date.now()}`))
     try {
-      await window.api.video.build({
-        title: effectiveTitle,
-        body,
-        resolution,
-        aspect,
-        template,
-        narrationVoice,
-        captionsAndChapters,
-        winVoiceId: narrationVoice === 'winnatural' ? winVoiceId : undefined,
-        musicPath: musicPath ?? undefined,
-        soundEffects,
-        engine,
-        style,
-        images: engine === 'presets' && images.length ? images : undefined,
-        useStock: engine === 'presets' && useStock && hasStockKey
-      })
+      await window.api.video.build(currentBuildRequest(effectiveTitle))
       await refreshJobs()
       toast('Video built ✓', 'success')
     } catch (err) {
@@ -466,6 +535,67 @@ export default function VideoPage() {
   async function pickLogo(): Promise<void> {
     const paths = await window.api.video.pickImages()
     if (paths[0]) setWatermarkLogo(paths[0])
+  }
+
+  async function handleCreditCheck(job: VideoJob): Promise<void> {
+    setCreditsBusyId(job.id)
+    setError(null)
+    setCreditReport(null)
+    try {
+      // The description the credit has to appear in is the one the app drafts for this
+      // video. If that cannot be read, an empty description is the right fallback: it
+      // reports a required credit as missing, which errs toward telling the user.
+      const meta = await window.api.shorts.postMeta(job.id, 'youtube').catch(() => null)
+      const description = meta?.description ?? ''
+      const res = await window.api.copyright.check(job.id, description)
+      if (res.found) setCreditReport({ id: job.id, ...res })
+      else setError(res.error)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not check the credits.')
+    } finally {
+      setCreditsBusyId(null)
+    }
+  }
+
+  /** Reads the take and reports what WOULD be cut. Two cheap reads, no encode. */
+  async function handleSilencePlan(job: VideoJob): Promise<void> {
+    setSilenceBusyId(job.id)
+    setError(null)
+    setSilencePlan(null)
+    try {
+      const res = await window.api.silence.plan(job.id)
+      if (res.ok) setSilencePlan({ id: job.id, headline: res.summary.headline, cuts: res.summary.cuts })
+      else setError(res.error)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not read the recording.')
+    } finally {
+      setSilenceBusyId(null)
+    }
+  }
+
+  /** Cuts it — to a NEW video. The original is never touched. */
+  async function handleSilenceApply(job: VideoJob): Promise<void> {
+    setSilenceBusyId(job.id)
+    setError(null)
+    setSavedNote(null)
+    const unsubscribe = window.api.video.onProgress((st) => setStage(st))
+    try {
+      const res = await window.api.silence.apply(job.id)
+      if (res.ok) {
+        await refreshJobs()
+        setSilencePlan(null)
+        setSavedNote(`${res.summary.headline} Saved as a new video — your original is untouched.`)
+        toast('Dead air removed ✓', 'success')
+      } else {
+        setError(res.error)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not cut the recording.')
+    } finally {
+      unsubscribe()
+      setSilenceBusyId(null)
+      setStage(null)
+    }
   }
 
   async function handleWatermark(job: VideoJob): Promise<void> {
@@ -1370,6 +1500,50 @@ export default function VideoPage() {
               <p className="text-[10px] text-ink-600 mt-1">
                 Mixed softly under the narration (auto fade in/out). Use your own file, or grab a free track below.
               </p>
+              {/* HIS ASK: "it gives me multiple examples... I play, I listen... and it
+                  would tell me why." Three full-length beds from the offline synthesizer,
+                  each with one sentence of reasoning; he picks, nothing is picked for him. */}
+              <div className="mt-2">
+                <button
+                  onClick={() => {
+                    if (makingExamples) return
+                    setMakingExamples(true)
+                    const words = body.trim().split(/\s+/).filter(Boolean).length
+                    // Full length: narration runs ~2.4 words/second in this app's voices.
+                    const estSec = Math.max(20, Math.round(words / 2.4))
+                    void window.api.youtube
+                      .musicExamples(body, estSec)
+                      .then((r) => {
+                        setMusicExamples(r.examples)
+                        if (!r.examples.length) toast('Could not make music examples this time.', 'error')
+                      })
+                      .finally(() => setMakingExamples(false))
+                  }}
+                  disabled={makingExamples || !body.trim()}
+                  className="rounded-md border border-gold-500/40 text-gold-400 hover:bg-gold-500/10 disabled:opacity-40 text-xs px-3 py-1.5 transition-colors"
+                >
+                  {makingExamples ? 'Composing examples…' : '🎼 Make me examples to listen to'}
+                </button>
+                {musicExamples.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {musicExamples.map((ex) => (
+                      <div key={ex.path} className={`rounded-md border p-2 ${musicPath === ex.path ? 'border-gold-500/60 bg-gold-500/5' : 'border-ink-700 bg-ink-800/60'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-ink-100 font-medium capitalize">{ex.mood}</span>
+                          <button
+                            onClick={() => setMusicPath(ex.path)}
+                            className="rounded-md bg-gold-500 hover:bg-gold-400 text-ink-950 text-[11px] font-medium px-2.5 py-1 transition-colors"
+                          >
+                            {musicPath === ex.path ? '✓ Chosen' : 'Use this one'}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-ink-500 mt-1">{ex.why}</p>
+                        <audio controls preload="none" src={fileUrl(ex.path)} className="mt-1.5 w-full h-8" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <details className="mt-2 rounded-md border border-ink-700 bg-ink-800/60">
                 <summary className="cursor-pointer px-3 py-1.5 text-xs text-gold-400 select-none">
                   🎼 Get free, legal music ↗
@@ -1392,6 +1566,11 @@ export default function VideoPage() {
                 </div>
               </details>
             </div>
+            {/* The queue, when there is one. Above the Build button so it is the first
+                thing seen after queueing something. */}
+            <div className="mb-3">
+              <RenderQueuePanel />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleBuild}
@@ -1399,6 +1578,15 @@ export default function VideoPage() {
                 className="flex-1 rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-50 text-ink-950 font-medium px-4 py-2 text-sm transition-colors"
               >
                 {building ? 'Building video…' : `🎬 Build Video (${resolution.toUpperCase()}, free)`}
+              </button>
+              {/* Queue it instead of building now: the point is to line several up and
+                  walk away, and the list survives the app closing. */}
+              <button
+                onClick={() => void handleAddToQueue()}
+                className="rounded-md border border-gold-500/50 hover:border-gold-400 text-gold-400 text-sm px-4 py-2 transition-colors"
+                title="Puts it in the queue instead of building it now. Queue several and walk away — the list is written down, so closing the app does not lose it."
+              >
+                ＋ Queue it
               </button>
               {(building || exportingId || trimmingId) && (
                 <button
@@ -1647,6 +1835,76 @@ export default function VideoPage() {
                         </span>
                       </div>
                     )}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-ink-700 bg-ink-900/60 p-2">
+                      <span className="text-[11px] text-ink-400">© Credits</span>
+                      <button
+                        onClick={() => handleCreditCheck(job)}
+                        disabled={creditsBusyId === job.id}
+                        className="rounded-md border border-ink-600 hover:border-ink-400 text-ink-200 text-xs px-3 py-1 transition-colors disabled:opacity-50"
+                      >
+                        Check before publishing
+                      </button>
+                      {creditsBusyId === job.id && <span className="text-[10px] text-gold-300">working…</span>}
+                      {creditReport?.id === job.id && (
+                        <>
+                          <span
+                            className={`w-full text-[11px] ${creditReport.ok ? 'text-emerald-300' : 'text-amber-300'}`}
+                          >
+                            {creditReport.headline}
+                          </span>
+                          {creditReport.creditsBlock && (
+                            <button
+                              onClick={() => {
+                                void navigator.clipboard.writeText(creditReport.creditsBlock)
+                                toast('Credits copied ✓', 'success')
+                              }}
+                              className="rounded-md bg-gold-500 hover:bg-gold-400 text-ink-950 text-xs font-medium px-3 py-1 transition-colors"
+                            >
+                              Copy the credits
+                            </button>
+                          )}
+                          {creditReport.verdicts.map((v, i) => (
+                            <span key={`${v.item.title}-${i}`} className="w-full text-[10px] text-ink-500">
+                              {v.item.title} — {v.note}
+                            </span>
+                          ))}
+                        </>
+                      )}
+                      <span className="w-full text-[10px] text-ink-600">
+                        This is NOT a copyright detector — nothing on your PC can tell you whether YouTube will claim
+                        something. It checks the paperwork for music and footage the app fetched itself: whether the
+                        licence needs a credit, and whether that credit is actually in your description. A missing
+                        credit is what turns a free track into a claim.
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-ink-700 bg-ink-900/60 p-2">
+                      <span className="text-[11px] text-ink-400">✂ Dead air</span>
+                      <button
+                        onClick={() => handleSilencePlan(job)}
+                        disabled={silenceBusyId === job.id}
+                        className="rounded-md border border-ink-600 hover:border-ink-400 text-ink-200 text-xs px-3 py-1 transition-colors disabled:opacity-50"
+                      >
+                        What would be cut?
+                      </button>
+                      {silencePlan?.id === job.id && silencePlan.cuts > 0 && (
+                        <button
+                          onClick={() => handleSilenceApply(job)}
+                          disabled={silenceBusyId === job.id}
+                          className="rounded-md bg-gold-500 hover:bg-gold-400 text-ink-950 text-xs font-medium px-3 py-1 transition-colors disabled:opacity-50"
+                        >
+                          Cut it
+                        </button>
+                      )}
+                      {silenceBusyId === job.id && <span className="text-[10px] text-gold-300">working…</span>}
+                      {silencePlan?.id === job.id && (
+                        <span className="w-full text-[11px] text-gold-300">{silencePlan.headline}</span>
+                      )}
+                      <span className="w-full text-[10px] text-ink-600">
+                        Removes the long pauses where nothing is said, keeping a quarter-second of breath so it still
+                        sounds like a person talking. Picture and sound are cut together, so nothing goes out of sync.
+                        Makes a NEW video — your original stays in this list.
+                      </span>
+                    </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-ink-700 bg-ink-900/60 p-2">
                       <span className="text-[11px] text-ink-400">📝 Captions</span>
                       <button
