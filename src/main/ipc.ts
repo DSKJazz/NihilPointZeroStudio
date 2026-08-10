@@ -72,6 +72,7 @@ export function selfUpdateEnv(): SelfUpdateDeps {
     log: (message) => logActivity('ai', message)
   }
 }
+import { diskIsNewerThanRunning, getAvailableUpdate, tagDate } from './updateCheck'
 import { whatsNewReport } from '../shared/whatsNew'
 import { DEFAULT_SPEED, planReadAloud, type ReadSpeed } from '../shared/readAloud'
 import { learnTitlePatterns, publishTimingReport, scoreTitle } from '../shared/channelLearning'
@@ -95,6 +96,8 @@ import { fetchComments, readMyChannel } from './data/youtube'
 import { resolveYouTubeChannel, verifySavedYouTubeKey, verifyYouTubeKey } from './data/youtubeKeyCheck'
 import { verifyGeminiKey, verifySavedGeminiKey } from './llm/geminiKeyCheck'
 import { caretakerStatus, clearCaretakerLog, runCaretakerPass, updateCaretakerSchedule } from './caretaker'
+import { searchYouTubeSignals } from './data/youtube'
+import { fetchComments, fetchMyChannelVideos } from './data/youtube'
 import { buildCutArgs, planSilenceCut } from './video/silence'
 import { buildVideoEncoderArgs, chooseEncoderForJob } from './video/encoder'
 import { buildSpeedArgs } from './audio/speed'
@@ -1032,6 +1035,8 @@ export function registerIpcHandlers(): void {
     // empty answer used to mean five different things and named none of them.
     const { videos, problem } = await readMyChannel()
     logRead('Your channel', problem)
+  ipcMain.handle(IPC.channelLearn, async () => {
+    const videos = await fetchMyChannelVideos()
     const past = videos.map((v) => ({
       title: v.title,
       publishedAt: v.publishedAt,
@@ -1062,6 +1067,11 @@ export function registerIpcHandlers(): void {
       ),
       problem
     }
+    const videos = await fetchMyChannelVideos()
+    return scoreTitle(
+      typeof title === 'string' ? title : '',
+      videos.map((v) => ({ title: v.title, publishedAt: v.publishedAt, views: v.views }))
+    )
   })
 
   // THE VIDEO IDEAS ALREADY SITTING IN THE COMMENTS. Every question returned is quoted
@@ -1070,6 +1080,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.channelComments, async (_e, videoLimit?: number) => {
     const { videos, problem } = await readMyChannel()
     logRead('Comment questions', problem)
+    const videos = await fetchMyChannelVideos()
     // Newest first, and only the recent ones: a question from three years ago has usually
     // been answered, and each video costs a quota unit.
     const recent = [...videos]
@@ -1252,6 +1263,21 @@ export function registerIpcHandlers(): void {
     return { found: true as const, ...report }
   })
 
+  // THE CREDIT CHECK BEFORE PUBLISHING. Not a copyright detector — only YouTube's Content
+  // ID can answer that, and pretending otherwise would be worse than silence because the
+  // user would trust it. This checks the PAPERWORK for what the app fetched itself: a
+  // licence that obliges a credit, and whether that credit actually reached the
+  // description. A missing credit on a CC-BY track is what turns a free track into a claim.
+  ipcMain.handle(IPC.copyrightCheck, (_e, videoId: string, description?: string) => {
+    const job = listVideos().find((j) => j.id === videoId)
+    if (!job) return { found: false as const, error: 'Video not found — build it again first.' }
+    // A video built before this shipped has no recorded provenance at all. "Nothing to
+    // check" is the truthful answer there — it is not a claim that the video is clear, and
+    // the report's own wording never implies one.
+    const report = checkCopyright(job.credits ?? [], typeof description === 'string' ? description : '')
+    return { found: true as const, ...report }
+  })
+
   // WHAT OTHER CHANNELS COVERED THAT THIS ONE HAS NOT. Searches this channel's own beats
   // plus subjects it has never touched — searching only what it already covers can never
   // find a gap, it can only confirm coverage.
@@ -1283,6 +1309,26 @@ export function registerIpcHandlers(): void {
       }
     }
     return { ...gapReport(mine, theirs), problem: read.problem, myVideos: mine.length, competitorVideos: theirs.length, queries }
+    return { scanned: comments.length, videosRead: recent.length, clusters, summary: summariseQuestions(clusters, comments.length) }
+  })
+
+  // WHAT OTHER CHANNELS COVERED THAT THIS ONE HAS NOT. Searches this channel's own beats
+  // plus subjects it has never touched — searching only what it already covers can never
+  // find a gap, it can only confirm coverage.
+  ipcMain.handle(IPC.channelGaps, async () => {
+    const mine = (await fetchMyChannelVideos()).map((v) => ({ title: v.title, views: v.views, publishedAt: v.publishedAt }))
+    const queries = searchQueries(mine)
+    const theirs: { title: string; channelTitle: string; viewCount: number; publishedAt?: string }[] = []
+    const mineTitles = new Set(mine.map((m) => m.title.toLowerCase()))
+    for (const q of queries) {
+      const signals = await searchYouTubeSignals(q, 10)
+      for (const s of signals) {
+        // Our own videos come back in a topic search. Counting them as a competitor's
+        // would make every covered topic look contested and could never be a gap.
+        if (!mineTitles.has(s.title.toLowerCase())) theirs.push(s)
+      }
+    }
+    return { ...gapReport(mine, theirs), myVideos: mine.length, competitorVideos: theirs.length, queries }
   })
 
   // Proof the script BY EAR. The plan is pure and instant — what to listen for, and how

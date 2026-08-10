@@ -443,6 +443,16 @@ export async function buildVideoFromScript(
         /* temp cleanup best-effort */
       }
     }
+    onProgress?.('Finalizing…')
+    finished = true
+  } finally {
+    endRenderSession() // a Stop must not outlive the build it stopped
+    rmSync(scratch, { recursive: true, force: true })
+    // KEPT on failure, discarded on success. A finished render has no use for it, and
+    // leaving them behind would quietly fill the disk with narration nobody will hear
+    // again. Anything a user never retried is swept after a week, at the top of the next
+    // build.
+    if (finished) discardCheckpoint(resume.dir)
   }
 }
 

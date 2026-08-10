@@ -139,6 +139,10 @@ echo.
 echo    If it still says an update is available when you open it, just
 echo    press "Get the update" on the blue notice - the app downloads
 echo    and installs it by itself. You never need to hunt for a file.
+echo    ONE LAST THING, and only once:
+echo    open the NihilPointZeroStudio folder on your Desktop and
+echo    double-click NIHILPOINTZERO-OS-setup.exe. That refreshes the
+echo    installed app. It keeps all your videos and settings.
 echo.
 echo    Then open the app and look at Settings - "What changed" tells
 echo    you what is new in the version you are now running.

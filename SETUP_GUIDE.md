@@ -111,6 +111,9 @@ If it cannot download for some reason, it tells you why in that same notice and 
 offers to show you the setup file instead, so the button never just does nothing.
 
 ### Also updating the code folder — one double-click (needs the code folder)
+**Two ways. Pick whichever you have in front of you.**
+
+### The easy way — one double-click (needs the code folder)
 
 If you have the `NihilPointZeroStudio-workshop` folder on your PC, open it and
 double-click **`UPDATE-MY-STUDIO.cmd`**.
