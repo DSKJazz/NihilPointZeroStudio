@@ -17,6 +17,9 @@ const api = {
     setModel: (provider: LLMProviderId, model: string) => ipcRenderer.invoke(IPC.settingsSetModel, provider, model),
     setApiKey: (provider: LLMProviderId, key: string) => ipcRenderer.invoke(IPC.settingsSetApiKey, provider, key),
     setYouTubeKey: (key: string) => ipcRenderer.invoke(IPC.settingsSetYouTubeKey, key),
+    /** The switchboard: turn a brain ON or OFF. Off means never contacted, even as a fallback. */
+    setProviderEnabled: (provider: LLMProviderId, on: boolean) =>
+      ipcRenderer.invoke(IPC.settingsSetProviderEnabled, provider, on),
     setYouTubeChannel: (id: string) => ipcRenderer.invoke(IPC.settingsSetYouTubeChannel, id),
     setHordeKey: (key: string) => ipcRenderer.invoke(IPC.settingsSetHordeKey, key),
     setMvsepToken: (key: string) => ipcRenderer.invoke(IPC.settingsSetMvsepToken, key),
@@ -28,6 +31,14 @@ const api = {
     setStartWithWindows: (on: boolean): Promise<{ on: boolean; applied: boolean }> =>
       ipcRenderer.invoke(IPC.settingsSetStartWithWindows, on),
     ollamaStatus: () => ipcRenderer.invoke(IPC.ollamaStatus)
+  },
+  // The Caretaker: the scheduled self-diagnostic and its record (Settings → Caretaker).
+  caretaker: {
+    status: (): Promise<import('../shared/caretaker').CaretakerStatus> => ipcRenderer.invoke(IPC.caretakerStatus),
+    runNow: (): Promise<import('../shared/caretaker').CaretakerRun> => ipcRenderer.invoke(IPC.caretakerRunNow),
+    setSchedule: (hours: number, paused: boolean): Promise<import('../shared/caretaker').CaretakerStatus> =>
+      ipcRenderer.invoke(IPC.caretakerSetSchedule, hours, paused),
+    clearLog: (): Promise<import('../shared/caretaker').CaretakerStatus> => ipcRenderer.invoke(IPC.caretakerClearLog)
   },
   ideas: {
     generate: (req: IdeaGenRequest) => ipcRenderer.invoke(IPC.ideasGenerate, req)
@@ -273,6 +284,7 @@ const api = {
   },
   timeline: {
     pickClips: (): Promise<string[]> => ipcRenderer.invoke(IPC.timelinePickClips),
+    pickAudio: (): Promise<string[]> => ipcRenderer.invoke(IPC.timelinePickAudio),
     probe: (src: string): Promise<{ ok: boolean; duration?: number; error?: string }> =>
       ipcRenderer.invoke(IPC.timelineProbe, src),
     render: (
@@ -637,6 +649,94 @@ const api = {
   },
   // What YOUR channel's own history says — not general advice about channels in general.
   channel: {
+    /**
+     * Title shapes that worked, when the audience shows up, and your series.
+     *
+     * `problem` is non-null when nothing could be read, and says which of the five
+     * reasons it was — a bare empty result used to cover all of them at once.
+     */
+    learn: (): Promise<{
+      problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      videoCount: number
+      titleFindings: import('../shared/channelLearning').Finding[]
+      timing: ReturnType<typeof import('../shared/channelLearning').publishTimingReport>
+      series: ReturnType<typeof import('../shared/series').seriesReport>
+    }> => ipcRenderer.invoke(IPC.channelLearn),
+    /** Scores a proposed title against your own history, with the reasons. */
+    scoreTitle: (
+      title: string
+    ): Promise<
+      import('../shared/channelLearning').TitleScore & {
+        problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      }
+    > => ipcRenderer.invoke(IPC.channelScoreTitle, title),
+    /** Subjects other channels get views on that this one has never covered. */
+    gaps: (): Promise<
+      import('../shared/competitorGap').GapReport & {
+        problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+        myVideos: number
+        competitorVideos: number
+        queries: string[]
+      }
+    > => ipcRenderer.invoke(IPC.channelGaps),
+    /** The questions your comments keep asking, quoted verbatim and ranked. */
+    comments: (
+      videoLimit?: number
+    ): Promise<{
+      problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      scanned: number
+      videosRead: number
+      clusters: import('../shared/commentMining').QuestionCluster[]
+      summary: string
+    }> => ipcRenderer.invoke(IPC.channelComments, videoLimit)
+  },
+  // Hear the script read out at speed, to catch by ear what silent reading hides.
+  readAloud: {
+    // Instant and pure: what to listen for, and how long the listen will take.
+    plan: (script: string, speed?: number): Promise<import('../shared/readAloud').ReadAloudPlan> =>
+      ipcRenderer.invoke(IPC.readAloudPlan, script, speed),
+    // Speaks it and speeds the file up. Returns a PATH — the page turns that into a
+    // playable link with fileUrl(), which is what makes it work on the phone too.
+    speak: (
+      script: string,
+      speed?: number,
+      voice?: 'natural' | 'winnatural' | 'windows'
+    ): Promise<
+      | { ok: true; path: string; engineName: string; plan: import('../shared/readAloud').ReadAloudPlan }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.readAloudSpeak, script, speed, voice)
+  },
+  // "What changed" — what is new in the build actually running. The build tag is read in
+  // the main process, never passed in from here, so a stale page cannot make the app
+  // advertise a feature it does not have.
+  whatsNew: {
+    get: (): Promise<import('../shared/whatsNew').WhatsNewReport> => ipcRenderer.invoke(IPC.whatsNewGet),
+    markSeen: (ids: string[]): Promise<import('../shared/whatsNew').WhatsNewReport> =>
+      ipcRenderer.invoke(IPC.whatsNewMarkSeen, ids)
+  },
+  // Cut the dead air out of a take. Plan first (cheap, no encode, nothing changed), then
+  // apply — which writes a NEW video and never touches the original.
+  silence: {
+    plan: (
+      videoId: string
+    ): Promise<
+      | {
+          ok: true
+          keeps: import('../shared/types').KeepSpan[]
+          summary: import('../shared/types').SilenceSummary
+          durationSec: number
+        }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silencePlan, videoId),
+    apply: (
+      videoId: string
+    ): Promise<
+      | { ok: true; video: import('../shared/types').VideoJob; summary: import('../shared/types').SilenceSummary }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silenceApply, videoId)
+  },
+  // What YOUR channel's own history says — not general advice about channels in general.
+  channel: {
     /** Title shapes that worked, when the audience shows up, and your series. */
     learn: (): Promise<{
       videoCount: number
@@ -647,10 +747,6 @@ const api = {
     /** Scores a proposed title against your own history, with the reasons. */
     scoreTitle: (title: string): Promise<import('../shared/channelLearning').TitleScore> =>
       ipcRenderer.invoke(IPC.channelScoreTitle, title),
-    /** Subjects other channels get views on that this one has never covered. */
-    gaps: (): Promise<
-      import('../shared/competitorGap').GapReport & { myVideos: number; competitorVideos: number; queries: string[] }
-    > => ipcRenderer.invoke(IPC.channelGaps),
     /** The questions your comments keep asking, quoted verbatim and ranked. */
     comments: (
       videoLimit?: number
@@ -749,7 +845,23 @@ const api = {
   youtube: {
     // Assisted publish: prepare metadata (→ clipboard), open the upload page, reveal the file.
     publish: (videoId: string): Promise<{ title: string; description: string; tags: string[]; uploadUrl: string }> =>
-      ipcRenderer.invoke(IPC.youtubePublish, videoId)
+      ipcRenderer.invoke(IPC.youtubePublish, videoId),
+    /**
+     * Try the pasted key against Google for real. Pass nothing to re-check the saved
+     * one. The answer is three-state — working / broken / could-not-tell — because a
+     * check that cannot reach Google must never look like a pass.
+     */
+    verifyKey: (rawKey?: string): Promise<import('../shared/youtubeKeySetup').KeyVerdict> =>
+      ipcRenderer.invoke(IPC.youtubeKeyVerify, rawKey ?? ''),
+    /** Gemini's free AI-Studio key, tested for real — same three-state verdict as YouTube's. */
+    verifyGeminiKey: (rawKey?: string): Promise<import('../shared/youtubeKeySetup').KeyVerdict> =>
+      ipcRenderer.invoke(IPC.geminiKeyVerify, rawKey ?? ''),
+    /** 3 full-length music beds with a plain WHY each — play, compare, pick one. */
+    musicExamples: (scriptText: string, durationSec: number): Promise<{ examples: { mood: string; why: string; path: string }[] }> =>
+      ipcRenderer.invoke(IPC.musicExamples, scriptText, durationSec),
+    /** @handle, channel URL or UC id → the id plus the channel NAME, so it can be confirmed by eye. */
+    resolveChannel: (input: string, rawKey?: string): Promise<import('../shared/youtubeKeySetup').ChannelResolution> =>
+      ipcRenderer.invoke(IPC.youtubeChannelResolve, input, rawKey ?? '')
   },
   voice: {
     // Windows NATURAL voices (WinRT) — the best free narration, and the only route to

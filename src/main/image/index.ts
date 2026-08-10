@@ -58,6 +58,8 @@ async function fetchImageOnce(
     width: String(width),
     height: String(height),
     nologo: 'true',
+    // Strict content filter — see sceneImageUrl in styles.ts, which must stay identical.
+    safe: 'true',
     model,
     referrer: 'nihilpointzero-studio'
   })

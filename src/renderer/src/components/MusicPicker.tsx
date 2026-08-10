@@ -23,18 +23,22 @@ export default function MusicPicker({
   const [playingId, setPlayingId] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Set the moment the user runs their OWN mood search: a slow mount-time suggest()
+  // resolving late must never overwrite the results the user searched for.
+  const userSearchedRef = useRef(false)
+
   useEffect(() => {
     let cancelled = false
     void window.api.music
       .suggest(scriptText)
       .then((r) => {
-        if (!cancelled) setResult(r)
+        if (!cancelled && !userSearchedRef.current) setResult(r)
       })
       .catch(() => {
-        if (!cancelled) setResult({ moods: [], tracks: [], note: 'Could not reach the free music services.' })
+        if (!cancelled && !userSearchedRef.current) setResult({ moods: [], tracks: [], note: 'Could not reach the free music services.' })
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && !userSearchedRef.current) setLoading(false)
       })
     return () => {
       cancelled = true
@@ -50,6 +54,7 @@ export default function MusicPicker({
 
   async function runSearch(): Promise<void> {
     if (!query.trim()) return
+    userSearchedRef.current = true
     setLoading(true)
     try {
       setResult(await window.api.music.moodSearch(query.trim()))

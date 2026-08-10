@@ -38,7 +38,7 @@ describe('describeUpdateStatus', () => {
       const s = describeUpdateStatus(tag('2026-08-01 19:29'), published)
       expect(s.state).toBe('unknown')
       expect(s.message).not.toMatch(/up to date/i)
-      expect(s.message).toMatch(/offline|try again/i)
+      expect(s.message).toMatch(/try again/i)
     }
   })
 

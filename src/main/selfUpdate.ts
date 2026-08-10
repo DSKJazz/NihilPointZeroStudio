@@ -116,7 +116,7 @@ export function updateDir(tempRoot: string): string {
 /** Reads the latest release. Separated so the handler stays readable and so a network
  * failure has one obvious place to be turned into plain English. */
 export async function fetchLatestRelease(fetchImpl: typeof fetch = fetch): Promise<
-  { ok: true; assets: unknown; body: string } | { ok: false; error: string }
+  { ok: true; assets: unknown; body: string; tag_name?: string; published_at?: string | null } | { ok: false; error: string }
 > {
   try {
     const res = await fetchImpl(RELEASE_API, {
@@ -124,8 +124,8 @@ export async function fetchLatestRelease(fetchImpl: typeof fetch = fetch): Promi
       signal: AbortSignal.timeout(30_000)
     })
     if (!res.ok) return { ok: false, error: `Could not reach the download page (${res.status}).` }
-    const rel = (await res.json()) as { assets?: unknown; body?: string }
-    return { ok: true, assets: rel.assets, body: rel.body ?? '' }
+    const rel = (await res.json()) as { assets?: unknown; body?: string; tag_name?: string; published_at?: string | null }
+    return { ok: true, assets: rel.assets, body: rel.body ?? '', tag_name: rel.tag_name, published_at: rel.published_at }
   } catch {
     return { ok: false, error: 'Could not reach the internet to fetch the update.' }
   }

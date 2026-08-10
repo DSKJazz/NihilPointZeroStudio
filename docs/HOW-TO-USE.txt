@@ -35,6 +35,14 @@ FIRST TIME YOU RUN IT
       WAIT. Do not double-click again.
    3. If Windows says "Windows protected your PC": More info -> Run anyway (it's safe,
       just unsigned).
+   4. Nothing else is required. The AI brain is free and already chosen for you; you do
+      not need to buy anything, ever, and you do not need to open Settings to start.
+   5. The ONE thing worth doing once: Settings -> "Connect YouTube" -> "Show me how".
+      Free, about three minutes, and Google never asks for a card. Without it the "Your
+      channel" tab, the questions from your comments and the competitor gaps have
+      nothing to read. It walks you through it with a button for each page and then
+      tests the key for real, so you find out straight away if something is wrong
+      instead of a week later.
 
 HOW TO KNOW YOU'RE ON THE NEWEST BUILD  (READ THIS — it caused a lot of confusion)
    • The sidebar shows a small gold badge under "OS", e.g.
@@ -158,6 +166,27 @@ WHAT IS NEW (1 August 2026)
 
    The short version of this round:
 
+   CONNECTING YOUTUBE IS NOW A WALKTHROUGH, NOT AN INSTRUCTION. Settings used to say
+   "get a free key from Google Cloud Console, enable YouTube Data API v3, create an API
+   key" and leave you there. Now it is five numbered steps with a button on each that
+   opens the exact page. You paste the key, press Check, and the app really tries it —
+   if something is wrong it tells you in plain English which step to go back to. The
+   most common problem, by a mile, is a perfectly good key on a project where the
+   YouTube service was never switched on, and the app now says exactly that rather than
+   letting you assume you typed the key wrong.
+
+   AND IT FINDS YOUR CHANNEL FOR YOU. Type your @name — the one on your own channel
+   page — and it looks up the long "UC..." ID and shows you the channel name it found,
+   so you can see it picked the right one. YouTube buries that ID three menus deep and
+   nobody knows it by heart.
+
+   WHEN A CHANNEL PANEL COMES BACK EMPTY IT NOW SAYS WHY. It used to print "no videos
+   could be read, check your key and channel ID in Settings" no matter what had
+   happened, and only one of the seven things that can actually happen was that. In
+   particular, "could not reach YouTube" is now shown in amber and says plainly that it
+   does not know — it is not the app telling you that you have no videos. Amber always
+   means "I could not tell", and is never something for you to go and fix.
+
    A NEW TAB, "Your Channel". Everything else in the app helps you make a video. This
    one tells you what has already worked. It reads your own past videos and works out
    which title shapes did better FOR YOU — not what advice says works in general, which
@@ -267,6 +296,11 @@ HOW TO UPDATE THE WHOLE WORKSHOP TOO (only if you have the code folder)
    UPDATE-MY-STUDIO.cmd. This does more than the button above: as well as the app,
    it refreshes the code folder and your Desktop studio folder and pushes to GitHub.
    Five to ten minutes, and you can walk away while it runs.
+HOW TO UPDATE, WITHOUT TYPING ANYTHING
+   Open the NihilPointZeroStudio-workshop folder on your PC and double-click
+   UPDATE-MY-STUDIO.cmd. That is the whole procedure. It fetches the new code,
+   builds it, copies it into your Desktop studio folder, updates the installed app
+   and pushes to GitHub. Five to ten minutes, and you can walk away while it runs.
 
    It checks its tools first and tells you by name if something is missing. If any
    step fails it STOPS and says so in plain words rather than leaving things

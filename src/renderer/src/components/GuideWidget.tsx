@@ -85,12 +85,17 @@ export default function GuideWidget(): React.JSX.Element {
 
   const pageName = PAGE_NAMES[location.pathname] ?? 'the app'
 
+  // Same fix as AssistantWidget: `open` is true for every stream token, so the old
+  // `nearBottom || open` guard force-scrolled the reader down on every delta.
+  useEffect(() => {
+    if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [open])
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    if (nearBottom || open) el.scrollTo({ top: el.scrollHeight })
-  }, [msgs, open])
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight })
+  }, [msgs])
 
   function push(m: Msg): void {
     setMsgs((cur) => [...cur, m])
@@ -136,7 +141,10 @@ export default function GuideWidget(): React.JSX.Element {
         const copy = cur.slice()
         const i = copy.length - 1
         if (copy[i]?.role === 'assistant') {
-          const content = copy[i].content || reply
+          // The invoke's return value is the AUTHORITATIVE final answer. Preferring
+          // the accumulated stream meant a mid-stream Ollama failure showed the
+          // truncated stream WITH the fallback's full answer concatenated onto it.
+          const content = reply || copy[i].content
           // Error strings resolve normally (the handler never rejects) — don't offer
           // to "execute" an error message.
           copy[i] = { role: 'assistant', content, executable: !content.startsWith('⚠') }

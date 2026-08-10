@@ -11,7 +11,7 @@
  * returns key material — only a verdict.
  */
 import { existsSync } from 'fs'
-import { getDecryptedKey, getModel, getSettings, getStockConfig, getYouTubeApiKey } from './store'
+import { getDecryptedKey, getGeminiApiKey, getModel, getSettings, getStockConfig, getYouTubeApiKey } from './store'
 import { getOllamaStatus } from './llm/ollama'
 import type { HealthCheck, HealthReport } from '../shared/types'
 
@@ -59,10 +59,10 @@ async function checkFreeText(): Promise<HealthCheck> {
       signal: AbortSignal.timeout(15000)
     })
     if (res.status === 402) {
-      return fail(label, 'no longer free — the service now demands a paid account. Use Ollama or a Claude/OpenAI key')
+      return fail(label, 'no longer free — the service now demands a paid account. The local brain (Ollama) is the answer; nothing needs buying')
     }
     if (res.status === 404) {
-      return fail(label, 'the free model was removed from their API. Use Ollama or a Claude/OpenAI key')
+      return fail(label, 'the free model was withdrawn from their service. The local brain (Ollama) covers it; nothing needs buying')
     }
     if (res.status === 429) return warn(label, 'busy right now (rate-limited) — answers may fail or be slow')
     if (res.status >= 400) return fail(label, `service returned ${res.status} — answers will fail`)
@@ -127,6 +127,36 @@ async function checkPaidKey(provider: 'anthropic' | 'openai'): Promise<HealthChe
   return ok(label, 'valid')
 }
 
+/**
+ * Gemini is FREE-keyed, so its rules sit between YouTube's and the paid pair's: a
+ * missing key is a note (not a fault — nothing needs it unless chosen), a saved key on
+ * a switched-off provider is never contacted, and only an enabled/active Gemini gets a
+ * live test. The test lists models: free, nothing generated, nothing sent.
+ */
+async function checkGemini(): Promise<HealthCheck> {
+  const label = 'Gemini (free key)'
+  let key: string | null
+  try {
+    key = getGeminiApiKey()
+  } catch {
+    return warn(label, 'saved key could not be read on this machine (copied portable copy?)')
+  }
+  if (!key) return warn(label, 'not set (optional — a free key from AI Studio switches it on)')
+  const s = getSettings()
+  if (s.activeProvider !== 'gemini' && !s.providerEnabled.gemini) {
+    return warn(label, 'saved but switched OFF — nothing is contacted while the switch is off')
+  }
+  const code = await ping('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', 12000, {
+    'x-goog-api-key': key
+  })
+  if (code === null) return warn(label, 'could not reach Google — check internet')
+  if (code === 400 || code === 401 || code === 403)
+    return fail(label, `REJECTED (${code}) — Settings → Connect Gemini → "Check the saved key" says exactly what is wrong`)
+  if (code === 429) return warn(label, "key works but the free daily allowance is used up right now — it resets by itself")
+  if (code >= 400) return warn(label, `service returned ${code}`)
+  return ok(label, 'valid')
+}
+
 async function checkOllama(): Promise<HealthCheck> {
   const s = await getOllamaStatus()
   if (!s.connected) return warn('Ollama (local AI)', 'not running (only needed if you pick Ollama)')
@@ -143,6 +173,7 @@ function checkActiveProvider(checks: HealthCheck[]): HealthCheck {
   const nameFor: Record<string, string> = {
     free: 'Free AI (text)',
     ollama: 'Ollama (local AI)',
+    gemini: 'Gemini (free key)',
     anthropic: 'Anthropic key',
     openai: 'OpenAI key'
   }
@@ -183,20 +214,28 @@ function checkYouTubeKey(): HealthCheck {
   } catch {
     return warn('YouTube key', 'saved key could not be read')
   }
-  return key ? ok('YouTube key', 'set') : warn('YouTube key', 'not set — trend signals from YouTube are skipped')
+  // Free, so a missing one is worth naming as a thing to switch on rather than a bare
+  // "not set" — three whole tabs read nothing without it.
+  return key
+    ? ok('YouTube key', 'set')
+    : warn(
+        'YouTube key',
+        'not set — Your Channel, the comment questions and the competitor gaps all read nothing. Free to fix: Settings → Connect YouTube (about 3 minutes)'
+      )
 }
 
 /** Runs every check (network ones in parallel) and summarises. Never throws. */
 export async function runHealthCheck(): Promise<HealthReport> {
-  const [internet, freeText, freeImg, anthropic, openai, ollama] = await Promise.all([
+  const [internet, freeText, freeImg, anthropic, openai, ollama, gemini] = await Promise.all([
     checkInternet(),
     checkFreeText(),
     checkFreeImages(),
     checkPaidKey('anthropic'),
     checkPaidKey('openai'),
-    checkOllama()
+    checkOllama(),
+    checkGemini()
   ])
-  const checks: HealthCheck[] = [internet, freeText, freeImg, anthropic, openai, ollama, checkVoices(), checkStockFootage(), checkYouTubeKey()]
+  const checks: HealthCheck[] = [internet, freeText, freeImg, anthropic, openai, ollama, gemini, checkVoices(), checkStockFootage(), checkYouTubeKey()]
   // Prepend the headline verdict about the provider actually selected.
   checks.unshift(checkActiveProvider(checks))
   return {

@@ -95,7 +95,10 @@ export default function VoiceRecorder({
     redoFromRef.current = redoFrom
     setError(null)
     setSavedMsg(null)
-    const withCamera = camera
+    // A punch-in ("redo from playhead") is an AUDIO re-assembly. If the camera toggle
+    // was flipped on after the take, honouring it here recorded video instead — the
+    // punch-in branch was then skipped and the WHOLE previous take silently replaced.
+    const withCamera = camera && redoFrom == null
     cameraRef.current = withCamera
     try {
       const stream = await navigator.mediaDevices.getUserMedia(

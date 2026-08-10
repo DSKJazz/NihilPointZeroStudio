@@ -85,14 +85,20 @@ export default function AssistantWidget(): React.JSX.Element {
 
   // Track which field (if any) is currently editable so we can ground + apply.
   useEffect(() => subscribeProducerTarget(() => setTarget(getProducerTarget())), [])
+  // Two separate effects on purpose. The old single effect checked `nearBottom || open`,
+  // and `open` is true for every stream token — so the guard was dead code and every
+  // token yanked the reader to the bottom while they were scrolled up reading.
+  useEffect(() => {
+    // Opening the panel jumps to the latest message once.
+    if (open) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [open])
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    // Only auto-scroll if the reader is already near the bottom — don't yank them down
-    // while they're scrolled up reading earlier advice during a stream.
+    // During a stream, follow only when the reader is already near the bottom.
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    if (nearBottom || open) el.scrollTo({ top: el.scrollHeight })
-  }, [msgs, open])
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight })
+  }, [msgs])
   // If nothing is editable, edit mode has no target — fall back to chat.
   useEffect(() => {
     if (!target && mode === 'edit') setMode('chat')
@@ -126,7 +132,10 @@ export default function AssistantWidget(): React.JSX.Element {
       setMsgs((cur) => {
         const copy = cur.slice()
         const i = copy.length - 1
-        if (copy[i]?.role === 'assistant' && !copy[i].content) copy[i] = { role: 'assistant', content: reply }
+        // The invoke's return value is the authoritative final answer — trusting the
+        // accumulated stream let a mid-stream Ollama failure show the truncated text
+        // with the fallback's full answer concatenated onto it.
+        if (copy[i]?.role === 'assistant' && reply) copy[i] = { role: 'assistant', content: reply }
         return copy
       })
     } catch (err) {

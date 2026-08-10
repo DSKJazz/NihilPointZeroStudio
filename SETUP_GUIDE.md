@@ -39,16 +39,29 @@ build the app yourself.
 ## First-run setup (2 minutes, optional but recommended)
 
 1. Open **Settings** (bottom of the left sidebar).
-2. **AI brain** — the app works out of the box on a free, keyless AI (needs internet).
-   For much smarter results, choose `anthropic` and paste your API key, with the model
-   set to `claude-sonnet-5`. (Stray spaces in model names are cleaned automatically.)
-3. Optional keys, all free tiers: **YouTube API key** (trend signals), **AI Horde key**
-   (faster "put me in the scene" photo generation).
-4. **Natural voice** — install the offline Piper voice when prompted for human-sounding
+2. **AI brain** — nothing to do. (Want Google's Gemini as a brain? **Settings →
+   Connect Gemini** walks you to a genuinely free key in about two minutes — optional.) The app runs on the local, free brain (Ollama) and
+   falls back to a free keyless online service. Both are free and stay that way. The
+   paid options (Claude, OpenAI) are present but asleep: they are never contacted and
+   never chosen for you, and you only wake one by deliberately selecting it yourself.
+3. **Connect YouTube** — free, about three minutes, and Google never asks for a card.
+   Press **Show me how** and follow the five numbered steps; each has a button that
+   opens the exact page, so nothing has to be found by hunting. Paste the key, press
+   **Check**, and the app really tries it and tells you in plain English whether it
+   works — and if it does not, which step fixes it. Then type your **@name** and it
+   finds your channel ID for you.
+
+   This is worth doing: without it the **Your channel** tab, the questions mined from
+   your comments, and the competitor gaps all read nothing at all.
+4. Other optional free keys: **AI Horde key** (faster "put me in the scene" photo
+   generation — a shared key is already built in, so this is only if you want your own).
+5. **Natural voice** — install the offline Piper voice when prompted for human-sounding
    narration that works with no internet.
 
-> **If answers ever feel dumb:** open the **Activity Log** tab. If it says *"…came from
-> the free AI instead"*, your paid key/model isn't working — fix it in Settings.
+> **If answers ever feel dumb:** open the **Activity Log** tab, then **Settings → Setup
+> Health**, which runs a real test of each service and names the actual cause. It will
+> never tell you to buy anything: the free and local paths are the ones that are meant
+> to work, and if one of them is failing that is what gets fixed.
 
 ## Updating later
 
@@ -98,6 +111,9 @@ If it cannot download for some reason, it tells you why in that same notice and 
 offers to show you the setup file instead, so the button never just does nothing.
 
 ### Also updating the code folder — one double-click (needs the code folder)
+**Two ways. Pick whichever you have in front of you.**
+
+### The easy way — one double-click (needs the code folder)
 
 If you have the `NihilPointZeroStudio-workshop` folder on your PC, open it and
 double-click **`UPDATE-MY-STUDIO.cmd`**.

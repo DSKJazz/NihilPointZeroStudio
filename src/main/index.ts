@@ -1,12 +1,11 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { checkForUpdate } from './updateCheck'
 import { runAutoBackupIfDue } from './autoBackup'
-import { runHealthCheck } from './health'
+import { runCaretakerPass, scheduleCaretaker } from './caretaker'
 import { scanStranded } from './strandedData'
 import { decideDataHome, holdsUserWork, isUsableDir, readPin, writePin } from './dataHome'
 import {
   getLastBackupNudgeAt,
-  getLastHealth,
   getSecondBackupDir,
   getSettings,
   getStartWithWindows,
@@ -14,11 +13,10 @@ import {
   listVideos,
   logActivity,
   setActiveProvider,
-  setLastBackupNudgeAt,
-  setLastHealth
+  setLastBackupNudgeAt
 } from './store'
 import { join } from 'path'
-import { registerIpcHandlers, selfUpdateEnv } from './ipc'
+import { registerIpcHandlers, selfUpdateEnv, setCaretakerBusyCheck } from './ipc'
 import { applyOpenAtLogin, shouldAutoInstall, shouldFocusOnSecondInstance, wasAutoStarted } from './autoStart'
 import { runSelfUpdate } from './selfUpdate'
 import { rescueMessage, rescueTarget } from './llm/rescueBrain'
@@ -345,31 +343,17 @@ if (!gotLock) {
         })()
       }, 45_000)
 
-      // Weekly QUIET health check: the manual "Run full check" only helps when the
-      // user remembers it. This runs the same live checks in the background, stores
-      // the verdict (Settings shows a red badge when something is actually broken),
-      // and writes a plain-English line to the Activity Log. Never blocks startup.
+      // THE CARETAKER replaced the old weekly quiet health check: same live checks,
+      // plus the dead-brain rescue and the lost-videos scan, on a schedule the user can
+      // see and change (Settings → Caretaker), with every pass recorded. First pass 90s
+      // after start so launch stays instant; then every N hours (default 6) while open.
+      setCaretakerBusyCheck(isBusy)
       setTimeout(() => {
-        void (async () => {
-          try {
-            const last = getLastHealth()
-            const lastAt = last.at ? Date.parse(last.at) : NaN
-            if (!Number.isNaN(lastAt) && Date.now() - lastAt < 7 * 24 * 60 * 60 * 1000) return
-            const report = await runHealthCheck()
-            const failed = report.checks.filter((c) => c.status === 'fail').map((c) => c.name)
-            setLastHealth(failed)
-            if (failed.length) {
-              logActivity(
-                'ai',
-                `Weekly self-check found ${failed.length} problem(s): ${failed.join(', ')}`,
-                'Open Settings → "Run full check" for details and fixes. Everything else keeps working.'
-              )
-            }
-          } catch {
-            /* a failed self-check must never bother the user */
-          }
-        })()
+        void runCaretakerPass('start', isBusy).catch(() => {
+          /* a failed self-check must never bother the user */
+        })
       }, 90_000)
+      scheduleCaretaker(isBusy)
     }
 
     app.on('activate', () => {

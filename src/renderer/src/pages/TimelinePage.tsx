@@ -159,7 +159,7 @@ export default function TimelinePage(): React.JSX.Element {
   }
 
   async function addAudio(): Promise<void> {
-    const paths = await window.api.timeline.pickClips()
+    const paths = await window.api.timeline.pickAudio()
     if (!paths.length) return
     const added: TimelineAudioClip[] = []
     for (const p of paths) {
@@ -229,7 +229,7 @@ export default function TimelinePage(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-serif text-gold-400">
             Timeline Editor
-            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
           </h1>
           <p className="text-ink-400 text-sm mt-1">
             A real non-linear editor: trim, reorder and crossfade clips, layer audio with fades, and add
@@ -441,8 +441,11 @@ function Waveform({ src }: { src: string }): React.JSX.Element {
     let cancelled = false
     void (async () => {
       try {
-        const url = fileUrl(src)
-        const buf = await (await fetch(url)).arrayBuffer()
+        // fetch() cannot read the file: scheme, so on the DESKTOP every waveform
+        // silently rendered blank. Reading the bytes over the api bridge works on
+        // both surfaces — Electron IPC on the PC, the HTTP bridge on the phone.
+        const bytes = await window.api.audio.readFile(src)
+        const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
         const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         const ctx = new Ctx()
         const audioBuf = await ctx.decodeAudioData(buf)

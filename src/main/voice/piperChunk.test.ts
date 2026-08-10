@@ -37,4 +37,20 @@ describe('chunkForPiper', () => {
   it('handles a single short line without splitting', () => {
     expect(chunkForPiper('Just one short line.')).toEqual(['Just one short line.'])
   })
+
+  // Regression: the old any-'.' splitter re-joined "45.3" as "45. 3", so a finance
+  // narration read decimal prices out wrong. Decimals must survive chunking intact.
+  it('never splits decimal numbers', () => {
+    const text = 'LUCK closed at 45.3 rupees. HUBC moved 2.75 percent today. ENGRO hit 310.5 again.'
+    const rejoined = chunkForPiper(text, 40).join(' ')
+    expect(rejoined).toContain('45.3')
+    expect(rejoined).toContain('2.75')
+    expect(rejoined).toContain('310.5')
+    expect(rejoined).not.toMatch(/\d\.\s+\d/)
+  })
+
+  it('still splits normal sentences at punctuation-plus-space', () => {
+    const chunks = chunkForPiper('One sentence here. Two sentence here. Three sentence here.', 25)
+    expect(chunks.length).toBeGreaterThan(1)
+  })
 })

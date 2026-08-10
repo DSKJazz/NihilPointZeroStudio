@@ -89,6 +89,10 @@ $ver = (Get-Content (Join-Path $repo 'package.json') -Raw | ConvertFrom-Json).ve
 $dot = [char]0x00B7  # the badge's middle-dot separator, kept out of this file's literal text
 $stamp = "v$ver $dot $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 
+Step 'Refresh the changelog' {
+    npm run changelog:update
+}
+
 Step 'Stamp build identity into the diagnostic report' {
     # Keeps the doc's "## Build:" line matching the sidebar badge's version+date prefix,
     # so comparing the two remains a valid staleness check.
@@ -231,6 +235,8 @@ Step 'Deploy docs to Desktop studio' {
     }
     # The setup guide lives at the repo root (it covers building from source too).
     Copy-Item (Join-Path $repo 'SETUP_GUIDE.md') $studio -Force
+    # Keep the release changelog next to the release docs so the Desktop copy matches GitHub.
+    Copy-Item (Join-Path $repo 'CHANGELOG.md') $studio -Force
     # The one-click backup tool the docs point at — must exist wherever the studio does.
     Copy-Item (Join-Path $repo 'BACKUP-NOW.cmd') $studio -Force
     # The one-click UPDATER. It has to travel with the studio for the same reason the

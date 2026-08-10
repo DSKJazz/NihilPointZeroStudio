@@ -8,6 +8,82 @@ work, not afterwards: before starting anything long, and again when it lands. It
 the repo because the container, the assistant's memory and the harness task list all die
 with the session — only what is pushed to GitHub survives.
 
+Last updated: **2026-08-07** (after PR #37, the lockfile-test merge).
+
+## The 2026-08-07 round — his screen recording, and what it exposed
+
+He sent a screen recording and a long voice-note. Shipped the same day (#25, #26):
+drawtext `expansion=none` (a % in a finance headline killed every build); `safe=true`
+plus a no-people/modest-dress clause on scene image prompts (NSFW/irrelevant imagery);
+the 402 "add a Claude/OpenAI key" message removed everywhere (PAID FEATURES SLEEP);
+a known-dead free service is skipped in the fallback chain; the Actions artifact upload
+(435 MB/build vs a 500 MB allowance — his "storage full" emails) now runs only when the
+release upload fails. Existing artifacts self-expire by 2026-08-16.
+
+**HE APPROVED ALL TEN ITEMS (2026-08-07, in his own words: "I approve all of your
+work").** Build order (dependencies first), each lands as its own small PR:
+
+1. ~~AI switchboard~~ — DONE, #28 (free-online OFF by default; off = never contacted)
+2. ~~Gemini + browser doors~~ — DONE, #28 (free AI-Studio key walkthrough; ChatGPT/Grok
+   open-in-browser only — NEVER stored passwords, NEVER browser automation)
+3. ~~Honesty gate~~ — DONE, #29 (all three builders refuse a mostly-failed video, with
+   reasons; fixes the "8-9 empty black videos")
+4. ~~Scene-length control~~ — DONE, #30 ("Every scene stays N sec" + per-card override)
+5. ~~Delete-everywhere~~ — DONE, #31 (library images: file + backups + entry together;
+   the boundary test caught an outside-userData deletion — never weaken it)
+6. ~~Expert offline brain~~ — DONE, #32 (Expert prefers Ollama whenever its switch is ON)
+7. ~~Music examples~~ — DONE (this branch): musicExamplePlan (pure, tested) + IPC
+   music:examples + Video Studio UI ("Make me examples to listen to").
+8. Merge Script Writer + Script Pad — THE ONLY ITEM LEFT. UI-heavy; plan: Script
+   Writer's generate flow becomes a panel inside Script Pad, one sidebar entry, old
+   route redirects.
+9. ~~The Caretaker~~ — DONE (this branch): src/main/caretaker.ts + shared/caretaker.ts +
+   CaretakerCard in Settings. Replaces the old weekly quiet health check. Busy-check
+   injected from main/index (setCaretakerBusyCheck) to avoid the import cycle.
+10. Free-video watch — fold into a caretaker note when a candidate service appears;
+    nothing reliable exists today (researched 2026-08-07)
+
+Work these in order without asking. Push at every coherent step. Every done item is
+already MERGED to main and in the rolling release — nothing in flight is unpushed.
+
+## CI WAS RED FOR NINE MERGES AND I DID NOT LOOK (2026-08-07) — read this before reporting
+
+I merged #28-#34, said "shipped", and only checked the build afterwards. It had been
+FAILING since a2f5c80: that commit is a 512-line pure DELETION of the lock file which
+removed every `@esbuild/*` platform entry for esbuild 0.28.1 (vitest's copy) while
+leaving the 0.21.5 tree intact. Nothing local complains — an existing node_modules never
+needs them — but `npm ci` installs strictly from the lock and aborts:
+
+    npm error Missing: @esbuild/win32-x64@0.28.1 from lock file
+
+So nine merges produced NO exes. Fixed in #35 by restoring the complete lock, verified
+with `npm ci --dry-run` (773 packages, no missing entries) rather than by eye.
+
+**CLOSED OUT, verified end to end:** the build for the fix commit (`5b3194f`, run
+31171239755) concluded `success`. The rolling `latest` release was read back afterwards:
+both exes carry the `10:54` timestamp from that run, and all six docs (plus
+BACKUP-NOW.cmd) are present and freshly re-uploaded. **It was safe to tell the user to
+update at that point**, and he was told so.
+
+A permanent guard against the same class of bug is now merged too: `#37` added
+`src/shared/lockfile.test.ts`, which reads `package.json` + `package-lock.json` and
+performs the same completeness check `npm ci` does (every optional/hard dependency of
+every locked package actually resolves) as a plain `npm test` — no network, runs in this
+sandbox. It passed against the restored lock and `npm run lint` + all five typechecks
+were clean before merging. Merging #37 produced one more `main` build (`0ba9321`,
+run 31195069652) — **check its conclusion before assuming green**, same rule as above.
+
+**THE RULE, restated because I broke it:** "pushed is not shipped" applies to THE RUN,
+not just the release assets. Before the word "shipped" is used, read the workflow run's
+conclusion for the merge commit. A merge that cannot even install is not a merge that
+shipped. If the lock is ever regenerated, check `npm ci --dry-run` in the same breath.
+
+## THE 493-SHOT INCIDENT (2026-08-08, from his screenshot) — fixed on this branch
+storyboardFromScript: beat count ignored the target (2 sentences/beat → 493 beats) and
+the scaler's per-beat round+clamp let the 2s floor push a "606s" film to 986s real
+seconds. Fix: target decides beat count (~6s/shot), largest-remainder distribution sums
+to the target EXACTLY. Pinned in src/shared/storyboard.test.ts — do not weaken the
+"sums to the requested total EXACTLY" test.
 Last updated: **2026-08-02** (after PR #21).
 
 ---
@@ -123,6 +199,11 @@ He has told me to stop asking and just work: plan, build, test, stress test, fix
 back only when it is done, with a detailed report. Work the queue below in order without
 checking in. See DO NOT ASK in `CLAUDE.md` for the three narrow exceptions.
 
+## Done in the 2026-08-02 run
+
+| PR | What |
+|---|---|
+| #23 | **P3 — the YouTube key walkthrough.** The last of the approved four. Also fixed the defect underneath it: five different empty-read reasons all printed one wrong sentence |
 ## Done in the 2026-08-02 run (all merged)
 
 | PR | What |
@@ -133,6 +214,54 @@ checking in. See DO NOT ASK in `CLAUDE.md` for the three narrow exceptions.
 | #18 | Ollama becomes the default brain; PAID FEATURES SLEEP rule |
 | #17 | Ship-from-behind guard; local-model timeouts; unused paid keys go quiet |
 
+1649 tests passing, 0 lint errors, five clean typechecks, build green.
+
+### The sandbox now needs one workaround to run the tests at all
+
+`npm ci` FAILS outright in the container: `xlsx` is installed from `https://cdn.sheetjs.com/...`
+and the proxy returns 403, which aborts the whole install, leaving no `node_modules`. The
+RESUME used to say "five test files fail"; it is worse than that — nothing installs.
+
+What works, and is safe because both files are restored afterwards:
+
+```bash
+cp package.json package-lock.json <scratch>/          # keep originals
+# delete the xlsx entry from dependencies in BOTH files, then:
+npm install --no-audit --no-fund
+git checkout package.json package-lock.json           # put them back BEFORE committing
+# then, so the typechecks pass, stub the missing module (node_modules is gitignored):
+mkdir -p node_modules/xlsx
+printf '{"name":"xlsx","version":"0.20.3","main":"index.js","types":"index.d.ts"}' > node_modules/xlsx/package.json
+printf 'declare const xlsx: any\nexport = xlsx\n' > node_modules/xlsx/index.d.ts
+echo 'module.exports = {}' > node_modules/xlsx/index.js
+```
+
+After that: all five typechecks clean, lint clean, and only `src/main/data/psxLive.test.ts`
+fails (it needs the real xlsx) plus `src/main/autoBackup.test.ts` when the electron binary
+did not download. Neither is a defect; both pass on the Windows runner.
+
+**CI does not run on feature branches** — `windows-build.yml` is `branches: [main]` on
+purpose, because Windows runners bill at 2x. A PR with no checks is normal here; the build
+only happens after the merge, which is also when the rolling release is refreshed.
+
+## WHAT THE #23 AUDIT PROVED, AND WHY IT IS WORTH REPEATING
+
+After building the walkthrough I ran four independent reviewers over the diff — correctness,
+honesty, integration, quota — each told to REFUTE rather than confirm. They found **eighteen
+issues in code that already had 49 passing tests, a clean lint and five clean typechecks**.
+Three were real bugs that would have reached the user:
+
+- The saved key was not the verified key (cleaning applied to one and not the other), so a
+  key pasted with quotes went green and then failed every request afterwards.
+- The restricted-key branch could never fire, because Google buries the useful reason in
+  `error.details` behind a useless `errors[0].reason: 'forbidden'`. My test passed because
+  I had fed it a hand-simplified body instead of Google's real one.
+- "Find the gaps" spent 800 quota units — 8% of the free day — running searches whose
+  results it was guaranteed to discard.
+
+**The lesson: my own tests confirm what I already believed.** Where a test is built from an
+assumed response shape, it certifies the assumption. Use real payloads, and get an
+adversarial reader onto anything that classifies an external service's replies.
 1551 tests passing, 0 lint errors, five clean typechecks, build green.
 
 ## BLOCKED FROM THIS SANDBOX — do not attempt blind
@@ -149,6 +278,18 @@ before adding it. Do not guess.
 
 ## Approved by the user, NOT yet built
 
+**Nothing.** All four approved items are built and merged.
+
+1. ~~P3 YouTube key walkthrough~~ — done in #23. What it turned into, because the shape
+   matters for the next thing like it: the four steps that live inside the user's own
+   Google account became one button each landing on the EXACT page, and everything after
+   the paste was automated — the key is tested for real before being saved, each Google
+   failure is named with the one action that fixes it, and the channel id is looked up
+   from the @handle so the buried `UCxxxx` string never has to be found. Underneath it
+   was a worse bug: `fetchMyChannelVideos` returned `[]` for no-key, no-channel,
+   key-refused, offline AND empty-channel alike, and all three panels printed
+   "check the YouTube key and channel ID in Settings" for all five. `readMyChannel()`
+   now carries a `ChannelReadProblem` and they are told apart.
 1. **P3 — in-app YouTube API key walkthrough.** Free, 10k units/day. Without it the whole
    Your Channel tab and every evidence/trend feature is inert. THE LAST ONE LEFT of the
    approved four.
