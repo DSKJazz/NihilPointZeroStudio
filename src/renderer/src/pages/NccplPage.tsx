@@ -52,12 +52,16 @@ export default function NccplPage(): React.JSX.Element {
   })
 
   async function upload(): Promise<void> {
-    setBusy('Reading your NCCPL file…'); setError(null); setNote(null); setScript(''); setSummary(''); setKind(null)
+    // Do NOT clear the existing analysis/script before the dialog: pressing Cancel
+    // in the file picker used to wipe them (and autosave then persisted the loss).
+    // The old state is replaced only once a new file has actually been read.
+    setBusy('Reading your NCCPL file…'); setError(null); setNote(null)
     try {
       const res = await window.api.data.importFile()
       if (res.canceled) return
       if (res.error) { setError(res.error); return }
       if (res.analysis) {
+        setScript('')
         setKind(res.analysis.kind as Kind)
         setSummary(res.analysis.summary)
         setFileName(res.analysis.fileName)
@@ -105,7 +109,7 @@ export default function NccplPage(): React.JSX.Element {
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-serif text-gold-400">NCCPL Analysis
-        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
       </h1>
       <p className="text-ink-400 text-sm mt-1">
         NCCPL's portal blocks automated access, so download the FIPI/LIPI (or market) file from NCCPL

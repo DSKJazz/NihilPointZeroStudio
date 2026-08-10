@@ -54,6 +54,9 @@ jobs:
       - name: Run the tests
         run: npm run test
 
+      - name: Refresh the changelog
+        run: npm run changelog:update
+
       - name: Lint
         run: npm run lint
 
@@ -74,6 +77,25 @@ jobs:
       # Access Token is not set" AFTER both exes had already built successfully. The
       # release is handled explicitly further down, with a token, so its implicit
       # attempt is pure downside.
+      # THE BUILD TAG IS DECIDED HERE, NOT LEFT TO CHANCE.
+      #
+      # Two things have to agree byte-for-byte: the gold badge baked into the exe, and the
+      # "Build ..." line written into the release notes below. The app's update check reads
+      # that line and compares it with its own badge, so if they differ by even a minute
+      # the app can update successfully and STILL believe it is behind — an update loop.
+      #
+      # Left to itself, electron.vite.config.ts self-stamps from the clock at the moment
+      # each process is bundled, which is not a value this job can quote afterwards.
+      # Computing it once here and exporting NPZ_BUILD_TAG (the same variable ship.ps1
+      # uses) makes the badge and the notes provably the same string.
+      - name: Decide the build tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="$(node -p "require('./package.json').version")"
+          STAMP="$(date -u '+%Y-%m-%d %H:%M')"
+          echo "NPZ_BUILD_TAG=v$VER · $STAMP · ${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
       - name: Build the Windows exes
         run: npm run dist:win
 
@@ -91,7 +113,6 @@ jobs:
         run: |
           set -euo pipefail
           TAG=latest
-          STAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
           # Create the rolling release the first time; afterwards just reuse it.
           if ! gh release view "$TAG" >/dev/null 2>&1; then
@@ -101,10 +122,15 @@ jobs:
               --latest
           fi
 
-          # The exes AND the four docs. The docs were left out until now, so the download
-          # page served a brand-new exe alongside instructions from days earlier — which
-          # is the worst combination, because the docs describe features the user then
-          # cannot find, or omit the ones that are there.
+          # The exes AND every shipped document. Leaving any of them out means the
+          # download page serves a brand-new exe alongside instructions from days
+          # earlier — the worst combination, because the docs then describe features the
+          # user cannot find, or omit the ones that are there.
+          #
+          # Eight documents, not four (user's instruction, 2026-08-01): CHANGELOG.md,
+          # QA-REPORT.md, SETUP_GUIDE.md and UPDATE-MY-STUDIO.cmd are maintained on the
+          # same footing as the four core studio docs so they can never go stale next to
+          # the others.
           gh release upload "$TAG" \
             "release/NIHILPOINTZERO-OS-setup.exe" \
             "release/NIHILPOINTZERO-OS-portable.exe" \
@@ -112,21 +138,47 @@ jobs:
             "docs/NIHILPOINTZERO-GUIDE.txt" \
             "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
             "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "docs/QA-REPORT.md" \
+            "CHANGELOG.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
             --clobber
 
+          # THE LAST LINE IS LOAD-BEARING, NOT DECORATION.
+          #
+          # main/updateCheck.ts finds the newest published version by matching
+          #   /Build (v[^\n*]+)/
+          # against these notes. This step used to write only "Built automatically from
+          # main on <stamp>" — no "Build v..." anywhere — so the check found nothing,
+          # concluded there was no update, and stayed silent. Every release published from
+          # a cloud session was invisible to every installed app. The user reported the
+          # update notice "never appearing"; this was why.
+          #
+          # Rules for anyone editing the line: it must contain "Build " followed by the
+          # exact build tag, the tag must carry "yyyy-mm-dd HH:MM" (tagDate parses that),
+          # and NOTHING containing an asterisk may follow the tag on that line, because the
+          # capture stops at the first '*'. Hence Build goes last.
           gh release edit "$TAG" \
             --title "Download NIHILPOINTZERO-OS (always the newest version)" \
-            --notes "Built automatically from main on $STAMP (commit ${GITHUB_SHA::7}).
+            --notes "Built automatically from main (commit ${GITHUB_SHA::7}).
 
           - **NIHILPOINTZERO-OS-setup.exe** — installs the app (recommended).
           - **NIHILPOINTZERO-OS-portable.exe** — single file, runs from anywhere.
 
           Note: this refreshes the GitHub download only. To update the studio folder on
-          your own PC, run \`npm run ship\` there."
+          your own PC, run \`npm run ship\` there.
 
-      # Keeps the exes reachable for 14 days even if the release step ever fails.
-      - name: Keep a copy of the build
-        if: always()
+          Build $NPZ_BUILD_TAG"
+
+      # SAFETY NET ONLY ON FAILURE. This used to run on every build (if: always,
+      # 14-day retention), which stored ~435 MB of exes per build against GitHub's
+      # 500 MB free Actions-storage allowance — one build nearly filled it, the second
+      # blew past it, and the owner got "95% full" and "100% full" emails an hour
+      # apart. The artifact's only purpose is to save the exes when the RELEASE upload
+      # fails, so that is now the only time it exists. Normal-case storage cost: zero.
+      - name: Keep a copy of the build (only if the release upload failed)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: windows-exes
@@ -134,4 +186,4 @@ jobs:
             release/NIHILPOINTZERO-OS-setup.exe
             release/NIHILPOINTZERO-OS-portable.exe
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3

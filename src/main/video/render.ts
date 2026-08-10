@@ -253,7 +253,11 @@ export function buildFfmpegArgs(params: {
       ? ['-f', 'lavfi', '-i', `color=c=${bg.color}:s=${layout.w}x${layout.h}:d=${dur.toFixed(2)}`]
       : bg.kind === 'animated'
         ? ['-f', 'lavfi', '-i', bg.source]
-        : ['-i', bg.path]
+        : // Loop a file background: the output uses -shortest, so a background even
+          // slightly shorter than the narration (stock B-roll with a failed segment,
+          // a short AI clip) used to silently cut off the END of the user's video.
+          // Looping makes the narration the governing duration in every case.
+          ['-stream_loop', '-1', '-i', bg.path]
   const args = ['-y', ...bgInput, '-i', audioPath]
   if (musicPath) args.push('-stream_loop', '-1', '-i', musicPath)
   for (let i = 0; i < sfxCount; i++) args.push('-i', whooshPath as string)
@@ -441,7 +445,10 @@ export interface SlideshowShot {
  */
 export function planSlideshowShots(imageCount: number, durationSec: number): SlideshowShot[] {
   const imgs = Math.max(1, imageCount)
-  const target = Math.min(12, Math.max(imgs, Math.round(Math.max(1, durationSec) / 6)))
+  // The image floor must WIN over the 12-shot pacing cap: with the old
+  // min(12, max(imgs, …)) ordering, a 30-image build silently discarded every
+  // image past the 12th — images the app had just spent minutes generating.
+  const target = Math.max(imgs, Math.min(12, Math.round(Math.max(1, durationSec) / 6)))
   // Shot lengths TIGHTEN toward the end instead of every shot getting an equal slice.
   // The last third of a finance video is where people leave, and an even 6-6-6 split
   // makes the end feel exactly as slow as the beginning when it needs to feel faster.
@@ -767,7 +774,10 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
     if (showText) {
       const titleAlpha = tpl.animateTitle ? `:alpha='${titleAlphaExpr()}'` : ''
       chains.push(
-        `[${base}]drawtext=fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
+        // expansion=none: drawtext expands %-sequences even in a textfile, so a headline
+        // like "OIL UP 40%!" kills the whole build with "Stray %". Nothing here uses
+        // text expansion, so it is switched off rather than escaped around.
+        `[${base}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
       )
       chains.push(`[v0][wave]overlay=x=0:y=H-h-${layout.waveMargin}[v1]`)
     } else {
@@ -797,14 +807,14 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
             `enable='between(t,${s},${end})'[${bar}]`
         )
         chains.push(
-          `[${bar}]drawtext=fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.bgColor}:fontsize=${Math.round(cardFont * 0.5)}:` +
+          `[${bar}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.bgColor}:fontsize=${Math.round(cardFont * 0.5)}:` +
             `x='${-barW}+${travel}*${slide}':y=${barY + Math.round(barH * 0.28)}:enable='between(t,${s},${end})'[${next}]`
         )
       } else {
         // Kinetic centered card: fade in while sliding up ~40px.
         const y = `(h-th)/2 + 40*(1-min((t-${s})/0.6,1))`
         chains.push(
-          `[${prev}]drawtext=fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.cardColor}:fontsize=${cardFont}:` +
+          `[${prev}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(cardFile)}':fontcolor=${theme.cardColor}:fontsize=${cardFont}:` +
             `x=(w-tw)/2:y='${y}':alpha='${alpha}':enable='between(t,${s},${end})'[${next}]`
         )
       }

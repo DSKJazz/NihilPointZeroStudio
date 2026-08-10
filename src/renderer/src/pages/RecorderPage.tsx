@@ -472,8 +472,11 @@ export default function RecorderPage(): React.JSX.Element {
       </div>
 
       <div className="mt-4 inline-flex rounded-md border border-ink-700 overflow-hidden text-sm">
+        {/* stopEverything(): switching source must actually release the webcam/mic —
+            resetting the previewing flag alone left the camera light on and the
+            live feed still playing in the preview element. */}
         {(remote ? (['camera', 'voice'] as Source[]) : (['camera', 'screen', 'voice'] as Source[])).map((s) => (
-          <button key={s} onClick={() => { setSource(s); setPreviewing(false); setActual(null) }} disabled={recording} className={`px-3 py-1.5 ${source === s ? 'bg-gold-500 text-ink-950' : 'text-ink-300 hover:bg-ink-800'} disabled:opacity-40`}>
+          <button key={s} onClick={() => { stopEverything(); setSource(s); setPreviewing(false); setActual(null) }} disabled={recording} className={`px-3 py-1.5 ${source === s ? 'bg-gold-500 text-ink-950' : 'text-ink-300 hover:bg-ink-800'} disabled:opacity-40`}>
             {s === 'camera' ? '📷 Camera + Mic' : s === 'screen' ? '🖥 Screen' : '🎙 Voice only — no face'}
           </button>
         ))}

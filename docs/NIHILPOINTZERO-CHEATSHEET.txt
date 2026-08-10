@@ -1,6 +1,19 @@
 ==============================  NIHILPOINTZERO — 1-PAGE CHEAT SHEET  ==============================
 (Full manual: NIHILPOINTZERO-GUIDE.txt · Start here: HOW-TO-USE.txt · What's real/free/online: MEGA-DIAGNOSTIC-REPORT.md)
 
+AM I CURRENT? ..... Settings -> Version box at the top. Says up to date / newer available /
+                    could not check, and shows both version stamps. "Check now" re-checks.
+UPDATES ........... nothing to do. The studio opens when Windows starts and installs
+                    anything new right then, before you sit down. Never during a render,
+                    and never when YOU opened the app yourself. Off switch: Settings ->
+                    "Open the studio when Windows starts".
+UPDATE BY HAND .... open the app. If a blue "A newer version exists" notice appears at the
+                    bottom, press "Get the update". Done - the app downloads it, starts it
+                    and reopens updated. Say yes to Windows once. No web page, no Downloads
+                    folder, no File Explorer.
+                    WHOLE WORKSHOP TOO? double-click UPDATE-MY-STUDIO.cmd in the code folder
+                    - that also refreshes the code folder, your Desktop folder and GitHub.
+                    5-10 min, walk away.
 RUN IT ............ EITHER double-click NIHILPOINTZERO-OS-portable.exe (portable; unpacks ~40-60s)
                     OR run NIHILPOINTZERO-OS-setup.exe ONCE to install -> opens in ~2s from then on,
                     taskbar pins are SAFE, and it uses the SAME data folder (same videos/settings).
@@ -41,6 +54,25 @@ YOUR CHANNEL ...... a new tab. Reads YOUR OWN videos and tells you which title s
                     written for you). Also reads your COMMENTS and ranks the questions people
                     keep asking, quoted word for word. Needs the YouTube key + channel ID in
                     Settings; costs about 4 of the 10,000 free daily requests.
+CARETAKER ......... Settings -> the studio checks itself: health, dead AI rescue, lost videos.
+                    Recommended every 6h + at app start (the why is on the card). You set the
+                    schedule, pause it, run it now, delete its record. Never runs during a render.
+AI SWITCHBOARD .... Settings -> every AI brain with a plain ON/OFF switch + "Use this one".
+                    OFF means never contacted, not even as a backup. The old free online AI
+                    (went paid) is OFF; your local brain stays ON; paid ones stay asleep.
+CONNECT GEMINI .... Settings -> "Connect Gemini" -> "Show me how". Google gives the key away
+                    FREE (no card): 2 minutes, buttons for each step, tested for real before
+                    saving. ChatGPT/Grok have no free machinery, so they get open-in-browser
+                    buttons — the studio never stores your passwords.
+CONNECT YOUTUBE ... Settings -> "Connect YouTube" -> "Show me how". Free, ~3 min, no card. Five
+                    steps, each with a button that opens the exact page. Paste the key, press
+                    Check: the app really tries it and says in plain English what is wrong and
+                    which step fixes it. Then type your @name and it finds your channel ID for
+                    you (YouTube hides it three menus deep) and shows the channel name back so
+                    you can see it got the right one. Empty result? It now says WHICH of the
+                    seven reasons — including "could not reach YouTube", which is not the same
+                    as "you have no videos". RED = wrong, here is the fix. AMBER = could not
+                    tell, nothing for you to do.
 READ IT TO ME ..... Script Writer -> hear your script spoken at 2x, with a list of what to listen
                     for: sentences too long for one breath, a word said twice, a number you cannot
                     read aloud, a line that switches language. A 12-min script proofs in 6 min.
@@ -65,6 +97,14 @@ THUMBNAILS ........ Script Writer -> "Test two thumbnails properly". Different v
 UNDO IN SCENES ..... Scene Studio -> Ctrl+Z, like the Timeline and Storyboard already had
 CRASHES ........... if the app ever closes on its own it now says so and writes it into
                     Settings -> Known Issues first, instead of vanishing silently
+RENDER FAILED? .... just press Build again. It reuses the narration it already recorded
+                    (the slow part) instead of speaking the whole script over. Only ever
+                    for the SAME words in the SAME voice - change a word and it starts fresh
+WATCH ONE SCENE ... Scene Studio -> any finished scene -> "Watch this scene". A few seconds,
+                    with the real camera move and look, instead of rendering the whole video
+BIG VIDEO LAGGY ... Timeline Editor -> "Scrub smoothly" on any clip over 1080p. Edits a small
+                    stand-in; your cuts land in exactly the same place; the finished video is
+                    still made from the full-quality original
 QUIETLY BETTER .... every render now: one encode instead of four (less quality lost), audio at
                     YouTube's own -14 LUFS target (so it stops turning you down), slow camera
                     movement on footage instead of a frozen frame, scene lengths that tighten

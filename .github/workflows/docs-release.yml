@@ -1,4 +1,4 @@
-# Keeps the four shipped docs on the GitHub download page current.
+# Keeps every shipped document on the GitHub download page current.
 #
 # WHY THIS IS A SEPARATE WORKFLOW
 # The Windows build deliberately SKIPS documentation-only pushes: it takes 10-15 minutes
@@ -20,6 +20,9 @@ on:
       - 'docs/NIHILPOINTZERO-GUIDE.txt'
       - 'docs/NIHILPOINTZERO-CHEATSHEET.txt'
       - 'docs/MEGA-DIAGNOSTIC-REPORT.md'
+      - 'SETUP_GUIDE.md'
+      - 'UPDATE-MY-STUDIO.cmd'
+      - 'BACKUP-NOW.cmd'
   workflow_dispatch:
 
 permissions:
@@ -54,5 +57,8 @@ jobs:
             "docs/NIHILPOINTZERO-GUIDE.txt" \
             "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
             "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
             --clobber
           echo "Docs on the download page now match main."

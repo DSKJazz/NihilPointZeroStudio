@@ -2,20 +2,16 @@ import { AnthropicProvider } from './anthropic'
 import { OpenAIProvider } from './openai'
 import { OllamaProvider } from './ollama'
 import { PollinationsProvider } from './pollinations'
+import { GeminiProvider } from './gemini'
 import { ResilientProvider } from './resilient'
 import { LLMConfigError, LLMRequestError, type LLMProvider } from './types'
 import { logAiError } from './errorLog'
 import { isProviderDead, recordProviderFailure, recordProviderSuccess } from './deadProviders'
 
 import { CHOSEN_TIMEOUT_MS, FALLBACK_TIMEOUT_MS } from './limits'
+import { fallbackTimeoutMs } from './timeouts'
 
-/**
- * How long a FALLBACK Ollama gets before the chain moves on. The user's chosen provider
- * keeps the full 20-minute allowance; a backup does not, because a silent multi-minute
- * wait is exactly the "the app froze" complaint this module exists to fix.
- */
-const FALLBACK_OLLAMA_TIMEOUT_MS = FALLBACK_TIMEOUT_MS
-import { getDecryptedKey, getModel, getSettings, logActivity } from '../store'
+import { getDecryptedKey, getModel, getProviderEnabled, getSettings, logActivity } from '../store'
 import { broadcastAiFallback } from '../notify'
 
 /** Builds the raw provider for the chosen id (throws for a paid provider with no key). */
@@ -25,8 +21,9 @@ function buildProvider(id: string, model: string, timeoutMs = CHOSEN_TIMEOUT_MS)
   const m = (model || '').trim()
   if (id === 'free') return new PollinationsProvider(m || 'openai')
   if (id === 'ollama') return new OllamaProvider(m)
-  const key = getDecryptedKey(id as 'anthropic' | 'openai')
+  const key = getDecryptedKey(id as 'anthropic' | 'openai' | 'gemini')
   if (!key) throw new LLMConfigError(`No API key configured for ${id}. Add one in Settings before generating.`)
+  if (id === 'gemini') return new GeminiProvider(key, m, timeoutMs)
   if (id === 'anthropic') return new AnthropicProvider(key, m, timeoutMs)
   return new OpenAIProvider(key, m, timeoutMs)
 }
@@ -42,6 +39,11 @@ function buildProvider(id: string, model: string, timeoutMs = CHOSEN_TIMEOUT_MS)
  */
 export function getActiveProvider(): LLMProvider {
   const settings = getSettings()
+  // THE SWITCHBOARD IS LAW. A brain the user switched off is never contacted — not as
+  // a fallback, not as a safety net, not "just this once". An off switch that still
+  // answers is not an off switch. The active provider is always allowed (choosing it
+  // was the clearest possible ON), which getProviderEnabled() guarantees.
+  const enabled = getProviderEnabled()
   const chain: LLMProvider[] = []
   const labels: string[] = []
   // A provider that recently refused permanently (revoked key, service now demanding
@@ -84,17 +86,46 @@ export function getActiveProvider(): LLMProvider {
   }
   // Local Ollama is a genuinely different brain, needs no key and no internet, and is the
   // only thing that still works when the hosted free service refuses everyone. An absent
-  // Ollama costs milliseconds (localhost refuses instantly). As a FALLBACK it is given a
-  // short leash: a present-but-slow Ollama generating on CPU would otherwise hold a single
-  // request for up to 20 minutes, which is the very freeze this whole change exists to fix.
-  if (!labels.includes('ollama')) {
-    chain.push(new OllamaProvider(getModel('ollama'), FALLBACK_OLLAMA_TIMEOUT_MS))
+  // Ollama costs milliseconds (localhost refuses instantly).
+  //
+  // ITS ALLOWANCE IS NOT THE CLOUD ONE. It used to get the flat 90-second fallback leash,
+  // which was chosen for cloud backups that answer in seconds when healthy. On a CPU-only
+  // machine an 8B model cannot finish a long script in 90 seconds — not sometimes, ever —
+  // so the app reliably killed the only working brain it had left and then apologised for
+  // it. (Reported from a real machine: "Ollama did not respond within 2 minute(s)", with
+  // the answer then coming from the free AI.) See llm/timeouts.ts.
+  //
+  // Being generous here is close to free: the underlying deadline is a socket INACTIVITY
+  // timeout, so a fast answer still returns immediately. It only bites when nothing is
+  // coming back at all, which is exactly when it should.
+  if (!labels.includes('ollama') && enabled.ollama) {
+    // Not the last resort at this point: the keyless free service is appended below.
+    const ollamaMs = fallbackTimeoutMs({ isLocal: true, isLastResort: false })
+    chain.push(new OllamaProvider(getModel('ollama'), ollamaMs))
     labels.push('ollama')
+  }
+  // Gemini as a fallback when it is switched on and has its (free) key: a genuinely
+  // different brain that costs nothing, tried after the local one, before the free net.
+  if (!labels.includes('gemini') && enabled.gemini && !isProviderDead('gemini')) {
+    try {
+      chain.push(buildProvider('gemini', getModel('gemini'), FALLBACK_TIMEOUT_MS))
+      labels.push('gemini')
+    } catch {
+      /* no key saved — nothing to add, and nothing to report: it is simply not set up */
+    }
   }
   // Keyless safety net, so the chain is never empty. Added only ONCE: it used to be pushed
   // twice, so a failing free service was asked the identical question a second time and the
   // user simply waited twice as long for the same error.
-  if (!labels.includes('free')) {
+  //
+  // BUT NOT WHEN IT IS KNOWN-DEAD. The hosted service began demanding payment (HTTP 402,
+  // permanent), which makes it a paid service in all but name — and the standing rule is
+  // that paid things are never contacted unless the user chose them. Appending it anyway
+  // meant every failed Ollama answer ended with ITS error on screen: "requires a paid
+  // account", which reads as *go and pay*. Skipped while dead (unless it is the active,
+  // deliberately-chosen provider); it re-enters the chain by itself if it ever recovers,
+  // because deadProviders re-probes and clears the mark on success.
+  if (!labels.includes('free') && enabled.free && (settings.activeProvider === 'free' || !isProviderDead('free'))) {
     chain.push(new PollinationsProvider(getModel('free') || 'openai'))
     labels.push('free')
   }

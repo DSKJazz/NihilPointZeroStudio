@@ -21,6 +21,7 @@ import { useState } from 'react'
 import { formatHour } from '../../../shared/channelLearning'
 import { seriesHeadline, seriesLinks, type Series } from '../../../shared/series'
 import type { QuestionCluster } from '../../../shared/commentMining'
+import ChannelProblem from '../components/ChannelProblem'
 
 type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
 type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
@@ -34,6 +35,7 @@ export default function ChannelPage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
   const [score, setScore] = useState<Awaited<ReturnType<typeof window.api.channel.scoreTitle>> | null>(null)
+  const [scoring, setScoring] = useState(false)
   const [openSeries, setOpenSeries] = useState<Series | null>(null)
 
   async function run(which: 'learn' | 'comments' | 'gaps'): Promise<void> {
@@ -58,8 +60,9 @@ export default function ChannelPage(): React.JSX.Element {
         average across millions of channels that are not yours. This is not that.
       </p>
       <p className="text-ink-500 text-xs mt-2">
-        Needs your YouTube key and channel ID in Settings. Reading a hundred of your own videos costs about four of
-        the ten thousand daily free requests, so this is effectively free to run.
+        Needs the free YouTube connection — Settings has a three-minute walkthrough that finds your channel from your
+        @name. Reading a hundred of your own videos costs about four of the ten thousand daily free requests, so this
+        is effectively free to run.
       </p>
 
       {error && <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/5 p-3 text-xs text-red-300">{error}</div>}
@@ -77,11 +80,18 @@ export default function ChannelPage(): React.JSX.Element {
           </button>
         </div>
 
+        {/* Shown whenever there is a problem, INCLUDING when videos did come back: a
+            partial read returns real data and an incomplete-read notice at the same time,
+            and hiding the notice would let a half-read history pass as the whole story.
+            Was one sentence — "check the key and channel ID in Settings" — printed for
+            five different situations, four of which it described wrongly. */}
+        {learned?.problem && (
+          <div className="mb-2">
+            <ChannelProblem problem={learned.problem} />
+          </div>
+        )}
         {learned && learned.videoCount === 0 && (
-          <p className="text-xs text-ink-400">
-            No videos could be read. Check the YouTube key and channel ID in Settings — with no data the honest answer
-            is nothing, so nothing is claimed.
-          </p>
+          <p className="text-xs text-ink-500">With no data the honest answer is nothing, so nothing is claimed.</p>
         )}
 
         {learned && learned.videoCount > 0 && (
@@ -176,14 +186,31 @@ export default function ChannelPage(): React.JSX.Element {
                   className="flex-1 rounded-md bg-ink-950 border border-ink-700 text-ink-200 text-xs px-2 py-1.5"
                 />
                 <button
-                  onClick={() => void window.api.channel.scoreTitle(titleDraft).then(setScore)}
-                  disabled={!titleDraft.trim()}
+                  // Guarded: each press is a FULL channel read, so an impatient double-click
+                  // spent the quota twice and let two replies race — the slower one winning
+                  // and scoring a title the user had already changed.
+                  onClick={() => {
+                    if (scoring) return
+                    setScoring(true)
+                    void window.api.channel
+                      .scoreTitle(titleDraft)
+                      .then(setScore)
+                      .finally(() => setScoring(false))
+                  }}
+                  disabled={!titleDraft.trim() || scoring}
                   className="rounded-md border border-gold-500/40 text-gold-400 hover:bg-gold-500/10 disabled:opacity-40 text-xs px-3 py-1.5 transition-colors"
                 >
-                  Score it
+                  {scoring ? 'Reading your videos…' : 'Score it'}
                 </button>
               </div>
-              {score && (
+              {score?.problem && (
+                <div className="mt-2">
+                  {/* Without this the score said "not enough history to tell" — a claim about
+                      the channel — when the read had actually failed. */}
+                  <ChannelProblem problem={score.problem} />
+                </div>
+              )}
+              {score && !score.problem && (
                 <div className="mt-2 rounded-md border border-ink-800 bg-ink-950 p-2 space-y-1">
                   {score.reasons.map((r, i) => (
                     <div key={i} className="text-xs text-ink-300">
@@ -211,11 +238,21 @@ export default function ChannelPage(): React.JSX.Element {
           </button>
         </div>
         <p className="text-xs text-ink-400">
-          {gaps
+          {/* The headline is only true if something was actually read. With no key it says
+              "No competitor videos read yet — search a topic first", which is a statement
+              about the channel rather than about the read having failed, sitting directly
+              above a card saying nothing could be read. Suppressed when there is a problem. */}
+          {gaps && (!gaps.problem || gaps.problem.kind === 'partial')
             ? gaps.headline
             : 'Trending tells you what is popular. This tells you what is popular that YOU have never made — demonstrated demand, with nothing of your own competing for it.'}
         </p>
-        {gaps && (
+        {gaps?.problem && (
+          <div className="mt-3">
+            <ChannelProblem problem={gaps.problem} />
+          </div>
+        )}
+
+        {gaps && (!gaps.problem || gaps.problem.kind === 'partial') && (
           <div className="text-[11px] text-ink-600 mt-1">
             Compared {gaps.myVideos} of your videos against {gaps.competitorVideos} from other channels
             {gaps.unmatched > 0 && `, ${gaps.unmatched} of which were about something outside finance`}.
@@ -274,10 +311,18 @@ export default function ChannelPage(): React.JSX.Element {
           </button>
         </div>
         <p className="text-xs text-ink-400">
-          {mined
+          {/* Same trap: summarise(0 comments) says "No comments to read yet", which reads as
+              a fact about the audience when in truth nothing was read at all. */}
+          {mined && (!mined.problem || mined.problem.kind === 'partial')
             ? mined.summary
             : 'Nobody reads two thousand comments. The same question asked forty times is a video with an audience before you record a frame.'}
         </p>
+        {mined?.problem && (
+          <div className="mt-3">
+            <ChannelProblem problem={mined.problem} />
+          </div>
+        )}
+
         {mined && mined.clusters.length > 0 && (
           <div className="mt-3 space-y-2">
             {mined.clusters.map((c: QuestionCluster) => (

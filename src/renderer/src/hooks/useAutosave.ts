@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export type SaveStatus = 'idle' | 'saving' | 'saved'
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 /**
  * Universal autosave: restores a tab's saved state once on mount, then debounce-saves
@@ -53,10 +53,15 @@ export function useAutosave<T>(
     dirty.current = true
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
-      void window.api.drafts.set(key, latest.current).then(() => {
-        dirty.current = false
-        setStatus('saved')
-      })
+      window.api.drafts
+        .set(key, latest.current)
+        .then(() => {
+          dirty.current = false
+          setStatus('saved')
+        })
+        // A failed write used to pin the indicator on "Saving…" forever — the
+        // user believed their work was safe when nothing had reached disk.
+        .catch(() => setStatus('error'))
     }, 600)
     return () => {
       if (timer.current) clearTimeout(timer.current)

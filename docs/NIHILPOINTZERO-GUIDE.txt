@@ -163,9 +163,39 @@ Copy the folder to another PC and:
      but cannot press for you — and like everything AI in this app, it can never delete.
      - → TAKE ME THERE: when an answer mentions a tab, chips appear under it ("→ Open
        Scene Studio") — one click jumps you straight to that tab.
-  ⬆ UPDATE NOTICES: on startup the app quietly checks if a newer version was published.
-     If yes, a small blue notice appears with a "Show me the file" button that opens the
-     studio folder with NIHILPOINTZERO-OS-setup.exe selected — one double-click updates.
+  ✓ AM I UP TO DATE? Settings → the Version box at the top of the page. It states it
+     outright: up to date, or a newer one exists, or "could not check just now" — and it
+     shows the build you are running next to the newest published one, so you can see the
+     answer rather than trust it. A "Check now" button re-reads the download page live.
+     It will NEVER say "up to date" when the check did not actually run. That distinction
+     matters: the app used to speak only when it was behind, so silence meant either
+     "you're current" or "the check is broken", and there was no way to tell which.
+  🔌 IT OPENS WITH WINDOWS, AND UPDATES ITSELF THEN: the studio is registered with
+     Windows to open when you sign in. That moment is deliberately chosen: nobody is
+     waiting for the app and nothing is running, so it is the only safe time to spend
+     a few minutes replacing itself. If it finds a newer version it downloads and
+     installs it there and then, and you sit down to the newest version having pressed
+     nothing.
+     Three rules it will not break:
+       - it never updates while a render or a queue is running — your work is never
+         interrupted, which is the one rule this app does not bend;
+       - if the download finishes and by then you HAVE started something, it holds the
+         installer back rather than closing on you, and the blue notice becomes instant
+         (there is nothing left to fetch);
+       - if YOU opened the app rather than Windows, it never hijacks you — you get the
+         notice and you choose.
+     Off switch: Settings → "Open the studio when Windows starts".
+  ⬆ THE APP UPDATES ITSELF: on startup it quietly checks whether a newer version was
+     published. If yes, a small blue notice appears at the bottom of the window. Press
+     "Get the update" and the app does the whole job — downloads the update (you see a
+     progress bar), checks it really is the file GitHub published, starts it, and closes
+     itself so the update can finish. Windows asks once whether to allow it; say yes,
+     and the app reopens updated.
+     You never open a web page, a Downloads folder or File Explorer. If the download is
+     interrupted, press the button again — it keeps the part it already has.
+     Behind that one button are three routes, best first: an instant restart when the
+     new code is already on disk, then the download-and-install above, and only if both
+     fail does it fall back to showing you the setup file and saying so in words.
      Offline? The check silently skips; it never blocks or nags.
   📌 THE FOLDER IS NOW PINNED: the app decides where your work lives ONCE, writes it
      down, and reads that from then on. It used to re-decide on every launch, which is
@@ -1076,10 +1106,69 @@ audience that is not yours. A Pakistani finance channel spoken in Roman Urdu has
 an audience with its own habits, and the only data that describes those habits is
 already sitting in your own uploads. Nothing was reading it.
 
+YOUR AI BRAINS — THE SWITCHBOARD
+Settings has a switchboard: every AI brain the studio can use, each with a plain
+ON/OFF switch and a "Use this one" button. OFF genuinely means off — a switched-off
+brain is never contacted, not even as a backup. The old free online service (the one
+that started demanding payment in 2026) sits OFF; your local brain (Ollama) stays ON.
+
+GEMINI, FREE. Google gives Gemini away through a free key — no card, a daily
+allowance that renews itself. Settings -> "Connect Gemini" -> "Show me how": two
+minutes, a button for each step, and the key is tested against Google for real before
+it is saved. Saving it switches Gemini ON.
+
+CHATGPT AND GROK. Their websites are free but their machinery is not — there is no
+free key for an app to use, and the only way to fake one would be storing your
+passwords, which this studio will never do. They get open-in-browser buttons instead.
+
 WHAT YOU NEED FIRST
-Settings -> your YouTube key and your channel ID. Both are free. Reading a
-hundred of your own videos costs about four of the ten thousand requests Google
-gives you every day, so you can run this as often as you like.
+Settings -> "Connect YouTube". It is free, it takes about three minutes, and
+Google never asks for a card.
+
+There used to be one sentence here telling you to go to the Google Cloud Console
+and create an API key. That was an accurate sentence and a useless one, so it is
+gone. Open Settings and press "Show me how" instead. You get five numbered steps,
+each with a button that opens the exact page — no hunting through menus — and
+then you paste the key and press Check.
+
+Check is the part that matters. The app makes one real request with your key and
+tells you in plain English what happened. If it does not work it names which of
+the five steps to go back to. The commonest problem by far is a perfectly good
+key on a project where the YouTube service was never switched on, and the app now
+says exactly that instead of leaving you to guess whether the key was mistyped.
+
+Then step 6 asks which channel is yours, and you type your @name — the same thing
+you see on your own channel page. The app finds the long "UC..." ID for you and
+shows you the channel name it found, so you can see it picked the right one. That
+ID is buried three menus deep inside YouTube's Advanced settings and nobody knows
+it by heart; you no longer need to.
+
+If any of this ever stops working, Settings -> Connect YouTube -> "Check the saved
+key" re-runs the same test on demand and tells you the answer.
+
+Reading a hundred of your own videos costs about four of the ten thousand requests
+Google gives you every day, so you can run this as often as you like.
+
+IF A PANEL COMES BACK EMPTY, IT NOW TELLS YOU WHY
+It used to say "no videos could be read, check your key and channel ID" whatever
+had happened — including when nothing was wrong at all. Seven different things
+can happen and they are now told apart:
+
+  - no key yet, with a button that takes you straight to the walkthrough
+  - there is a key but the app does not know which channel is yours
+  - Google refused the request, and it says which reason Google gave
+  - Google itself had a problem (amber) — this says nothing about your key and
+    nothing needs fixing; try again in a few minutes
+  - it could not reach YouTube at all (amber) — this is NOT the app claiming you
+    have no videos, it is the app saying it does not know
+  - only part of your channel could be read — what is shown is real, but the
+    numbers are a floor rather than a total, and it says so
+  - everything is set up correctly and the channel simply has no videos yet,
+    which is not a fault at all
+
+The colours mean something. Red is "this is wrong and here is the fix". Amber is
+"I could not tell" — never treat amber as a fault to chase. Gold with a button is
+"three minutes of setup and this works".
 
 WORK IT OUT — WHAT THE THREE ANSWERS MEAN
 

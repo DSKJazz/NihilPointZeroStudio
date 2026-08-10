@@ -1,0 +1,947 @@
+Running IPC mapping with manual quoted-arg extraction and git-history secret scan (read-only)
+Searching full history for pattern: sk-
+Searching full history for pattern: API_KEY
+Searching full history for pattern: APIKEY
+Searching full history for pattern: SECRET
+Searching full history for pattern: client_secret
+Searching full history for pattern: anthropic
+Searching full history for pattern: openai
+Searching full history for pattern: ACCESS_TOKEN
+Searching full history for pattern: aws_secret_access_key
+Searching full history for pattern: aws_access_key_id
+{
+    "HistoryMatches":  [
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "AUDIT_REPORT.md:27:- Self-update flow is cautious: checks release asset state/size, optional SHA256 verification when GitHub provides it, streaming download with hashing, disk-space guard and final safety check before launching installer (src/main/selfUpdate.ts)."
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "docs/MEGA-DIAGNOSTIC-REPORT.md:460:### 🈳 Disk-space guard on video builds"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "docs/NIHILPOINTZERO-GUIDE.txt:576:  with \"sk-ant-api...\" and is very long; copy ALL of it). If your provider is Ollama,"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "package-lock.json:8599:      \"resolved\": \"https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz\","
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "phone/src/phone.test.ts:99:    setKey(\u0027  sk-test  \u0027)"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "phone/src/phone.test.ts:101:    expect(getKey()).toBe(\u0027sk-test\u0027)"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/main/voice/piper.ts:77:  // A disk-full/permission error must reject THIS promise — with no \u0027error\u0027 listener"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:807:            placeholder=\"sk-ant-…\""
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:840:            placeholder=\"sk-…\""
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/shared/youtubeKeySetup.test.ts:84:    expect(inspectKeyShape(\u0027sk-proj-abcdefghijklmnopqrstuvwx\u0027).problem).toMatch(/OpenAI/i)"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/shared/youtubeKeySetup.ts:121: * it, and anyone who has set up an AI key before reaches for an `sk-` string out of"
+                           },
+                           {
+                               "Pattern":  "sk-",
+                               "Match":  "src/shared/youtubeKeySetup.ts:140:  if (/^sk-/.test(key)) {"
+                           },
+                           {
+                               "Pattern":  "API_KEY",
+                               "Match":  "src/shared/youtubeKeySetup.test.ts:52:    for (const raw of [` \"${GOOD}\" `, `key=${GOOD}`, `API_KEY: ${GOOD}`, `${GOOD}\\n`, `\u003c${GOOD}\u003e`]) {"
+                           },
+                           {
+                               "Pattern":  "API_KEY",
+                               "Match":  "src/shared/youtubeKeySetup.test.ts:150:        details: [{ \u0027@type\u0027: \u0027type.googleapis.com/google.rpc.ErrorInfo\u0027, reason: \u0027API_KEY_HTTP_REFERRER_BLOCKED\u0027 }]"
+                           },
+                           {
+                               "Pattern":  "API_KEY",
+                               "Match":  "src/shared/youtubeKeySetup.ts:171: *   details: [{ reason: \u0027API_KEY_HTTP_REFERRER_BLOCKED\u0027 }]   \u003c- the only useful one"
+                           },
+                           {
+                               "Pattern":  "API_KEY",
+                               "Match":  "src/shared/youtubeKeySetup.ts:228:  if (/ipRefererBlocked|API_KEY_HTTP_REFERRER_BLOCKED|API_KEY_IP_ADDRESS_BLOCKED|API_KEY_ANDROID_APP_BLOCKED|API_KEY_IOS_APP_BLOCKED|API_KEY_API_CALL_NOT_VALID|API_KEY_SERVICE_BLOCKED/i.test(reason)) {"
+                           },
+                           {
+                               "Pattern":  "API_KEY",
+                               "Match":  "src/shared/youtubeKeySetup.ts:250:  if (/API_KEY_INVALID|keyInvalid|badRequest|INVALID_ARGUMENT/i.test(reason) || /API key not valid/i.test(detail)) {"
+                           },
+                           {
+                               "Pattern":  "APIKEY",
+                               "Match":  "phone/src/store.ts:21:const KEY_APIKEY = \u0027npz.apikey\u0027"
+                           },
+                           {
+                               "Pattern":  "APIKEY",
+                               "Match":  "phone/src/store.ts:103:  return read(KEY_APIKEY) ?? \u0027\u0027"
+                           },
+                           {
+                               "Pattern":  "APIKEY",
+                               "Match":  "phone/src/store.ts:107:  write(KEY_APIKEY, k.trim())"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "docs/HOW-TO-USE.txt:78:     or email — NO phone number — create a free key and paste the SECRET (sk_…) one"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "docs/MEGA-DIAGNOSTIC-REPORT.md:514:Live-tested the same day with a real account (thank you): **use the SECRET key (sk_…)**"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "docs/NIHILPOINTZERO-CHEATSHEET.txt:188:                          NO phone) -\u003e paste the SECRET key (sk_…) + \"Test key\". Free Pollen is CLAIMED"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "docs/NIHILPOINTZERO-GUIDE.txt:782:    paste the SECRET key (sk_…) into Settings -\u003e AI Video. (The pk_ \"app\" key is"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "docs/SIGNING.md:29:   $env:AZURE_CLIENT_SECRET = \u0027…\u0027"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "electron-builder.yml:51:# AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET environment variables before"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "phone/src/phone.test.ts:20:const SECRET_WORDING = ["
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "phone/src/phone.test.ts:66:      for (const secret of SECRET_WORDING) {"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "phone/src/phone.test.ts:77:    for (const secret of SECRET_WORDING) {"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "phone/src/phone.test.ts:183:    for (const secret of SECRET_WORDING) expect(init.body as string).not.toContain(secret)"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "resources/models/Xenova/whisper-base/tokenizer.json:62218:      \"ĠSECRET\": 47627,"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/main/autoBackup.test.ts:90:    writeFileSync(join(live, \u0027settings.json\u0027), \u0027{\"apiKey\":\"SECRET\"}\u0027)"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/main/autoBackup.test.ts:91:    writeFileSync(join(live, \u0027ai-video.json\u0027), \u0027{\"pollinationsKeyEnc\":\"SECRET\"}\u0027)"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/main/autoBackup.ts:12: *  - SECRETS ARE NEVER COPIED. Allowlist of user-work items only; keys and the"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/main/video/pollinationsVideo.ts:83:          \u0027Use your SECRET key (sk_…) instead, or edit this key on enter.pollinations.ai and allow video models.\u0027"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:1228:                  \u003cb\u003eenter.pollinations.ai\u003c/b\u003e (GitHub or email), create a key, paste the \u003cb\u003eSECRET (sk_…) one\u003c/b\u003e{\u0027 \u0027}"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:1251:                    placeholder={aiHasPollinKey ? \u0027Key saved — type to replace\u0027 : \u0027Pollinations SECRET key (sk_…) — pk_ keys often block video\u0027}"
+                           },
+                           {
+                               "Pattern":  "SECRET",
+                               "Match":  "src/stress-adversarial.test.ts:45:  \u0027${process.env.SECRET}\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "README.md:47:1. Get a key from [console.anthropic.com](https://console.anthropic.com) (Claude, recommended) or [platform.openai.com](https://platform.openai.com) (OpenAI)."
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "README.md:67:- **New LLM provider**: implement the `LLMProvider` interface in `src/main/llm/` (see `anthropic.ts` / `openai.ts`) and register it in `src/main/llm/index.ts`."
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "docs/MEGA-DIAGNOSTIC-REPORT.md:768:  written to the Activity Log in plain English (e.g. \"Your anthropic AI failed — this"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "package-lock.json:11:        \"@anthropic-ai/sdk\": \"^0.110.0\","
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "package-lock.json:61:    \"node_modules/@anthropic-ai/sdk\": {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "package-lock.json:63:      \"resolved\": \"https://registry.npmjs.org/@anthropic-ai/sdk/-/sdk-0.110.0.tgz\","
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "package-lock.json:71:        \"anthropic-ai-sdk\": \"bin/cli\""
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "package.json:25:    \"@anthropic-ai/sdk\": \"^0.110.0\","
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/public/index.html:263:      \u003coption value=\"anthropic\"\u003eClaude — my own key (better quality)\u003c/option\u003e"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/freeAi.ts:14:const ANTHROPIC = \u0027https://api.anthropic.com/v1/messages\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/freeAi.ts:55:  if (provider === \u0027anthropic\u0027 \u0026\u0026 key) {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/freeAi.ts:60:        \u0027anthropic-version\u0027: \u00272023-06-01\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/freeAi.ts:62:        \u0027anthropic-dangerous-direct-browser-access\u0027: \u0027true\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/phone.test.ts:98:    setProvider(\u0027anthropic\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/phone.test.ts:100:    expect(getProvider()).toBe(\u0027anthropic\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/store.ts:10:export type PhoneProvider = \u0027free\u0027 | \u0027anthropic\u0027 | \u0027openai\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "phone/src/store.ts:95:  return v === \u0027anthropic\u0027 || v === \u0027openai\u0027 ? v : \u0027free\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "scripts/phone-smoke.mjs:323:  await page.selectOption(\u0027#st-provider\u0027, \u0027anthropic\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:87:async function checkPaidKey(provider: \u0027anthropic\u0027 | \u0027openai\u0027): Promise\u003cHealthCheck\u003e {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:88:  const label = provider === \u0027anthropic\u0027 ? \u0027Anthropic key\u0027 : \u0027OpenAI key\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:117:    provider === \u0027anthropic\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:118:      ? await ping(\u0027https://api.anthropic.com/v1/models\u0027, 12000, {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:120:          \u0027anthropic-version\u0027: \u00272023-06-01\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:177:    anthropic: \u0027Anthropic key\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:229:  const [internet, freeText, freeImg, anthropic, openai, ollama, gemini] = await Promise.all(["
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:233:    checkPaidKey(\u0027anthropic\u0027),"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/health.ts:238:  const checks: HealthCheck[] = [internet, freeText, freeImg, anthropic, openai, ollama, gemini, checkVoices(), checkStockFootage(), checkYouTubeKey()]"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/anthropic.ts:1:import Anthropic from \u0027@anthropic-ai/sdk\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/anthropic.ts:34:      logAiError({ at: new Date().toISOString(), provider: \u0027anthropic\u0027, feature: \u0027text\u0027, status, message })"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/deadProviders.test.ts:27:    recordProviderFailure(\u0027anthropic\u0027, true)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/deadProviders.test.ts:28:    expect(isProviderDead(\u0027anthropic\u0027)).toBe(true)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/index.ts:1:import { AnthropicProvider } from \u0027./anthropic\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/index.ts:24:  const key = getDecryptedKey(id as \u0027anthropic\u0027 | \u0027openai\u0027 | \u0027gemini\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/index.ts:27:  if (id === \u0027anthropic\u0027) return new AnthropicProvider(key, m, timeoutMs)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:11:const anthropicCtor = vi.fn()"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:13:vi.mock(\u0027@anthropic-ai/sdk\u0027, () =\u003e ({"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:16:      anthropicCtor(opts)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:28:import { AnthropicProvider } from \u0027./anthropic\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:71:    anthropicCtor.mockClear()"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:73:    expect(anthropicCtor).toHaveBeenCalledWith({"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:91:    anthropicCtor.mockClear()"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/limits.test.ts:95:    expect(anthropicCtor.mock.calls[0][0]).toMatchObject({ timeout: FALLBACK_TIMEOUT_MS })"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:25:    for (const active of [\u0027free\u0027, \u0027ollama\u0027, \u0027anthropic\u0027, \u0027openai\u0027]) {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:30:    const t = rescueTarget({ ...dead, activeProvider: \u0027anthropic\u0027, ollamaAvailable: true })"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:35:    expect(rescueTarget({ ...dead, activeProvider: \u0027anthropic\u0027 })).toBe(\u0027ollama\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:44:    expect(rescueTarget({ ...dead, activeProvider: \u0027anthropic\u0027, ollamaAvailable: false, freeAvailable: true })).toBe("
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:70:    const m = rescueMessage(\u0027anthropic\u0027, \u0027ollama\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:76:    expect(rescueMessage(\u0027anthropic\u0027, \u0027ollama\u0027)).toMatch(/revoked|refused permanently/)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/llm/rescueBrain.ts:72:    anthropic: \u0027Claude\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/notify.ts:6:  /** The provider that failed (\u0027anthropic\u0027 | \u0027openai\u0027 | \u0027ollama\u0027). */"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:24:  anthropicModel: string"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:27:  anthropicKeyEnc: string | null"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:81:  anthropicModel: \u0027claude-sonnet-5\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:84:  anthropicKeyEnc: null,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:187: *  - anthropic/openai OFF: PAID FEATURES SLEEP; only an explicit toggle wakes them."
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:197:    anthropic: false,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:235:    anthropicModel: s.anthropicModel,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:238:    hasAnthropicKey: !!s.anthropicKeyEnc,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:386:  if (provider === \u0027anthropic\u0027) s.anthropicModel = m"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:399:  else if (provider === \u0027anthropic\u0027) s.anthropicKeyEnc = enc"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:410:    provider === \u0027anthropic\u0027 ? s.anthropicKeyEnc : provider === \u0027gemini\u0027 ? s.geminiKeyEnc : s.openaiKeyEnc"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/main/store.ts:417:  if (provider === \u0027anthropic\u0027) return s.anthropicModel"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/components/AiSwitchboard.tsx:27:  { id: \u0027anthropic\u0027, label: \u0027Claude (Anthropic) — paid\u0027, note: \u0027Asleep until you switch it on yourself. Never contacted while off.\u0027 },"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/components/FallbackBanner.tsx:5:  anthropic: \u0027Claude (Anthropic)\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/DirectorPage.tsx:16:  anthropic: \u0027Claude (paid)\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/DirectorPage.tsx:114:  // paid cloud providers (anthropic/openai) should read \"· paid\"."
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:26:  anthropic: \u0027Claude (Anthropic)\u0027,"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:32:  const [anthropicKey, setAnthropicKey] = useState(\u0027\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:390:  async function handleSaveKey(provider: \u0027anthropic\u0027 | \u0027openai\u0027): Promise\u003cvoid\u003e {"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:391:    const key = provider === \u0027anthropic\u0027 ? anthropicKey : openaiKey"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:393:    if (provider === \u0027anthropic\u0027) setAnthropicKey(\u0027\u0027)"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:513:              ok: settings.activeProvider === \u0027free\u0027 || (settings.activeProvider === \u0027ollama\u0027 ? !!ollamaStatus?.connected : settings.activeProvider === \u0027anthropic\u0027 ? settings.hasAnthropicKey : settings.hasOpenAIKey),"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:797:            value={settings.anthropicModel}"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:798:            onChange={(e) =\u003e handleSetModel(\u0027anthropic\u0027, e.target.value)}"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:805:            value={anthropicKey}"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:811:            onClick={() =\u003e handleSaveKey(\u0027anthropic\u0027)}"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:812:            disabled={!anthropicKey.trim()}"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/shared/types.ts:6: * - \u0027anthropic\u0027 — Claude, your key (paid, highest quality)."
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/shared/types.ts:9:export type LLMProviderId = \u0027free\u0027 | \u0027anthropic\u0027 | \u0027openai\u0027 | \u0027ollama\u0027 | \u0027gemini\u0027"
+                           },
+                           {
+                               "Pattern":  "anthropic",
+                               "Match":  "src/shared/types.ts:14:  anthropicModel: string"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "README.md:47:1. Get a key from [console.anthropic.com](https://console.anthropic.com) (Claude, recommended) or [platform.openai.com](https://platform.openai.com) (OpenAI)."
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "README.md:67:- **New LLM provider**: implement the `LLMProvider` interface in `src/main/llm/` (see `anthropic.ts` / `openai.ts`) and register it in `src/main/llm/index.ts`."
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "package-lock.json:15:        \"openai\": \"^6.45.0\","
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "package-lock.json:7794:    \"node_modules/openai\": {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "package-lock.json:7796:      \"resolved\": \"https://registry.npmjs.org/openai/-/openai-6.45.0.tgz\","
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "package.json:29:    \"openai\": \"^6.45.0\","
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/public/index.html:264:      \u003coption value=\"openai\"\u003eOpenAI — my own key\u003c/option\u003e"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/freeAi.ts:12:const POLLINATIONS = \u0027https://text.pollinations.ai/openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/freeAi.ts:13:const OPENAI = \u0027https://api.openai.com/v1/chat/completions\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/freeAi.ts:78:  if (provider === \u0027openai\u0027 \u0026\u0026 key) {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/freeAi.ts:99:      model: \u0027openai\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/store.ts:10:export type PhoneProvider = \u0027free\u0027 | \u0027anthropic\u0027 | \u0027openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "phone/src/store.ts:95:  return v === \u0027anthropic\u0027 || v === \u0027openai\u0027 ? v : \u0027free\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "resources/models/Xenova/whisper-base/config.json:2:  \"_name_or_path\": \"openai/whisper-base\","
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/agent/agent.test.ts:129:        { type: \u0027set_setting\u0027, key: \u0027provider\u0027, value: \u0027openai\u0027 }"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:49:    const res = await fetch(\u0027https://text.pollinations.ai/openai\u0027, {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:53:        model: \u0027openai\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:87:async function checkPaidKey(provider: \u0027anthropic\u0027 | \u0027openai\u0027): Promise\u003cHealthCheck\u003e {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:122:      : await ping(\u0027https://api.openai.com/v1/models\u0027, 12000, { Authorization: `Bearer ${key}` })"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:178:    openai: \u0027OpenAI key\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:229:  const [internet, freeText, freeImg, anthropic, openai, ollama, gemini] = await Promise.all(["
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:234:    checkPaidKey(\u0027openai\u0027),"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/health.ts:238:  const checks: HealthCheck[] = [internet, freeText, freeImg, anthropic, openai, ollama, gemini, checkVoices(), checkStockFootage(), checkYouTubeKey()]"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/errorLog.test.ts:18:      provider: \u0027free/openai\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/errorLog.test.ts:27:    expect(e.provider).toBe(\u0027free/openai\u0027)"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/index.ts:2:import { OpenAIProvider } from \u0027./openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/index.ts:22:  if (id === \u0027free\u0027) return new PollinationsProvider(m || \u0027openai\u0027)"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/index.ts:24:  const key = getDecryptedKey(id as \u0027anthropic\u0027 | \u0027openai\u0027 | \u0027gemini\u0027)"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/index.ts:129:    chain.push(new PollinationsProvider(getModel(\u0027free\u0027) || \u0027openai\u0027))"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:12:const openaiCtor = vi.fn()"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:20:vi.mock(\u0027openai\u0027, () =\u003e ({"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:23:      openaiCtor(opts)"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:29:import { OpenAIProvider } from \u0027./openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:81:    openaiCtor.mockClear()"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:83:    expect(openaiCtor).toHaveBeenCalledWith({"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:92:    openaiCtor.mockClear()"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/limits.test.ts:96:    expect(openaiCtor.mock.calls[0][0]).toMatchObject({ timeout: FALLBACK_TIMEOUT_MS })"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/openai.ts:1:import OpenAI from \u0027openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/openai.ts:34:      logAiError({ at: new Date().toISOString(), provider: \u0027openai\u0027, feature: \u0027text\u0027, status, message })"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/pollinations.ts:17:const ENDPOINT = \u0027https://text.pollinations.ai/openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/pollinations.ts:26:  constructor(private model: string = \u0027openai\u0027) {}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/pollinations.ts:30:    const model = this.model || \u0027openai\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/rescueBrain.test.ts:25:    for (const active of [\u0027free\u0027, \u0027ollama\u0027, \u0027anthropic\u0027, \u0027openai\u0027]) {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/llm/rescueBrain.ts:73:    openai: \u0027OpenAI\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/notify.ts:6:  /** The provider that failed (\u0027anthropic\u0027 | \u0027openai\u0027 | \u0027ollama\u0027). */"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:25:  openaiModel: string"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:28:  openaiKeyEnc: string | null"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:80:  freeModel: \u0027openai\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:82:  openaiModel: \u0027gpt-4o\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:85:  openaiKeyEnc: null,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:187: *  - anthropic/openai OFF: PAID FEATURES SLEEP; only an explicit toggle wakes them."
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:198:    openai: false"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:236:    openaiModel: s.openaiModel,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:242:    hasOpenAIKey: !!s.openaiKeyEnc,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:387:  else if (provider === \u0027openai\u0027) s.openaiModel = m"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:400:  else if (provider === \u0027openai\u0027) s.openaiKeyEnc = enc"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:410:    provider === \u0027anthropic\u0027 ? s.anthropicKeyEnc : provider === \u0027gemini\u0027 ? s.geminiKeyEnc : s.openaiKeyEnc"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/main/store.ts:418:  if (provider === \u0027openai\u0027) return s.openaiModel"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/probe.html:98:            return SAFE({ activeProvider: \u0027free\u0027, freeModel: \u0027openai\u0027, narrationVoice: \u0027windows\u0027, piperVoiceId: \u0027\u0027, winVoiceId: \u0027\u0027, language: \u0027roman-urdu\u0027 })"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/components/AiSwitchboard.tsx:28:  { id: \u0027openai\u0027, label: \u0027OpenAI — paid\u0027, note: \u0027Asleep until you switch it on yourself. Never contacted while off.\u0027 }"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/components/FallbackBanner.tsx:6:  openai: \u0027ChatGPT (OpenAI)\u0027,"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/DirectorPage.tsx:17:  openai: \u0027OpenAI (paid)\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/DirectorPage.tsx:114:  // paid cloud providers (anthropic/openai) should read \"· paid\"."
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:27:  openai: \u0027OpenAI\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:33:  const [openaiKey, setOpenaiKey] = useState(\u0027\u0027)"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:390:  async function handleSaveKey(provider: \u0027anthropic\u0027 | \u0027openai\u0027): Promise\u003cvoid\u003e {"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:391:    const key = provider === \u0027anthropic\u0027 ? anthropicKey : openaiKey"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:830:            value={settings.openaiModel}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:831:            onChange={(e) =\u003e handleSetModel(\u0027openai\u0027, e.target.value)}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:838:            value={openaiKey}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:844:            onClick={() =\u003e handleSaveKey(\u0027openai\u0027)}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/renderer/src/pages/SettingsPage.tsx:845:            disabled={!openaiKey.trim()}"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/shared/types.ts:7: * - \u0027openai\u0027    — OpenAI, your key (paid)."
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/shared/types.ts:9:export type LLMProviderId = \u0027free\u0027 | \u0027anthropic\u0027 | \u0027openai\u0027 | \u0027ollama\u0027 | \u0027gemini\u0027"
+                           },
+                           {
+                               "Pattern":  "openai",
+                               "Match":  "src/shared/types.ts:15:  openaiModel: string"
+                           }
+                       ],
+    "IpcMainChannels":  [
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  44,
+                                "Channel":  "demo:add"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  57,
+                                "Channel":  "demo:ok"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  66,
+                                "Channel":  "demo:add"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  73,
+                                "Channel":  "demo:progress"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  88,
+                                "Channel":  "storyboard:pick-photo"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  108,
+                                "Channel":  "never"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\remote\\remote.test.ts",
+                                "Line":  116,
+                                "Channel":  "demo:fail"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\webserver\\webserver.test.ts",
+                                "Line":  217,
+                                "Channel":  "demo:add"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\webserver\\webserver.test.ts",
+                                "Line":  218,
+                                "Channel":  "demo:bytes"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\webserver\\webserver.test.ts",
+                                "Line":  219,
+                                "Channel":  "demo:echo-bytes"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\webserver\\webserver.test.ts",
+                                "Line":  220,
+                                "Channel":  "demo:boom"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\webserver\\webserver.test.ts",
+                                "Line":  223,
+                                "Channel":  "storyboard:pick-photo"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  374,
+                                "Channel":  "id"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  738,
+                                "Channel":  "user"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  791,
+                                "Channel":  "user"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  1688,
+                                "Channel":  "pixabay"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  2128,
+                                "Channel":  "youtube"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  2228,
+                                "Channel":  "online"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  2267,
+                                "Channel":  "remove"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  2376,
+                                "Channel":  "userData"
+                            },
+                            {
+                                "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\main\\ipc.ts",
+                                "Line":  2992,
+                                "Channel":  "ai-free-video"
+                            }
+                        ],
+    "IpcRendererChannels":  [
+                                {
+                                    "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\renderer\\src\\pages\\LibraryPage.tsx",
+                                    "Line":  84,
+                                    "Channel":  "window.api.exportText"
+                                },
+                                {
+                                    "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\renderer\\src\\pages\\SceneStudioPage.tsx",
+                                    "Line":  363,
+                                    "Channel":  "window.api.scenePreview"
+                                },
+                                {
+                                    "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\renderer\\src\\pages\\TimelinePage.tsx",
+                                    "Line":  130,
+                                    "Channel":  "window.api.timelineProxy"
+                                },
+                                {
+                                    "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\renderer\\src\\pages\\WriterPage.tsx",
+                                    "Line":  135,
+                                    "Channel":  "window.api.exportText"
+                                }
+                            ],
+    "PreloadExposes":  [
+                           {
+                               "File":  "C:\\Users\\Shoaib Khan\\Documents\\GitHub\\NihilPointZeroStudio\\src\\preload\\index.ts",
+                               "Line":  822,
+                               "ExposeName":  "api"
+                           }
+                       ],
+    "UnmatchedMainChannels":  [
+                                  "demo:add",
+                                  "demo:ok",
+                                  "demo:progress",
+                                  "storyboard:pick-photo",
+                                  "never",
+                                  "demo:fail",
+                                  "demo:bytes",
+                                  "demo:echo-bytes",
+                                  "demo:boom",
+                                  "id",
+                                  "user",
+                                  "pixabay",
+                                  "youtube",
+                                  "online",
+                                  "remove",
+                                  "userData",
+                                  "ai-free-video"
+                              ],
+    "UnmatchedRendererChannels":  [
+                                      "window.api.exportText",
+                                      "window.api.scenePreview",
+                                      "window.api.timelineProxy"
+                                  ]
+}
