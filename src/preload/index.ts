@@ -17,13 +17,28 @@ const api = {
     setModel: (provider: LLMProviderId, model: string) => ipcRenderer.invoke(IPC.settingsSetModel, provider, model),
     setApiKey: (provider: LLMProviderId, key: string) => ipcRenderer.invoke(IPC.settingsSetApiKey, provider, key),
     setYouTubeKey: (key: string) => ipcRenderer.invoke(IPC.settingsSetYouTubeKey, key),
+    /** The switchboard: turn a brain ON or OFF. Off means never contacted, even as a fallback. */
+    setProviderEnabled: (provider: LLMProviderId, on: boolean) =>
+      ipcRenderer.invoke(IPC.settingsSetProviderEnabled, provider, on),
     setYouTubeChannel: (id: string) => ipcRenderer.invoke(IPC.settingsSetYouTubeChannel, id),
     setHordeKey: (key: string) => ipcRenderer.invoke(IPC.settingsSetHordeKey, key),
     setMvsepToken: (key: string) => ipcRenderer.invoke(IPC.settingsSetMvsepToken, key),
     setDemucsCmd: (cmd: string) => ipcRenderer.invoke(IPC.settingsSetDemucsCmd, cmd),
     setFaceAnimCmd: (cmd: string) => ipcRenderer.invoke(IPC.settingsSetFaceAnimCmd, cmd),
     setPiperVoice: (voiceId: string) => ipcRenderer.invoke(IPC.settingsSetPiperVoice, voiceId),
+    /** Open the studio when Windows starts. Applied to Windows straight away, not just
+     * saved, so the toggle can be seen to work. */
+    setStartWithWindows: (on: boolean): Promise<{ on: boolean; applied: boolean }> =>
+      ipcRenderer.invoke(IPC.settingsSetStartWithWindows, on),
     ollamaStatus: () => ipcRenderer.invoke(IPC.ollamaStatus)
+  },
+  // The Caretaker: the scheduled self-diagnostic and its record (Settings → Caretaker).
+  caretaker: {
+    status: (): Promise<import('../shared/caretaker').CaretakerStatus> => ipcRenderer.invoke(IPC.caretakerStatus),
+    runNow: (): Promise<import('../shared/caretaker').CaretakerRun> => ipcRenderer.invoke(IPC.caretakerRunNow),
+    setSchedule: (hours: number, paused: boolean): Promise<import('../shared/caretaker').CaretakerStatus> =>
+      ipcRenderer.invoke(IPC.caretakerSetSchedule, hours, paused),
+    clearLog: (): Promise<import('../shared/caretaker').CaretakerStatus> => ipcRenderer.invoke(IPC.caretakerClearLog)
   },
   ideas: {
     generate: (req: IdeaGenRequest) => ipcRenderer.invoke(IPC.ideasGenerate, req)
@@ -269,6 +284,7 @@ const api = {
   },
   timeline: {
     pickClips: (): Promise<string[]> => ipcRenderer.invoke(IPC.timelinePickClips),
+    pickAudio: (): Promise<string[]> => ipcRenderer.invoke(IPC.timelinePickAudio),
     probe: (src: string): Promise<{ ok: boolean; duration?: number; error?: string }> =>
       ipcRenderer.invoke(IPC.timelineProbe, src),
     render: (
@@ -534,7 +550,161 @@ const api = {
       ipcRenderer.invoke(IPC.updateRevealSetup, remoteTag),
     /** One-click update for the installed app: the ship already swapped the code on
      * disk, so this relaunches onto it. ok:false = not applicable (portable/stale). */
-    restart: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.updateRestart)
+    restart: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.updateRestart),
+    /** Reads the download page now and says where this app stands: up to date, behind,
+     * ahead, or "could not check" — which is never reported as up to date. */
+    status: (): Promise<{
+      state: 'current' | 'behind' | 'ahead' | 'unknown'
+      runningTag: string
+      publishedTag: string | null
+      message: string
+      checkedAt: string
+    }> => ipcRenderer.invoke(IPC.updateStatus),
+    /** Downloads the installer and runs it — no browser, no Downloads folder. On success
+     * the app quits so the installer can replace it, so nothing follows this call. */
+    install: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.updateInstall),
+    /** Download progress for the button above: { pct, stage }. */
+    onInstallProgress: (cb: (p: { pct: number; stage: string }) => void) => {
+      const listener = (_e: unknown, p: { pct: number; stage: string }): void => cb(p)
+      ipcRenderer.on(IPC.updateInstallProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.updateInstallProgress, listener)
+    }
+  },
+  // "What changed" — what is new in the build actually running. The build tag is read in
+  // the main process, never passed in from here, so a stale page cannot make the app
+  // advertise a feature it does not have.
+  whatsNew: {
+    get: (): Promise<import('../shared/whatsNew').WhatsNewReport> => ipcRenderer.invoke(IPC.whatsNewGet),
+    markSeen: (ids: string[]): Promise<import('../shared/whatsNew').WhatsNewReport> =>
+      ipcRenderer.invoke(IPC.whatsNewMarkSeen, ids)
+  },
+  /**
+   * A small stand-in for scrubbing a big clip, guaranteed time-identical to the original,
+   * so a cut made against it lands in exactly the same place. Refuses (with a reason) when
+   * the file is already small enough, or when the copy came out a different length.
+   */
+  timelineProxy: (
+    sourcePath: string
+  ): Promise<{ ok: true; path: string; note: string; seconds: number } | { ok: false; error: string }> =>
+    ipcRenderer.invoke(IPC.timelineProxy, sourcePath),
+  // Watch ONE scene before committing to the whole render. Returns a PATH — the page turns
+  // it into a playable link, which is what makes it work on the phone too.
+  scenePreview: (
+    imagePath: string,
+    seconds: number,
+    motion: string,
+    aspect?: string,
+    template?: string
+  ): Promise<{ ok: true; path: string; seconds: number } | { ok: false; error: string }> =>
+    ipcRenderer.invoke(IPC.scenePreview, imagePath, seconds, motion, aspect, template),
+  // The render queue: line up an evening's work and walk away. Written to disk, so it
+  // survives the app closing, and one failure costs exactly one item.
+  queue: {
+    list: (): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueList),
+    add: (req: VideoBuildRequest): Promise<import('../shared/types').QueueItem[]> =>
+      ipcRenderer.invoke(IPC.queueAdd, req),
+    cancel: (id: string): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueCancel, id),
+    retry: (id: string): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueRetry, id),
+    reorder: (id: string, direction: number): Promise<import('../shared/types').QueueItem[]> =>
+      ipcRenderer.invoke(IPC.queueReorder, id, direction),
+    clearFinished: (): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueClearFinished),
+    /** Fires on every change, so the list follows a render without polling. */
+    onChanged: (cb: (items: import('../shared/types').QueueItem[]) => void) => {
+      const listener = (_e: unknown, items: import('../shared/types').QueueItem[]): void => cb(items)
+      ipcRenderer.on(IPC.queueChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.queueChanged, listener)
+    }
+  },
+  // The credit check before publishing. NOT a copyright detector — see
+  // shared/copyrightCheck.ts for why nothing on this PC can be one.
+  copyright: {
+    check: (
+      videoId: string,
+      description?: string
+    ): Promise<
+      | ({ found: true } & import('../shared/copyrightCheck').CopyrightReport)
+      | { found: false; error: string }
+    > => ipcRenderer.invoke(IPC.copyrightCheck, videoId, description)
+  },
+  // Cut the dead air out of a take. Plan first (cheap, no encode, nothing changed), then
+  // apply — which writes a NEW video and never touches the original.
+  silence: {
+    plan: (
+      videoId: string
+    ): Promise<
+      | {
+          ok: true
+          keeps: import('../shared/types').KeepSpan[]
+          summary: import('../shared/types').SilenceSummary
+          durationSec: number
+        }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silencePlan, videoId),
+    apply: (
+      videoId: string
+    ): Promise<
+      | { ok: true; video: import('../shared/types').VideoJob; summary: import('../shared/types').SilenceSummary }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silenceApply, videoId)
+  },
+  // What YOUR channel's own history says — not general advice about channels in general.
+  channel: {
+    /**
+     * Title shapes that worked, when the audience shows up, and your series.
+     *
+     * `problem` is non-null when nothing could be read, and says which of the five
+     * reasons it was — a bare empty result used to cover all of them at once.
+     */
+    learn: (): Promise<{
+      problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      videoCount: number
+      titleFindings: import('../shared/channelLearning').Finding[]
+      timing: ReturnType<typeof import('../shared/channelLearning').publishTimingReport>
+      series: ReturnType<typeof import('../shared/series').seriesReport>
+    }> => ipcRenderer.invoke(IPC.channelLearn),
+    /** Scores a proposed title against your own history, with the reasons. */
+    scoreTitle: (
+      title: string
+    ): Promise<
+      import('../shared/channelLearning').TitleScore & {
+        problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      }
+    > => ipcRenderer.invoke(IPC.channelScoreTitle, title),
+    /** Subjects other channels get views on that this one has never covered. */
+    gaps: (): Promise<
+      import('../shared/competitorGap').GapReport & {
+        problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+        myVideos: number
+        competitorVideos: number
+        queries: string[]
+      }
+    > => ipcRenderer.invoke(IPC.channelGaps),
+    /** The questions your comments keep asking, quoted verbatim and ranked. */
+    comments: (
+      videoLimit?: number
+    ): Promise<{
+      problem: import('../shared/youtubeKeySetup').ChannelReadProblem | null
+      scanned: number
+      videosRead: number
+      clusters: import('../shared/commentMining').QuestionCluster[]
+      summary: string
+    }> => ipcRenderer.invoke(IPC.channelComments, videoLimit)
+  },
+  // Hear the script read out at speed, to catch by ear what silent reading hides.
+  readAloud: {
+    // Instant and pure: what to listen for, and how long the listen will take.
+    plan: (script: string, speed?: number): Promise<import('../shared/readAloud').ReadAloudPlan> =>
+      ipcRenderer.invoke(IPC.readAloudPlan, script, speed),
+    // Speaks it and speeds the file up. Returns a PATH — the page turns that into a
+    // playable link with fileUrl(), which is what makes it work on the phone too.
+    speak: (
+      script: string,
+      speed?: number,
+      voice?: 'natural' | 'winnatural' | 'windows'
+    ): Promise<
+      | { ok: true; path: string; engineName: string; plan: import('../shared/readAloud').ReadAloudPlan }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.readAloudSpeak, script, speed, voice)
   },
   // "What changed" — what is new in the build actually running. The build tag is read in
   // the main process, never passed in from here, so a stale page cannot make the app
@@ -675,7 +845,23 @@ const api = {
   youtube: {
     // Assisted publish: prepare metadata (→ clipboard), open the upload page, reveal the file.
     publish: (videoId: string): Promise<{ title: string; description: string; tags: string[]; uploadUrl: string }> =>
-      ipcRenderer.invoke(IPC.youtubePublish, videoId)
+      ipcRenderer.invoke(IPC.youtubePublish, videoId),
+    /**
+     * Try the pasted key against Google for real. Pass nothing to re-check the saved
+     * one. The answer is three-state — working / broken / could-not-tell — because a
+     * check that cannot reach Google must never look like a pass.
+     */
+    verifyKey: (rawKey?: string): Promise<import('../shared/youtubeKeySetup').KeyVerdict> =>
+      ipcRenderer.invoke(IPC.youtubeKeyVerify, rawKey ?? ''),
+    /** Gemini's free AI-Studio key, tested for real — same three-state verdict as YouTube's. */
+    verifyGeminiKey: (rawKey?: string): Promise<import('../shared/youtubeKeySetup').KeyVerdict> =>
+      ipcRenderer.invoke(IPC.geminiKeyVerify, rawKey ?? ''),
+    /** 3 full-length music beds with a plain WHY each — play, compare, pick one. */
+    musicExamples: (scriptText: string, durationSec: number): Promise<{ examples: { mood: string; why: string; path: string }[] }> =>
+      ipcRenderer.invoke(IPC.musicExamples, scriptText, durationSec),
+    /** @handle, channel URL or UC id → the id plus the channel NAME, so it can be confirmed by eye. */
+    resolveChannel: (input: string, rawKey?: string): Promise<import('../shared/youtubeKeySetup').ChannelResolution> =>
+      ipcRenderer.invoke(IPC.youtubeChannelResolve, input, rawKey ?? '')
   },
   voice: {
     // Windows NATURAL voices (WinRT) — the best free narration, and the only route to

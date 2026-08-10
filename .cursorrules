@@ -1,0 +1,3 @@
+﻿# Cursor Rules
+
+"AI Agents must evaluate the current system state before executing tasks. Do not repeat optimal/completed work. Do not regenerate existing reports. Maintain idempotency at all times."

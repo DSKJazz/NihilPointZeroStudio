@@ -98,7 +98,7 @@ export function buildThumbnailArgs(params: {
     const y = blockTop + i * lineH
     const next = `t${i}`
     chains.push(
-      `[${prev}]drawtext=fontfile='${font}':textfile='${fileArg(lf)}':fontcolor=${theme.textColor}:` +
+      `[${prev}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(lf)}':fontcolor=${theme.textColor}:` +
         `fontsize=${fontSize}:x=60:y=${y}:shadowcolor=black@0.8:shadowx=4:shadowy=4[${next}]`
     )
     prev = next

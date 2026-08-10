@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { randomUUID } from 'crypto'
-import { join } from 'path'
+import { join, sep } from 'path'
 import type {
   ActivityActor,
   ActivityLogEntry,
@@ -11,10 +11,12 @@ import type {
   LLMProviderId,
   LibraryEntry,
   ProviderSettings,
+  SavedImage,
   ScriptPad,
   VideoJob
 } from '../shared/types'
 import { DEFAULT_PIPER_VOICE_ID, resolvePiperVoiceId } from './voice/piperVoices'
+import { cleanPastedKey } from '../shared/youtubeKeySetup'
 
 interface PersistedSettings {
   activeProvider: LLMProviderId
@@ -24,6 +26,11 @@ interface PersistedSettings {
   ollamaModel: string
   anthropicKeyEnc: string | null
   openaiKeyEnc: string | null
+  /** Gemini: a FREE AI-Studio key — keyed like YouTube, not billed like Anthropic. */
+  geminiKeyEnc?: string | null
+  geminiModel?: string
+  /** The switchboard: which brains may be contacted at all. Absent field = defaults. */
+  providerEnabled?: Partial<Record<LLMProviderId, boolean>>
   youtubeKeyEnc: string | null
   hordeKeyEnc: string | null
   mvsepTokenEnc: string | null
@@ -42,18 +49,42 @@ interface PersistedSettings {
    * a build date, because this project ships more than once a day and a date-based
    * marker loses every change that shipped later the same day. */
   seenChangeIds?: string[]
+  /** Open the studio when Windows starts. Absent means "never chosen" and defaults to
+   * on; see getStartWithWindows for why the default is not stored eagerly. */
+  startWithWindows?: boolean
+  /** Last time the single-disk backup reminder was shown. */
+  lastBackupNudgeAt?: string
+  /** The Caretaker's schedule — see main/caretaker.ts. Absent = defaults (6h, running). */
+  caretakerIntervalHours?: number
+  caretakerPaused?: boolean
 }
 
 const DEFAULT_SETTINGS: PersistedSettings = {
-  // Free, keyless, no-install hosted AI is the default so the app is fully usable
-  // out of the box (needs internet). Users can switch to local Ollama or a paid key.
-  activeProvider: 'free',
+  /**
+   * OLLAMA IS THE DEFAULT BRAIN. Local, free, no key, no quota, no rate limit, and it
+   * cannot start demanding payment.
+   *
+   * It used to be the hosted 'free' service, on the reasoning that it needs no install.
+   * That reasoning died twice: the service has now demanded payment TWICE (HTTP 402,
+   * seen again 2026-08-02 at 01:27 with 50 logged failures), and each time every user
+   * sitting on the default was silently left with no working AI at all. A default that
+   * can be switched off by someone else's pricing decision is not a default.
+   *
+   * The hosted free service is still in the fallback chain, so when it works it still
+   * helps. It is simply no longer the thing the app *relies* on.
+   *
+   * Paid providers are never the default and are never contacted on their own — see the
+   * PAID FEATURES SLEEP rule in CLAUDE.md.
+   */
+  activeProvider: 'ollama',
   freeModel: 'openai',
   anthropicModel: 'claude-sonnet-5',
   openaiModel: 'gpt-4o',
   ollamaModel: 'llama3.1:8b',
   anthropicKeyEnc: null,
   openaiKeyEnc: null,
+  geminiKeyEnc: null,
+  geminiModel: 'gemini-2.5-flash',
   youtubeKeyEnc: null,
   hordeKeyEnc: null,
   mvsepTokenEnc: null,
@@ -125,9 +156,9 @@ function encrypt(value: string): string {
 }
 
 function decrypt(stored: string): string {
-  const sep = stored.indexOf(':')
-  const scheme = sep === -1 ? '' : stored.slice(0, sep)
-  const payload = sep === -1 ? stored : stored.slice(sep + 1)
+  const colonAt = stored.indexOf(':')
+  const scheme = colonAt === -1 ? '' : stored.slice(0, colonAt)
+  const payload = colonAt === -1 ? stored : stored.slice(colonAt + 1)
   if (scheme === 'dpapi') {
     try {
       return safeStorage.decryptString(Buffer.from(payload, 'base64'))
@@ -147,6 +178,55 @@ function decrypt(stored: string): string {
   return Buffer.from(stored, 'base64').toString('utf-8')
 }
 
+/**
+ * The effective switchboard. Defaults, chosen with the user (2026-08-07):
+ *  - ollama ON: the local free brain the app runs on.
+ *  - free OFF: the hosted service went paid; a thing that demands payment is treated
+ *    like the paid ones — asleep until deliberately switched on.
+ *  - gemini ON once its (free) key exists, because saving the key IS the deliberate act.
+ *  - anthropic/openai OFF: PAID FEATURES SLEEP; only an explicit toggle wakes them.
+ * The active provider is always allowed — choosing it was the clearest possible "on".
+ */
+export function getProviderEnabled(): Record<LLMProviderId, boolean> {
+  const s = readSettings()
+  const saved = s.providerEnabled ?? {}
+  const defaults: Record<LLMProviderId, boolean> = {
+    ollama: true,
+    free: false,
+    gemini: !!s.geminiKeyEnc,
+    anthropic: false,
+    openai: false
+  }
+  const merged = { ...defaults, ...saved }
+  merged[s.activeProvider] = true
+  return merged
+}
+
+export function setProviderEnabled(provider: LLMProviderId, on: boolean): ProviderSettings {
+  const s = readSettings()
+  s.providerEnabled = { ...(s.providerEnabled ?? {}), [provider]: on }
+  writeSettings(s)
+  return getSettings()
+}
+
+/** The Caretaker's saved schedule; clamped so a corrupt value cannot arm a 0ms loop. */
+export function getCaretakerSchedule(): { intervalHours: number; paused: boolean } {
+  const s = readSettings()
+  const h = Number(s.caretakerIntervalHours)
+  return {
+    intervalHours: Number.isFinite(h) && h >= 1 && h <= 168 ? h : 6,
+    paused: !!s.caretakerPaused
+  }
+}
+
+export function setCaretakerSchedule(intervalHours: number, paused: boolean): void {
+  const s = readSettings()
+  const h = Number(intervalHours)
+  s.caretakerIntervalHours = Number.isFinite(h) && h >= 1 && h <= 168 ? h : 6
+  s.caretakerPaused = !!paused
+  writeSettings(s)
+}
+
 export function getSettings(): ProviderSettings {
   const s = readSettings()
   return {
@@ -156,6 +236,9 @@ export function getSettings(): ProviderSettings {
     openaiModel: s.openaiModel,
     ollamaModel: s.ollamaModel,
     hasAnthropicKey: !!s.anthropicKeyEnc,
+    hasGeminiKey: !!s.geminiKeyEnc,
+    geminiModel: s.geminiModel || 'gemini-2.5-flash',
+    providerEnabled: getProviderEnabled(),
     hasOpenAIKey: !!s.openaiKeyEnc,
     hasYouTubeKey: !!s.youtubeKeyEnc,
     hasHordeKey: !!s.hordeKeyEnc,
@@ -163,7 +246,8 @@ export function getSettings(): ProviderSettings {
     demucsCmd: s.demucsCmd || '',
     faceAnimCmd: s.faceAnimCmd || '',
     youtubeChannelId: s.youtubeChannelId || '',
-    piperVoiceId: resolvePiperVoiceId(s.piperVoiceId)
+    piperVoiceId: resolvePiperVoiceId(s.piperVoiceId),
+    startWithWindows: s.startWithWindows ?? true
   }
 }
 
@@ -171,6 +255,18 @@ export function getSettings(): ProviderSettings {
 export function getSecondBackupDir(): string | null {
   const v = readSettings().secondBackupDir
   return v && v.trim() ? v : null
+}
+
+/** When the "your work is on one disk" reminder was last shown. See backupNudge.ts. */
+export function getLastBackupNudgeAt(): string | null {
+  const v = readSettings().lastBackupNudgeAt
+  return typeof v === 'string' && v ? v : null
+}
+
+export function setLastBackupNudgeAt(iso: string): void {
+  const s = readSettings()
+  s.lastBackupNudgeAt = iso
+  writeSettings(s)
 }
 
 export function setSecondBackupDir(dir: string): void {
@@ -201,6 +297,53 @@ export function setLastHealth(failed: string[]): void {
   s.lastHealthAt = new Date().toISOString()
   s.lastHealthFailed = failed
   writeSettings(s)
+}
+
+// ───────────────────────── the render queue ─────────────────────────
+//
+// Its own file rather than a field in settings: it is a LIST that changes constantly
+// while a render runs, and writing the whole settings object on every progress step
+// would risk the settings file for the sake of the queue.
+
+function renderQueuePath(): string {
+  return join(dataDir(), 'render-queue.json')
+}
+
+/** The queue as last written. Never throws — a corrupt file reads as an empty queue
+ *  rather than stopping the app from starting. */
+export function listRenderQueue(): import('../shared/types').QueueItem[] {
+  try {
+    const file = renderQueuePath()
+    if (!existsSync(file)) return []
+    const parsed = JSON.parse(readFileSync(file, 'utf-8'))
+    return Array.isArray(parsed) ? parsed.filter((x) => x && typeof x.id === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function saveRenderQueue(items: import('../shared/types').QueueItem[]): import('../shared/types').QueueItem[] {
+  const clean = (items ?? []).filter((x) => x && typeof x.id === 'string')
+  atomicWrite(renderQueuePath(), JSON.stringify(clean, null, 2))
+  return clean
+}
+
+/**
+ * Should the studio open when Windows starts?
+ *
+ * Defaults to TRUE, on the user's explicit instruction ("the moment I turn my laptop on,
+ * studio automatically opens"). A stored `false` is honoured — `?? true` only fills in
+ * the never-set case, so turning it off in Settings sticks.
+ */
+export function getStartWithWindows(): boolean {
+  return readSettings().startWithWindows ?? true
+}
+
+export function setStartWithWindows(on: boolean): boolean {
+  const s = readSettings()
+  s.startWithWindows = !!on
+  writeSettings(s)
+  return s.startWithWindows
 }
 
 /** Which "What changed" entries have been read. Undefined (never set) means first run. */
@@ -243,6 +386,7 @@ export function setModel(provider: LLMProviderId, model: string): ProviderSettin
   if (provider === 'anthropic') s.anthropicModel = m
   else if (provider === 'openai') s.openaiModel = m
   else if (provider === 'free') s.freeModel = m
+  else if (provider === 'gemini') s.geminiModel = m
   else s.ollamaModel = m
   writeSettings(s)
   return getSettings()
@@ -251,7 +395,8 @@ export function setModel(provider: LLMProviderId, model: string): ProviderSettin
 export function setApiKey(provider: LLMProviderId, rawKey: string): ProviderSettings {
   const s = readSettings()
   const enc = rawKey ? encrypt(rawKey) : null
-  if (provider === 'anthropic') s.anthropicKeyEnc = enc
+  if (provider === 'gemini') s.geminiKeyEnc = enc
+  else if (provider === 'anthropic') s.anthropicKeyEnc = enc
   else if (provider === 'openai') s.openaiKeyEnc = enc
   // 'free' and 'ollama' carry no API key — ignore rather than misrouting the value
   // into the OpenAI slot (which would silently clobber a real OpenAI key).
@@ -261,7 +406,8 @@ export function setApiKey(provider: LLMProviderId, rawKey: string): ProviderSett
 
 export function getDecryptedKey(provider: LLMProviderId): string | null {
   const s = readSettings()
-  const enc = provider === 'anthropic' ? s.anthropicKeyEnc : s.openaiKeyEnc
+  const enc =
+    provider === 'anthropic' ? s.anthropicKeyEnc : provider === 'gemini' ? s.geminiKeyEnc : s.openaiKeyEnc
   if (!enc) return null
   return decrypt(enc)
 }
@@ -271,12 +417,42 @@ export function getModel(provider: LLMProviderId): string {
   if (provider === 'anthropic') return s.anthropicModel
   if (provider === 'openai') return s.openaiModel
   if (provider === 'free') return s.freeModel
+  if (provider === 'gemini') return s.geminiModel || 'gemini-2.5-flash'
   return s.ollamaModel
 }
 
+/**
+ * The Gemini key, cleaned the same way it is verified — see setYouTubeApiKey below for
+ * the incident that rule comes from. Gemini AI-Studio keys are Google keys and share the
+ * AIza shape, so they share the cleaner too.
+ */
+export function setGeminiApiKey(rawKey: string): ProviderSettings {
+  const s = readSettings()
+  const key = cleanPastedKey(rawKey ?? '')
+  s.geminiKeyEnc = key ? encrypt(key) : null
+  writeSettings(s)
+  return getSettings()
+}
+
+export function getGeminiApiKey(): string | null {
+  const s = readSettings()
+  if (!s.geminiKeyEnc) return null
+  return decrypt(s.geminiKeyEnc)
+}
+
+/**
+ * Saves the key the way it was VERIFIED, not the way it was typed.
+ *
+ * The check applies `cleanPastedKey` before contacting Google, so a key pasted as
+ * `"AIza…"` — with the quotes a copy out of a document leaves behind — passed the check
+ * and was then stored with the quotes still attached. Every later request failed, and the
+ * screen said the key was working, because it had been. Cleaning here as well as in the
+ * checker means the two can never disagree again whatever the caller does.
+ */
 export function setYouTubeApiKey(rawKey: string): ProviderSettings {
   const s = readSettings()
-  s.youtubeKeyEnc = rawKey ? encrypt(rawKey) : null
+  const key = cleanPastedKey(rawKey ?? '')
+  s.youtubeKeyEnc = key ? encrypt(key) : null
   writeSettings(s)
   return getSettings()
 }
@@ -392,17 +568,66 @@ export function restoreLibraryEntry(id: string): LibraryEntry[] {
 }
 
 /** Permanent removal — only ever called from the explicit user-initiated IPC handlers. */
-export function deleteFromLibrary(id: string): LibraryEntry[] {
-  const entries = readLibrary().filter((e) => e.id !== id)
-  writeLibrary(entries)
-  return listLibrary()
+/**
+ * The file(s) on disk that belong to a library entry, as userData-relative paths.
+ *
+ * DELETE-EVERYWHERE (his instruction, 2026-08-07): "once I delete them from the studio,
+ * they get deleted from wherever they're sitting in my computer. I don't wanna go in my
+ * computer and start looking for things." Videos already behaved; a saved IMAGE deleted
+ * from the Library only lost its list entry while the file — and its backup copies —
+ * stayed on disk forever. Only paths inside the app's own data folder are ever touched:
+ * an entry pointing outside it (a picture imported from Desktop) is the user's original,
+ * not the studio's copy, and deleting originals is not this feature.
+ */
+export function libraryEntryFiles(entry: LibraryEntry): string[] {
+  if (entry.kind !== 'image') return []
+  const p = (entry.data as SavedImage).path
+  const dataDir = app.getPath('userData')
+  if (!p || !p.toLowerCase().startsWith(dataDir.toLowerCase() + sep)) return []
+  return [p.slice(dataDir.length + 1).replace(/\\/g, '/')]
 }
 
-/** Permanently removes every trashed entry — only from the user's "Empty Trash" click. */
-export function emptyLibraryTrash(): LibraryEntry[] {
-  const entries = readLibrary().filter((e) => !e.trashedAt)
-  writeLibrary(entries)
-  return listLibrary()
+/** Removes an entry AND its files (inside the data folder only). Returns the relative
+ * paths that were deleted, so the caller can purge the backup copies too. */
+export function deleteFromLibrary(id: string): { entries: LibraryEntry[]; removedRels: string[] } {
+  const all = readLibrary()
+  const target = all.find((e) => e.id === id)
+  // Delete ONLY what libraryEntryFiles vouched for. It returns paths solely inside the
+  // app's data folder, so an entry pointing at the user's own picture on the Desktop
+  // produces an empty list — and an empty list means nothing is removed. The rm must
+  // key off that same answer, or the boundary is decoration.
+  const removedRels = target ? libraryEntryFiles(target) : []
+  if (target && removedRels.length) {
+    try {
+      rmSync((target.data as SavedImage).path, { force: true })
+    } catch {
+      /* file may already be gone; removing the entry is what matters */
+    }
+  }
+  writeLibrary(all.filter((e) => e.id !== id))
+  return { entries: listLibrary(), removedRels }
+}
+
+/** Permanently removes every trashed entry AND their files — only from the user's
+ * "Empty Trash" click. Same delete-everywhere contract as deleteFromLibrary. */
+export function emptyLibraryTrash(): { entries: LibraryEntry[]; removedRels: string[] } {
+  const all = readLibrary()
+  const removedRels: string[] = []
+  for (const e of all) {
+    if (!e.trashedAt) continue
+    const rels = libraryEntryFiles(e)
+    removedRels.push(...rels)
+    // Same boundary as deleteFromLibrary: no vouched path, no removal.
+    if (rels.length) {
+      try {
+        rmSync((e.data as SavedImage).path, { force: true })
+      } catch {
+        /* best effort */
+      }
+    }
+  }
+  writeLibrary(all.filter((e) => !e.trashedAt))
+  return { entries: listLibrary(), removedRels }
 }
 
 function readActivityLog(): ActivityLogEntry[] {

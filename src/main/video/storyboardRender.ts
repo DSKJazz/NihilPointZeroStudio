@@ -113,6 +113,12 @@ async function renderStoryboardInner(
   mkdirSync(assetDir, { recursive: true })
 
   const assets: Record<string, ResolvedBeatAsset> = {}
+  // THE HONESTY GATE'S LEDGER. Every beat that could not show its real picture is
+  // recorded here — the quiet dark-backdrop substitution stays (one bad beat must not
+  // abort an evening's render), but a video that is MOSTLY substitutions is not that
+  // video, and shipping it as though it were is how "8 or 9 empty black videos" ended
+  // up in the user's folder with nothing anywhere saying why.
+  const failedBeats: { tag: string; reason: string }[] = []
   // Effective per-beat duration (may grow to fit narration / match a user clip's real length).
   const effDur: Record<string, number> = {}
 
@@ -291,6 +297,7 @@ async function renderStoryboardInner(
           image = imgPath
         } catch (err) {
           onProgress?.(`${tag}: image generation failed (${err instanceof Error ? err.message : 'error'}) — using a plain scene.`)
+          failedBeats.push({ tag, reason: err instanceof Error ? err.message : 'image generation failed' })
           const slate = join(assetDir, `beat-${i}-slate.jpg`)
           await generateImage('a simple dark cinematic backdrop', slate, {
             width: gen.width,
@@ -322,6 +329,7 @@ async function renderStoryboardInner(
             await makeSlideshow([slate], layout, dur, clipPath)
           } catch {
             // Even the slate failed — skip this beat (compile drops a beat with no clip).
+            failedBeats.push({ tag, reason: 'shot could not be rendered at all' })
             continue
           }
         }
@@ -354,6 +362,25 @@ async function renderStoryboardInner(
     }
 
     assets[beat.id] = { clipPath, narrationPath, narrationDurationSec, sounds }
+  }
+
+  /**
+   * THE HONESTY GATE. A video where more than half the scenes are dark substitute
+   * slates is not the video that was asked for — it is a black void with a filename.
+   * Building it anyway costs the machine an hour and tells the user nothing; refusing
+   * names every failed scene and the real reason (almost always: the free image service
+   * refusing everything that day). One or two failed beats still pass — that is the
+   * soft-fail promise this module has always made.
+   */
+  const totalBeats = doc.beats.length
+  if (totalBeats > 0 && failedBeats.length > totalBeats / 2) {
+    const listed = failedBeats.slice(0, 5).map((f) => `${f.tag}: ${f.reason}`).join('; ')
+    throw new Error(
+      `Refusing to build: ${failedBeats.length} of ${totalBeats} scenes could not get their real image, ` +
+        `so the result would be mostly empty dark frames. First failures — ${listed}` +
+        (failedBeats.length > 5 ? '; …' : '') +
+        '. Usually the free image service is refusing or unreachable right now: check Settings → Setup Health, then build again.'
+    )
   }
 
   // Compile against the EFFECTIVE durations so beat starts / crossfades / captions all

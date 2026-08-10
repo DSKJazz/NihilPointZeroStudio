@@ -326,7 +326,10 @@ export default function ChartsPage(): React.JSX.Element {
         </div>
       )}
 
-      {series && n > 0 && (
+      {/* Also shown when only a RESTORED script exists: `script` is autosaved but
+          `series` is not, so after a restart the script was invisible and
+          unreachable even though it was still on disk. */}
+      {((series && n > 0) || script) && (
         <div className="mt-4 rounded-lg border border-ink-800 bg-ink-900 p-3">
           <div className="text-sm text-ink-200 font-medium">Turn this chart into a narration script (optional)</div>
           <div className="text-[11px] text-ink-500 mt-0.5 mb-2">
@@ -347,7 +350,14 @@ export default function ChartsPage(): React.JSX.Element {
               <option>Roman Urdu</option>
               <option>Urdu</option>
             </select>
-            <button onClick={generateScript} disabled={!!genBusy} className="ml-auto rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950">✍ Generate script</button>
+            <button
+              onClick={generateScript}
+              disabled={!!genBusy || !series || n === 0}
+              title={!series || n === 0 ? 'Import or load a chart first — the script is written from its figures.' : undefined}
+              className="ml-auto rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950"
+            >
+              ✍ Generate script
+            </button>
           </div>
           {genBusy && <div className="mt-2 text-sm text-gold-300">{genBusy}{progress ? ` — ${progress}` : ''}</div>}
           {note && <div className="mt-2 rounded-md border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">{note}</div>}

@@ -1,0 +1,4 @@
+﻿Scanning pattern: sk-[A-Za-z0-9]{32,} -> quarantine-prep/history_scan_openai_sk.txt
+
+--- Working tree matches ---
+

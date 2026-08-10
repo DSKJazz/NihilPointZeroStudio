@@ -6,6 +6,7 @@ import { isPiperInstalled, synthesizeWithPiper } from '../voice/piper'
 import { synthesizeWithWinNatural } from '../voice/winNatural'
 import {
   beginRenderSession,
+  CANCELLED_MESSAGE,
   endRenderSession,
   ffprobeDuration,
   makeFfmpegProgressLogger,
@@ -24,6 +25,7 @@ import { buildBeautifyArgs, type BeautifyOptions } from './beautify'
 import { buildCompositeArgs, type CompositeOptions } from './composite'
 import { chooseEncoderForJob, probeBestH264Encoder, runEncodeWithFallback } from './encoder'
 import { runPreflight } from '../preflight'
+import { discardCheckpoint, isReusable, openCheckpoint, sweepOldCheckpoints } from './checkpoint'
 import type { TimelineDoc } from '../../shared/types'
 import { ffmpegVersionText, ffprobeVideoSize } from './ffmpeg'
 import { generateCloudFootage } from './aiCloud'
@@ -107,19 +109,50 @@ export async function buildVideoFromScript(
   for (const w of pre.warnings) onProgress?.(`⚠ ${w.name}: ${w.detail}`)
   if (!pre.ok) throw new Error(pre.headline)
 
+  // RESUME. A twenty-minute render that dies at minute eighteen used to throw away all
+  // eighteen, because the scratch folder was a random temp directory deleted in the
+  // `finally`. The narration is the expensive part and it is COMPLETE before anything that
+  // commonly fails has even started — Piper reading a long script is minutes of CPU.
+  //
+  // The checkpoint folder is named after a fingerprint of the inputs that produced its
+  // contents, so a changed script cannot see the old narration at all. That safety is
+  // structural rather than a check somebody has to remember: a different script means a
+  // different folder. See checkpoint.ts for why that matters more than the time saved.
+  sweepOldCheckpoints(tmpdir())
+  const resume = openCheckpoint(tmpdir(), {
+    title,
+    body,
+    narrationVoice: options.narrationVoice,
+    winVoiceId: options.winVoiceId,
+    engine: options.engine,
+    style: options.style
+  })
   const scratch = mkdtempSync(join(tmpdir(), 'finscript-vid-'))
-  const wav = join(scratch, 'narration.wav')
+  const wav = resume.narrationPath
+  let finished = false
+  // Stock B-roll downloads land in their own temp dir (possibly hundreds of MB).
+  // Tracked out here so the finally can remove it on EVERY exit — the old cleanup
+  // ran only after a successful render, so Stop/failure leaked the whole folder.
+  let stockTempDir: string | undefined
   try {
     // Voice priority: use the NATURAL (Piper) voice whenever it's installed, unless the
     // user explicitly picked the robotic Windows voice. This makes "natural" the default
     // for every entry point (Video Studio, Scene Studio, AI Command, batch) instead of
     // silently defaulting to the robotic voice when narrationVoice is left unset.
+    // Already spoken by a previous attempt, for THESE words in THIS voice. A zero-length
+    // or tiny file is what a process killed mid-write leaves behind, and reusing that
+    // would produce a SILENT video — a failure that looks like success — so size is
+    // checked, not just existence.
+    const narrationReady = isReusable(wav)
+    if (narrationReady) {
+      onProgress?.('Picking up where the last attempt left off — the narration is already recorded.')
+    }
     const wantNatural = options.narrationVoice !== 'windows'
     // Windows NATURAL voice first when explicitly chosen — it's the only engine that can
     // speak Urdu (Asad/Uzma), and it beats both other options on quality. Each step falls
     // through to the next so narration NEVER fails outright.
-    let narrated = false
-    if (options.narrationVoice === 'silent') {
+    let narrated = narrationReady
+    if (!narrated && options.narrationVoice === 'silent') {
       // No computer voice at all: lay down silence as long as the script would take to
       // read, so the visuals still have the right pacing for the user to record over.
       onProgress?.('Preparing a silent track (no narration)…')
@@ -136,9 +169,17 @@ export async function buildVideoFromScript(
       }
     }
     if (!narrated && wantNatural && isPiperInstalled()) {
-      onProgress?.('Generating narration (natural voice)…')
-      await synthesizeWithPiper(stripStageDirections(body), wav)
-      narrated = true
+      try {
+        onProgress?.('Generating narration (natural voice)…')
+        await synthesizeWithPiper(stripStageDirections(body), wav)
+        narrated = true
+      } catch (err) {
+        // A user Stop must abort the build; anything else falls through to the
+        // Windows voice — this was the ONLY voice branch without a net, so a
+        // Piper hiccup used to kill the whole render mid-build.
+        if (err instanceof Error && err.message === CANCELLED_MESSAGE) throw err
+        onProgress?.('Natural voice failed — using the Windows voice instead…')
+      }
     }
     if (!narrated) {
       onProgress?.('Generating narration (Windows voice)…')
@@ -182,7 +223,9 @@ export async function buildVideoFromScript(
 
     if (engine === 'ai-cloud') {
       onProgress?.('Generating AI footage (cloud)…')
-      aiFootage = await generateCloudFootage({ title, body, durationSec, style: options.style, resolution: options.resolution })
+      // scratchDir: the footage lands in this build's scratch, so the finally-cleanup
+      // covers it — it used to leak a %TEMP%\ai-cloud-* dir per run.
+      aiFootage = await generateCloudFootage({ title, body, durationSec, style: options.style, resolution: options.resolution, scratchDir: scratch })
     } else if (engine === 'ai-free-video' || engine === 'ai-local') {
       const style = options.style ?? 'cinematic'
       const scenes = deriveScenes()
@@ -253,6 +296,19 @@ export async function buildVideoFromScript(
         throw err
       }
       const { assets, motionCount, stoppedReason } = seam
+      /**
+       * THE HONESTY GATE. If most scenes produced nothing, the "video" would be a black
+       * void with a filename — the user found 8 or 9 of those in his folder before
+       * anything admitted a problem. One or two lost scenes still pass (the soft-fail
+       * promise); a majority lost does not.
+       */
+      if (scenes.length > 1 && assets.length < scenes.length / 2) {
+        throw new Error(
+          `Refusing to build: only ${assets.length} of ${scenes.length} scenes could be generated` +
+            `${stoppedReason ? ` (${stoppedReason})` : ''}, so the result would be mostly empty. ` +
+            'Usually the image/video service is refusing or unreachable right now — check Settings → Setup Health, then build again.'
+        )
+      }
       const firstStill = assets.find((a) => a.kind === 'image')
       if (firstStill) options.onPreview?.(firstStill.path)
       if (motionCount > 0) {
@@ -303,6 +359,17 @@ export async function buildVideoFromScript(
           onProgress?.(`AI visual ${i + 1} failed (${err instanceof Error ? err.message : 'error'}) — continuing…`)
         }
       }
+      // Same honesty gate as the motion path: a slideshow missing MOST of its scenes is
+      // not the video that was asked for. Zero images keeps the old graceful fallback to
+      // the animated look (that is a different, honest product); a majority-failed set
+      // refuses with the reason instead of shipping the gaps.
+      if (made.length && scenes.length > 1 && made.length < scenes.length / 2) {
+        throw new Error(
+          `Refusing to build: only ${made.length} of ${scenes.length} scene images could be generated, ` +
+            'so the result would be missing most of its scenes. Usually the free image service is refusing or ' +
+            'unreachable right now — check Settings → Setup Health, then build again.'
+        )
+      }
       if (made.length) aiImages = made
       else onProgress?.('Free AI visuals unavailable — using the animated look instead.')
     }
@@ -322,6 +389,7 @@ export async function buildVideoFromScript(
           apiKey: options.stockApiKey,
           onProgress
         })
+        stockTempDir = dirname(stockBg)
       } catch (err) {
         onProgress?.(`Stock footage unavailable (${err instanceof Error ? err.message : 'error'}) — using the animated look instead.`)
       }
@@ -358,17 +426,23 @@ export async function buildVideoFromScript(
       onProgress,
       onPreview: options.onPreview
     })
-    if (stockBg) {
+    onProgress?.('Finalizing…')
+    finished = true
+  } finally {
+    endRenderSession() // a Stop must not outlive the build it stopped
+    rmSync(scratch, { recursive: true, force: true })
+    // KEPT on failure, discarded on success. A finished render has no use for it, and
+    // leaving them behind would quietly fill the disk with narration nobody will hear
+    // again. Anything a user never retried is swept after a week, at the top of the next
+    // build.
+    if (finished) discardCheckpoint(resume.dir)
+    if (stockTempDir) {
       try {
-        rmSync(dirname(stockBg), { recursive: true, force: true })
+        rmSync(stockTempDir, { recursive: true, force: true })
       } catch {
         /* temp cleanup best-effort */
       }
     }
-    onProgress?.('Finalizing…')
-  } finally {
-    endRenderSession() // a Stop must not outlive the build it stopped
-    rmSync(scratch, { recursive: true, force: true })
   }
 }
 

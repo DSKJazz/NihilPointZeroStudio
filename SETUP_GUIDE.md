@@ -39,22 +39,112 @@ build the app yourself.
 ## First-run setup (2 minutes, optional but recommended)
 
 1. Open **Settings** (bottom of the left sidebar).
-2. **AI brain** — the app works out of the box on a free, keyless AI (needs internet).
-   For much smarter results, choose `anthropic` and paste your API key, with the model
-   set to `claude-sonnet-5`. (Stray spaces in model names are cleaned automatically.)
-3. Optional keys, all free tiers: **YouTube API key** (trend signals), **AI Horde key**
-   (faster "put me in the scene" photo generation).
-4. **Natural voice** — install the offline Piper voice when prompted for human-sounding
+2. **AI brain** — nothing to do. (Want Google's Gemini as a brain? **Settings →
+   Connect Gemini** walks you to a genuinely free key in about two minutes — optional.) The app runs on the local, free brain (Ollama) and
+   falls back to a free keyless online service. Both are free and stay that way. The
+   paid options (Claude, OpenAI) are present but asleep: they are never contacted and
+   never chosen for you, and you only wake one by deliberately selecting it yourself.
+3. **Connect YouTube** — free, about three minutes, and Google never asks for a card.
+   Press **Show me how** and follow the five numbered steps; each has a button that
+   opens the exact page, so nothing has to be found by hunting. Paste the key, press
+   **Check**, and the app really tries it and tells you in plain English whether it
+   works — and if it does not, which step fixes it. Then type your **@name** and it
+   finds your channel ID for you.
+
+   This is worth doing: without it the **Your channel** tab, the questions mined from
+   your comments, and the competitor gaps all read nothing at all.
+4. Other optional free keys: **AI Horde key** (faster "put me in the scene" photo
+   generation — a shared key is already built in, so this is only if you want your own).
+5. **Natural voice** — install the offline Piper voice when prompted for human-sounding
    narration that works with no internet.
 
-> **If answers ever feel dumb:** open the **Activity Log** tab. If it says *"…came from
-> the free AI instead"*, your paid key/model isn't working — fix it in Settings.
+> **If answers ever feel dumb:** open the **Activity Log** tab, then **Settings → Setup
+> Health**, which runs a real test of each service and names the actual cause. It will
+> never tell you to buy anything: the free and local paths are the ones that are meant
+> to work, and if one of them is failing that is what gets fixed.
 
 ## Updating later
 
-Run `NIHILPOINTZERO-OS-setup.exe` again (one click) — it updates in place and keeps all
-your work. To confirm you're current, compare the gold badge in the sidebar with the
-`## Build:` line at the top of `MEGA-DIAGNOSTIC-REPORT.md`; they always match.
+**Normally: you do nothing at all.**
+
+### First, how to check where you stand
+
+**Settings → the Version box at the top.** It says one of three things: you are up to
+date, a newer one exists, or it could not check just now. It also shows the version you
+are running beside the newest published one, and there is a **Check now** button.
+
+If it says it could not check, that means exactly that — it will never tell you that you
+are up to date when it did not manage to look.
+
+### It opens with Windows, and updates itself then
+
+The studio opens by itself when you turn the laptop on. That moment is chosen on purpose —
+nobody is waiting for the app and nothing is running — so that is when it quietly installs
+anything new. You sit down to the newest version having pressed nothing.
+
+It will not do this while a render or a queue is running, and it will not do it to a
+launch you made yourself (then you get the notice below and you choose). If the download
+finishes and by then you have started working, it holds the installer back instead of
+closing on you.
+
+Off switch: **Settings → "Open the studio when Windows starts"**.
+
+One honest limit: while the app is *closed*, nothing can update it — no part of it is
+running to do the work. Opening it at sign-in is exactly how that gap is closed.
+
+### The one-button update, if you'd rather do it yourself
+
+Open the app. If a newer version has been published, a blue notice appears at the
+bottom of the window: *"A newer version of the app exists"*. Press **Get the update**.
+
+That is the whole thing. The app downloads the update itself — you will see a progress
+bar — checks that the file really is the one GitHub published, starts it, and closes so
+the update can finish. Windows will ask you once whether to allow it; say **yes**, or
+click **More info → Run anyway** if you get the blue "Windows protected your PC" box.
+The app then reopens, updated.
+
+You do not open a web page. You do not go into Downloads. You do not need File Explorer.
+If the download gets interrupted, press the button again — it keeps what it already got
+rather than starting over.
+
+If it cannot download for some reason, it tells you why in that same notice and then
+offers to show you the setup file instead, so the button never just does nothing.
+
+### Also updating the code folder — one double-click (needs the code folder)
+
+If you have the `NihilPointZeroStudio-workshop` folder on your PC, open it and
+double-click **`UPDATE-MY-STUDIO.cmd`**.
+
+That is the whole procedure. It gets the newest code, installs whatever that code
+needs, builds the app, copies it into your Desktop studio folder, updates the
+installed app, and pushes to GitHub. It takes five to ten minutes and you can walk
+away. If anything goes wrong it stops and says so in plain words rather than
+half-updating — and it never goes near your `nihilpointzero-data` folder, so your
+videos, scripts and settings are not at risk either way.
+
+When it finishes it will tell you to run `NIHILPOINTZERO-OS-setup.exe` once. Do that.
+
+### The other way — download the finished app
+
+If you do NOT have the code folder, or the easy way will not run, just download the
+already-built app:
+
+1. Go to **https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest**
+2. Under **Assets**, click **NIHILPOINTZERO-OS-setup.exe** — it downloads.
+3. Open your Downloads folder and double-click it.
+
+It updates in place and keeps all your work. That page is rebuilt automatically every
+time the code changes, so what you download there is always current — you never have
+to check whether it is the newest one.
+
+### Confirming you are actually current
+
+Open the app and look at **Settings → What changed**. It lists what is new in the
+build you are *running*, and it deliberately withholds anything that is not in it —
+so it can never send you looking for a button that is not there yet.
+
+The gold badge in the sidebar (under "OS") shows the exact build. It always matches
+the `## Build:` line at the top of `MEGA-DIAGNOSTIC-REPORT.md`.
 
 ## System requirements
 

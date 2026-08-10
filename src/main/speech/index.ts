@@ -26,6 +26,12 @@ let transcriberPromise: Promise<unknown> | null = null
 function getTranscriber(): Promise<unknown> {
   if (!transcriberPromise) {
     transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-base', { dtype: 'q8' })
+    // A REJECTED load must not stay cached: one transient failure (a file briefly
+    // locked by antivirus, low memory at startup) otherwise disabled dictation and
+    // auto-captions for the entire session. Clear it so the next call retries.
+    transcriberPromise.catch(() => {
+      transcriberPromise = null
+    })
   }
   return transcriberPromise
 }

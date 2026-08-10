@@ -70,7 +70,7 @@ function ollamaChat(model: string, prompt: string, numPredict: number, timeoutMs
       req.destroy()
       reject(
         new LLMRequestError(
-          `Ollama did not respond within ${Math.round(timeoutMs / 60000)} minute(s). On a CPU-only machine long scripts are slow — try a shorter length, or switch to a cloud provider in Settings for speed.`
+          `Ollama did not respond within ${Math.round(timeoutMs / 60000)} minute(s). On a CPU-only machine long scripts are slow — try a shorter length, or switch on Gemini (free, Settings → Connect Gemini) for cloud speed at no cost.`
         )
       )
     })

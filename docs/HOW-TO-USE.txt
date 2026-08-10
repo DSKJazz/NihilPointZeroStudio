@@ -35,6 +35,14 @@ FIRST TIME YOU RUN IT
       WAIT. Do not double-click again.
    3. If Windows says "Windows protected your PC": More info -> Run anyway (it's safe,
       just unsigned).
+   4. Nothing else is required. The AI brain is free and already chosen for you; you do
+      not need to buy anything, ever, and you do not need to open Settings to start.
+   5. The ONE thing worth doing once: Settings -> "Connect YouTube" -> "Show me how".
+      Free, about three minutes, and Google never asks for a card. Without it the "Your
+      channel" tab, the questions from your comments and the competitor gaps have
+      nothing to read. It walks you through it with a button for each page and then
+      tests the key for real, so you find out straight away if something is wrong
+      instead of a week later.
 
 HOW TO KNOW YOU'RE ON THE NEWEST BUILD  (READ THIS — it caused a lot of confusion)
    • The sidebar shows a small gold badge under "OS", e.g.
@@ -158,6 +166,27 @@ WHAT IS NEW (1 August 2026)
 
    The short version of this round:
 
+   CONNECTING YOUTUBE IS NOW A WALKTHROUGH, NOT AN INSTRUCTION. Settings used to say
+   "get a free key from Google Cloud Console, enable YouTube Data API v3, create an API
+   key" and leave you there. Now it is five numbered steps with a button on each that
+   opens the exact page. You paste the key, press Check, and the app really tries it —
+   if something is wrong it tells you in plain English which step to go back to. The
+   most common problem, by a mile, is a perfectly good key on a project where the
+   YouTube service was never switched on, and the app now says exactly that rather than
+   letting you assume you typed the key wrong.
+
+   AND IT FINDS YOUR CHANNEL FOR YOU. Type your @name — the one on your own channel
+   page — and it looks up the long "UC..." ID and shows you the channel name it found,
+   so you can see it picked the right one. YouTube buries that ID three menus deep and
+   nobody knows it by heart.
+
+   WHEN A CHANNEL PANEL COMES BACK EMPTY IT NOW SAYS WHY. It used to print "no videos
+   could be read, check your key and channel ID in Settings" no matter what had
+   happened, and only one of the seven things that can actually happen was that. In
+   particular, "could not reach YouTube" is now shown in amber and says plainly that it
+   does not know — it is not the app telling you that you have no videos. Amber always
+   means "I could not tell", and is never something for you to go and fix.
+
    A NEW TAB, "Your Channel". Everything else in the app helps you make a video. This
    one tells you what has already worked. It reads your own past videos and works out
    which title shapes did better FOR YOU — not what advice says works in general, which
@@ -231,6 +260,57 @@ ONE VERSION, EVERYWHERE — AND HOW TO CHECK
    IF THE LAPTOP SEEMS OLD: the installer alone never upgrades anything — it just
    installs whichever file is sitting there. A new file only appears after a build.
    See "If updates don't show up" in MEGA-DIAGNOSTIC-REPORT.md.
+
+AM I UP TO DATE? (one look, any time)
+   Settings -> the Version box at the top. It says plainly whether you are up to date,
+   and shows which version you are running next to the newest published one. There is a
+   "Check now" button if you want it re-checked this second.
+   If it says "could not check just now", that means exactly that - it does NOT mean you
+   are up to date. It will never claim a result it did not get.
+
+YOU DO NOT HAVE TO UPDATE IT AT ALL (this is the normal case now)
+   The studio opens by itself when you turn the laptop on. At that moment nobody is
+   waiting for it, so that is when it quietly installs anything new. By the time you
+   sit down it is already the newest version and there is nothing to press.
+
+   Two things it will never do: it will not update while a render or a queue is
+   running, and it will not interrupt you if YOU opened the app yourself — then you
+   get the blue notice and you choose when.
+
+   You can turn this off in Settings ("Open the studio when Windows starts"). If you
+   do, updating goes back to the one button described next.
+
+HOW TO UPDATE BY HAND — LET THE APP DO IT
+   Open the app. If a newer version exists, a blue notice appears at the bottom of
+   the window saying "A newer version of the app exists". Press "Get the update".
+   That is everything. The app downloads the update itself, checks it is the right
+   file, starts it, and closes so it can finish. Windows will ask you once whether
+   to allow it — say yes. Then the app reopens, updated.
+
+   You do not open a web page. You do not go looking in Downloads. You do not need
+   File Explorer. If the download is interrupted, press the button again — it keeps
+   what it already got.
+
+HOW TO UPDATE THE WHOLE WORKSHOP TOO (only if you have the code folder)
+   Open the NihilPointZeroStudio-workshop folder on your PC and double-click
+   UPDATE-MY-STUDIO.cmd. This does more than the button above: as well as the app,
+   it refreshes the code folder and your Desktop studio folder and pushes to GitHub.
+   Five to ten minutes, and you can walk away while it runs.
+
+   It checks its tools first and tells you by name if something is missing. If any
+   step fails it STOPS and says so in plain words rather than leaving things
+   half-updated, and it never touches your nihilpointzero-data folder — your videos,
+   scripts and settings are not at risk either way.
+
+   When it finishes it tells you to double-click NIHILPOINTZERO-OS-setup.exe once.
+   Do that; it keeps all your work.
+
+   NO CODE FOLDER ON THIS PC? Then just download the finished app:
+     1. go to github.com/DSKJazz/NihilPointZeroStudio/releases/latest
+     2. under "Assets", click NIHILPOINTZERO-OS-setup.exe
+     3. open your Downloads folder and double-click it
+   That page is rebuilt automatically whenever the code changes, so whatever is on
+   it is always the newest — you never have to check.
 
 WHERE TO LOOK NEXT
    • Need a quick reminder of a button or choice?  ->  NIHILPOINTZERO-CHEATSHEET.txt
