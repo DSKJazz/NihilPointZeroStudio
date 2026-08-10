@@ -1,4 +1,5 @@
 # Keeps every shipped document on the GitHub download page current.
+# Keeps the four shipped docs on the GitHub download page current.
 #
 # WHY THIS IS A SEPARATE WORKFLOW
 # The Windows build deliberately SKIPS documentation-only pushes: it takes 10-15 minutes

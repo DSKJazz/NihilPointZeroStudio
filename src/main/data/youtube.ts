@@ -121,6 +121,12 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
     return { videos: [], problem: { kind: 'refused', detail } }
   }
 
+export async function fetchMyChannelVideos(maxVideos = 200): Promise<MyVideo[]> {
+  const apiKey = getYouTubeApiKey()
+  const channelId = getYouTubeChannelId()
+  if (!apiKey || !channelId) return []
+  const keyHeader = { 'X-Goog-Api-Key': apiKey }
+
   try {
     // The uploads playlist id is the channel id with its second character switched.
     const chRes = await fetch(`${BASE_URL}/channels?part=contentDetails&id=${channelId}`, {
@@ -139,6 +145,13 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
     let pageToken = ''
     /** Set when the read stopped early — see the partial-read note below. */
     let truncated = ''
+    if (!chRes.ok) return []
+    const chData = await chRes.json()
+    const uploads: string | undefined = chData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
+    if (!uploads) return []
+
+    const found: { id: string; title: string; publishedAt: string }[] = []
+    let pageToken = ''
     // Bounded: a runaway pagination loop against a paid-quota API is its own bug.
     for (let page = 0; page < 10 && found.length < maxVideos; page++) {
       const url =
@@ -155,6 +168,7 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
         truncated = `Read ${found.length} of your videos and then the request was refused partway through.`
         break
       }
+      if (!res.ok) break
       const data = await res.json()
       for (const it of (data.items ?? []) as PlaylistItem[]) {
         const id = it.snippet?.resourceId?.videoId
@@ -166,6 +180,7 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
       if (!pageToken) break
     }
     if (!found.length) return { videos: [], problem: { kind: 'empty-channel' } }
+    if (!found.length) return []
 
     // Statistics come 50 ids at a time.
     const stats = new Map<string, { views: number; likes?: number; comments?: number }>()
@@ -183,6 +198,7 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
         truncated = truncated || `The view counts for ${Math.min(50, found.length - i)} of your videos could not be read.`
         continue
       }
+      if (!res.ok) continue
       const data = await res.json()
       for (const it of (data.items ?? []) as {
         id: string
@@ -204,6 +220,9 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
     // Timed out, DNS failed, offline. NOT the same as "this channel has no videos", and
     // it must never be shown as though it were.
     return { videos: [], problem: { kind: 'unreachable' } }
+    return found.slice(0, maxVideos).map((v) => ({ ...v, views: stats.get(v.id)?.views ?? 0, ...stats.get(v.id) }))
+  } catch {
+    return []
   }
 }
 

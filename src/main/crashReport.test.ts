@@ -24,6 +24,10 @@ afterAll(() => {
   process.off('uncaughtException', guard)
 })
 
+import { afterEach, describe, expect, it } from 'vitest'
+import { describeCrash, installCrashReporting, isWorthRecording } from './crashReport'
+import type { AiErrorEntry } from '../shared/types'
+
 const removers: (() => void)[] = []
 afterEach(() => {
   while (removers.length) removers.pop()!()
@@ -172,5 +176,21 @@ describe('the handlers can be removed', () => {
     // Both handlers go, and nothing else's listeners were disturbed.
     expect(process.listenerCount('uncaughtException')).toBe(exceptionsBefore)
     expect(process.listenerCount('unhandledRejection')).toBe(rejectionsBefore)
+  it('stops recording once removed', () => {
+    const entries: AiErrorEntry[] = []
+    const remove = installCrashReporting({ record: (e) => entries.push(e), onFatal: () => {} })
+    process.emit('uncaughtException', new Error('one'))
+    remove()
+    process.emit('uncaughtException', new Error('two'))
+    expect(entries).toHaveLength(1)
+  })
+
+  it('does not leave the process without any handler when vitest has its own', () => {
+    // A sanity check on the test harness itself: removing ours must not remove theirs.
+    const before = process.listenerCount('uncaughtException')
+    const remove = installCrashReporting({ record: () => {}, onFatal: () => {} })
+    expect(process.listenerCount('uncaughtException')).toBe(before + 1)
+    remove()
+    expect(process.listenerCount('uncaughtException')).toBe(before)
   })
 })

@@ -449,6 +449,7 @@ export function planSlideshowShots(imageCount: number, durationSec: number): Sli
   // min(12, max(imgs, …)) ordering, a 30-image build silently discarded every
   // image past the 12th — images the app had just spent minutes generating.
   const target = Math.max(imgs, Math.min(12, Math.round(Math.max(1, durationSec) / 6)))
+  const target = Math.min(12, Math.max(imgs, Math.round(Math.max(1, durationSec) / 6)))
   // Shot lengths TIGHTEN toward the end instead of every shot getting an equal slice.
   // The last third of a finance video is where people leave, and an even 6-6-6 split
   // makes the end feel exactly as slow as the beginning when it needs to feel faster.
@@ -778,6 +779,7 @@ export async function renderVideo(opts: RenderOptions): Promise<void> {
         // like "OIL UP 40%!" kills the whole build with "Stray %". Nothing here uses
         // text expansion, so it is switched off rather than escaped around.
         `[${base}]drawtext=expansion=none:fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
+        `[${base}]drawtext=fontfile='${font}':textfile='${fileArg(titleFile)}':fontcolor=${theme.titleColor}:fontsize=${titleFont}:x=(w-tw)/2:y=${layout.titleY}${titleAlpha}[v0]`
       )
       chains.push(`[v0][wave]overlay=x=0:y=H-h-${layout.waveMargin}[v1]`)
     } else {

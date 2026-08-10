@@ -1169,6 +1169,10 @@ can happen and they are now told apart:
 The colours mean something. Red is "this is wrong and here is the fix". Amber is
 "I could not tell" — never treat amber as a fault to chase. Gold with a button is
 "three minutes of setup and this works".
+WHAT YOU NEED FIRST
+Settings -> your YouTube key and your channel ID. Both are free. Reading a
+hundred of your own videos costs about four of the ten thousand requests Google
+gives you every day, so you can run this as often as you like.
 
 WORK IT OUT — WHAT THE THREE ANSWERS MEAN
 
