@@ -714,6 +714,24 @@ const api = {
     markSeen: (ids: string[]): Promise<import('../shared/whatsNew').WhatsNewReport> =>
       ipcRenderer.invoke(IPC.whatsNewMarkSeen, ids)
   },
+  // The render queue: line up an evening's work and walk away. Written to disk, so it
+  // survives the app closing, and one failure costs exactly one item.
+  queue: {
+    list: (): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueList),
+    add: (req: VideoBuildRequest): Promise<import('../shared/types').QueueItem[]> =>
+      ipcRenderer.invoke(IPC.queueAdd, req),
+    cancel: (id: string): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueCancel, id),
+    retry: (id: string): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueRetry, id),
+    reorder: (id: string, direction: number): Promise<import('../shared/types').QueueItem[]> =>
+      ipcRenderer.invoke(IPC.queueReorder, id, direction),
+    clearFinished: (): Promise<import('../shared/types').QueueItem[]> => ipcRenderer.invoke(IPC.queueClearFinished),
+    /** Fires on every change, so the list follows a render without polling. */
+    onChanged: (cb: (items: import('../shared/types').QueueItem[]) => void) => {
+      const listener = (_e: unknown, items: import('../shared/types').QueueItem[]): void => cb(items)
+      ipcRenderer.on(IPC.queueChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.queueChanged, listener)
+    }
+  },
   // The credit check before publishing. NOT a copyright detector — see
   // shared/copyrightCheck.ts for why nothing on this PC can be one.
   copyright: {
