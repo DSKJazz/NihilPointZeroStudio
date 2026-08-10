@@ -758,6 +758,10 @@ const api = {
     /** Scores a proposed title against your own history, with the reasons. */
     scoreTitle: (title: string): Promise<import('../shared/channelLearning').TitleScore> =>
       ipcRenderer.invoke(IPC.channelScoreTitle, title),
+    /** Subjects other channels get views on that this one has never covered. */
+    gaps: (): Promise<
+      import('../shared/competitorGap').GapReport & { myVideos: number; competitorVideos: number; queries: string[] }
+    > => ipcRenderer.invoke(IPC.channelGaps),
     /** The questions your comments keep asking, quoted verbatim and ranked. */
     comments: (
       videoLimit?: number
