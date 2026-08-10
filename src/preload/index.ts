@@ -706,6 +706,73 @@ const api = {
       | { ok: false; error: string }
     > => ipcRenderer.invoke(IPC.readAloudSpeak, script, speed, voice)
   },
+  // "What changed" — what is new in the build actually running. The build tag is read in
+  // the main process, never passed in from here, so a stale page cannot make the app
+  // advertise a feature it does not have.
+  whatsNew: {
+    get: (): Promise<import('../shared/whatsNew').WhatsNewReport> => ipcRenderer.invoke(IPC.whatsNewGet),
+    markSeen: (ids: string[]): Promise<import('../shared/whatsNew').WhatsNewReport> =>
+      ipcRenderer.invoke(IPC.whatsNewMarkSeen, ids)
+  },
+  // Cut the dead air out of a take. Plan first (cheap, no encode, nothing changed), then
+  // apply — which writes a NEW video and never touches the original.
+  silence: {
+    plan: (
+      videoId: string
+    ): Promise<
+      | {
+          ok: true
+          keeps: import('../shared/types').KeepSpan[]
+          summary: import('../shared/types').SilenceSummary
+          durationSec: number
+        }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silencePlan, videoId),
+    apply: (
+      videoId: string
+    ): Promise<
+      | { ok: true; video: import('../shared/types').VideoJob; summary: import('../shared/types').SilenceSummary }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.silenceApply, videoId)
+  },
+  // What YOUR channel's own history says — not general advice about channels in general.
+  channel: {
+    /** Title shapes that worked, when the audience shows up, and your series. */
+    learn: (): Promise<{
+      videoCount: number
+      titleFindings: import('../shared/channelLearning').Finding[]
+      timing: ReturnType<typeof import('../shared/channelLearning').publishTimingReport>
+      series: ReturnType<typeof import('../shared/series').seriesReport>
+    }> => ipcRenderer.invoke(IPC.channelLearn),
+    /** Scores a proposed title against your own history, with the reasons. */
+    scoreTitle: (title: string): Promise<import('../shared/channelLearning').TitleScore> =>
+      ipcRenderer.invoke(IPC.channelScoreTitle, title),
+    /** The questions your comments keep asking, quoted verbatim and ranked. */
+    comments: (
+      videoLimit?: number
+    ): Promise<{
+      scanned: number
+      videosRead: number
+      clusters: import('../shared/commentMining').QuestionCluster[]
+      summary: string
+    }> => ipcRenderer.invoke(IPC.channelComments, videoLimit)
+  },
+  // Hear the script read out at speed, to catch by ear what silent reading hides.
+  readAloud: {
+    // Instant and pure: what to listen for, and how long the listen will take.
+    plan: (script: string, speed?: number): Promise<import('../shared/readAloud').ReadAloudPlan> =>
+      ipcRenderer.invoke(IPC.readAloudPlan, script, speed),
+    // Speaks it and speeds the file up. Returns a PATH — the page turns that into a
+    // playable link with fileUrl(), which is what makes it work on the phone too.
+    speak: (
+      script: string,
+      speed?: number,
+      voice?: 'natural' | 'winnatural' | 'windows'
+    ): Promise<
+      | { ok: true; path: string; engineName: string; plan: import('../shared/readAloud').ReadAloudPlan }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.readAloudSpeak, script, speed, voice)
+  },
   health: {
     // Live self-test of every dependency (validates saved keys with a cheap request).
     run: (): Promise<import('../shared/types').HealthReport> => ipcRenderer.invoke(IPC.healthRun),

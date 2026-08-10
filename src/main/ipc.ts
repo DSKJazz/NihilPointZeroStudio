@@ -72,6 +72,7 @@ export function selfUpdateEnv(): SelfUpdateDeps {
     log: (message) => logActivity('ai', message)
   }
 }
+import { diskIsNewerThanRunning, getAvailableUpdate, tagDate } from './updateCheck'
 import { whatsNewReport } from '../shared/whatsNew'
 import { DEFAULT_SPEED, planReadAloud, type ReadSpeed } from '../shared/readAloud'
 import { learnTitlePatterns, publishTimingReport, scoreTitle } from '../shared/channelLearning'
@@ -95,6 +96,7 @@ import { fetchComments, readMyChannel } from './data/youtube'
 import { resolveYouTubeChannel, verifySavedYouTubeKey, verifyYouTubeKey } from './data/youtubeKeyCheck'
 import { verifyGeminiKey, verifySavedGeminiKey } from './llm/geminiKeyCheck'
 import { caretakerStatus, clearCaretakerLog, runCaretakerPass, updateCaretakerSchedule } from './caretaker'
+import { fetchComments, fetchMyChannelVideos } from './data/youtube'
 import { buildCutArgs, planSilenceCut } from './video/silence'
 import { buildVideoEncoderArgs, chooseEncoderForJob } from './video/encoder'
 import { buildSpeedArgs } from './audio/speed'
@@ -1032,6 +1034,8 @@ export function registerIpcHandlers(): void {
     // empty answer used to mean five different things and named none of them.
     const { videos, problem } = await readMyChannel()
     logRead('Your channel', problem)
+  ipcMain.handle(IPC.channelLearn, async () => {
+    const videos = await fetchMyChannelVideos()
     const past = videos.map((v) => ({
       title: v.title,
       publishedAt: v.publishedAt,
@@ -1062,6 +1066,11 @@ export function registerIpcHandlers(): void {
       ),
       problem
     }
+    const videos = await fetchMyChannelVideos()
+    return scoreTitle(
+      typeof title === 'string' ? title : '',
+      videos.map((v) => ({ title: v.title, publishedAt: v.publishedAt, views: v.views }))
+    )
   })
 
   // THE VIDEO IDEAS ALREADY SITTING IN THE COMMENTS. Every question returned is quoted
@@ -1070,6 +1079,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.channelComments, async (_e, videoLimit?: number) => {
     const { videos, problem } = await readMyChannel()
     logRead('Comment questions', problem)
+    const videos = await fetchMyChannelVideos()
     // Newest first, and only the recent ones: a question from three years ago has usually
     // been answered, and each video costs a quota unit.
     const recent = [...videos]
@@ -1283,6 +1293,7 @@ export function registerIpcHandlers(): void {
       }
     }
     return { ...gapReport(mine, theirs), problem: read.problem, myVideos: mine.length, competitorVideos: theirs.length, queries }
+    return { scanned: comments.length, videosRead: recent.length, clusters, summary: summariseQuestions(clusters, comments.length) }
   })
 
   // Proof the script BY EAR. The plan is pure and instant — what to listen for, and how

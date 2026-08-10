@@ -168,6 +168,7 @@ Only the first three are things to act on. The rest are the app saying "I could 
 shown in amber, and it will never dress one of those up as a fault of yours — a partial
 read in particular now says its numbers are a floor rather than a total, instead of
 letting half a history pass as the whole story.
+call, so eight calls would burn a tenth of your day.
 
 ### In the Script Writer
 - **Read it to me.** Hears the script back at 2x with the pitch held, so it still sounds
@@ -255,6 +256,10 @@ swapping the image overwrites it. What the app does instead is give genuinely di
 variants, catch the faults that need no data at all, and do the arithmetic that says whether
 a difference is real or chance. The swapping and the reading of two numbers are the user's
 to do, and the panel says so rather than implying an automation that does not exist.
+Eight of the twenty-seven are still not built: thumbnail A/B testing, competitor topic
+gaps, dual-language upload metadata, a copyright pre-check, resuming a failed render,
+proxy editing, scene preview, and a crash reporter. Undo and the render queue partly
+exist already and were left alone rather than duplicated.
 
 ## New in this build (2026-08-01, morning — the whole studio on your phone)
 

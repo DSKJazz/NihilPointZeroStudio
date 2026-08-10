@@ -12,6 +12,14 @@ import { CHOSEN_TIMEOUT_MS, FALLBACK_TIMEOUT_MS } from './limits'
 import { fallbackTimeoutMs } from './timeouts'
 
 import { getDecryptedKey, getModel, getProviderEnabled, getSettings, logActivity } from '../store'
+
+/**
+ * How long a FALLBACK Ollama gets before the chain moves on. The user's chosen provider
+ * keeps the full 20-minute allowance; a backup does not, because a silent multi-minute
+ * wait is exactly the "the app froze" complaint this module exists to fix.
+ */
+const FALLBACK_OLLAMA_TIMEOUT_MS = FALLBACK_TIMEOUT_MS
+import { getDecryptedKey, getModel, getSettings, logActivity } from '../store'
 import { broadcastAiFallback } from '../notify'
 
 /** Builds the raw provider for the chosen id (throws for a paid provider with no key). */
