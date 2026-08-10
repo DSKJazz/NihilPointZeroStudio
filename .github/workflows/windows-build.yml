@@ -134,6 +134,10 @@ jobs:
           # SIX documents, not four (user's instruction, 2026-08-01): SETUP_GUIDE.md and
           # UPDATE-MY-STUDIO.cmd are maintained on exactly the same footing as the four,
           # so they can never go stale next to the others.
+          # The exes AND the four docs. The docs were left out until now, so the download
+          # page served a brand-new exe alongside instructions from days earlier — which
+          # is the worst combination, because the docs describe features the user then
+          # cannot find, or omit the ones that are there.
           gh release upload "$TAG" \
             "release/NIHILPOINTZERO-OS-setup.exe" \
             "release/NIHILPOINTZERO-OS-portable.exe" \
