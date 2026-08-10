@@ -132,17 +132,24 @@ button. Best used right after "📱 Cut into vertical shorts" so uploading is co
 • ACTIVITY LOG — the app's diary: what the AI did, when a video build started/finished/
   FAILED and why, and — important — whether an answer came from your chosen AI or the
   FREE backup AI (if answers feel weak, check here first).
-• SETTINGS — pick the AI brain: free (default, keyless), Ollama (local), Anthropic or
-  OpenAI (paid keys). "🩺 Run full check" (top of the page) LIVE-tests everything —
-  internet, the free AI, the free image service, Ollama + whether your chosen model is
-  installed, and whether a saved Anthropic/OpenAI key is actually ACCEPTED (a wrong key
-  shows RED here; this is the first thing to try when answers feel weak). Model names are
-  cleaned of stray spaces automatically. Natural narration voices live here too: pick and
+• SETTINGS — pick the AI brain: Ollama (local, free, the default) or the free keyless
+  online service. Anthropic and OpenAI are there but ASLEEP: they are never contacted and
+  never chosen for you, and only wake if you deliberately select one. "🩺 Run full check"
+  (top of the page) LIVE-tests everything — internet, the free AI, the free image service,
+  Ollama + whether your chosen model is installed. A saved key for a provider you are not
+  using is simply noted as "saved but not in use", never marked as a fault. If answers feel
+  weak, this check names the real cause; the answer is never "go and pay for something".
+  Model names are cleaned of stray spaces automatically. Natural narration voices live here too: pick and
   download Piper voices (English + two real Urdu neural voices — no Windows setup
   needed), and see/refresh which Windows natural voices (incl. Urdu Asad/Uzma) are
-  installed, with a one-click link to add more via Windows' own Speech settings. A free
-  YouTube Data API key here makes Ideas & Trends use REAL YouTube view/competition data
-  instead of AI guesses (optional — ideas still work without it). Also: AI Horde key
+  installed, with a one-click link to add more via Windows' own Speech settings. "Connect YouTube"
+  lives here: five numbered steps, each with a button that opens the exact Google page,
+  then it TESTS the key for real and says in plain English what is wrong and which step
+  fixes it. It also finds your channel from your @name, so you never have to hunt for the
+  long UC… ID. Free, about 3 minutes, no card. It switches on Your Channel, the questions
+  mined from your comments, the competitor gaps, and real view/competition figures in
+  Ideas & Trends (ideas still work without it; the three channel tabs do not, and they now
+  say so with the reason instead of showing an empty panel). Also: AI Horde key
   (faster photo scenes), demucs/faceAnim commands, and the Photo Beautify tool.
 
 STANDARD WORKFLOWS

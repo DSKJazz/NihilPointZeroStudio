@@ -150,3 +150,49 @@ export function parseMoodReply(reply: string, fallbackText: string): string[] {
   const moods = normalizeMoods(parts)
   return moods.length >= 2 ? moods : moodsFromText(fallbackText)
 }
+
+/**
+ * The music EXAMPLES plan — his ask (2026-08-07): "after it creates it, it gives me
+ * multiple examples... I play, I listen... and it would tell me why."
+ *
+ * Pure so the WHY can be tested: 3 distinct built-in moods, the first ones steered by
+ * what the script actually says (via the same keyword signals the DJ uses), the rest
+ * padded with safe contrasts so there is always a real choice to listen through. Every
+ * candidate carries one plain sentence saying why it is offered — a list of names with
+ * no reasons is exactly the kind of half-answer this app is trying to stop giving.
+ */
+const SYNTH_WHY: Record<'calm' | 'uplifting' | 'tense' | 'lofi' | 'corporate' | 'cinematic', string> = {
+  tense: 'Your script talks about pressure — falls, warnings, risk — and this low, urgent bed keeps that edge under the voice.',
+  uplifting: 'Your script carries good news and growth, and this brighter bed lifts with it without shouting over the narration.',
+  corporate: 'The safe, neutral choice for financial analysis — steady and professional under numbers and explanations.',
+  calm: 'A soft, unhurried bed that lets a measured explanation breathe; good when the story is careful rather than dramatic.',
+  cinematic: 'A wider, film-style bed that makes a big-picture story feel like a documentary rather than a bulletin.',
+  lofi: 'A relaxed, modern texture — works when the video is conversational and you want it to feel casual, not formal.'
+}
+
+export interface MusicExamplePlanItem {
+  mood: 'calm' | 'uplifting' | 'tense' | 'lofi' | 'corporate' | 'cinematic'
+  why: string
+}
+
+export function musicExamplePlan(scriptText: string): MusicExamplePlanItem[] {
+  const detected = moodsFromText(scriptText || '')
+  const picked: MusicExamplePlanItem[] = []
+  const seen = new Set<string>()
+  const add = (mood: MusicExamplePlanItem['mood'], fromScript: boolean): void => {
+    if (seen.has(mood) || picked.length >= 3) return
+    seen.add(mood)
+    picked.push({
+      mood,
+      why: fromScript ? SYNTH_WHY[mood] : `${SYNTH_WHY[mood]} (Offered as a contrast to compare against.)`
+    })
+  }
+  // What the script's own words point at, first.
+  for (const kw of detected) {
+    const mood = SYNTH_MOOD[kw]
+    if (mood) add(mood, true)
+  }
+  // Then safe contrasts, so there are always three genuinely different things to hear.
+  for (const mood of ['corporate', 'cinematic', 'calm'] as const) add(mood, false)
+  return picked
+}

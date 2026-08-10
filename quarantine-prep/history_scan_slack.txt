@@ -1,0 +1,4 @@
+﻿Scanning pattern: xoxp-[0-9A-Za-z\-]+ -> quarantine-prep/history_scan_slack.txt
+
+--- Working tree matches ---
+

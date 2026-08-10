@@ -1,15 +1,36 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { checkForUpdate } from './updateCheck'
 import { runAutoBackupIfDue } from './autoBackup'
-import { runHealthCheck } from './health'
+import { runCaretakerPass, scheduleCaretaker } from './caretaker'
 import { scanStranded } from './strandedData'
 import { decideDataHome, holdsUserWork, isUsableDir, readPin, writePin } from './dataHome'
-import { getLastHealth, logActivity, setLastHealth } from './store'
+import {
+  getLastBackupNudgeAt,
+  getSecondBackupDir,
+  getSettings,
+  getStartWithWindows,
+  listLibrary,
+  listVideos,
+  logActivity,
+  setActiveProvider,
+  setLastBackupNudgeAt
+} from './store'
 import { join } from 'path'
-import { registerIpcHandlers } from './ipc'
+import { registerIpcHandlers, selfUpdateEnv, setCaretakerBusyCheck } from './ipc'
+import { applyOpenAtLogin, shouldAutoInstall, shouldFocusOnSecondInstance, wasAutoStarted } from './autoStart'
+import { runSelfUpdate } from './selfUpdate'
+import { rescueMessage, rescueTarget } from './llm/rescueBrain'
+import { nudgeMessage, shouldNudge } from './backupNudge'
+import { isProviderDead } from './llm/deadProviders'
+import { getOllamaStatus } from './llm/ollama'
+import { broadcastAiFallback } from './notify'
+import { getAvailableUpdate } from './updateCheck'
+import { isRunning as isQueueRunning } from './renderQueueRunner'
+import { isRenderSessionOpen } from './video/ffmpeg'
 import { captureHandlers } from './remote/registry'
 import { attachRemoteEvents } from './remote/events'
 import { installCrashReporting } from './crashReport'
+import { recoverQueueOnStartup } from './renderQueueRunner'
 import { logAiError } from './llm/errorLog'
 import { dialog } from 'electron'
 
@@ -18,6 +39,22 @@ import { dialog } from 'electron'
 // rule below. It also silences the update check and auto-backup (network/disk noise
 // a test run must not produce).
 const e2eUserData = process.env.NPZ_E2E_USERDATA
+
+/**
+ * Is the app in the middle of doing something for the user?
+ *
+ * Consulted before any automatic self-update. Restarting the app under a running render
+ * would destroy work in progress, and the one rule this app does not bend is that it does
+ * not destroy the user's work — so a busy app is never auto-updated, however overdue.
+ */
+function isBusy(): boolean {
+  try {
+    return isQueueRunning() || isRenderSessionOpen()
+  } catch {
+    // Cannot tell => assume busy. The safe answer is the one that does nothing.
+    return true
+  }
+}
 
 // WHERE THE USER'S WORK LIVES. Decided ONCE and written down (see main/dataHome.ts) —
 // the app no longer re-derives this on every launch, which is what used to move it to
@@ -101,7 +138,11 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_e, argv) => {
+    // Focus is right when a PERSON launches the app again. It is wrong when the Windows
+    // sign-in entry fires while they are typing in something else — the studio window
+    // would jump to the front for no reason they can see.
+    if (!shouldFocusOnSecondInstance(argv)) return
     const [win] = BrowserWindow.getAllWindows()
     if (win) {
       if (win.isMinimized()) win.restore()
@@ -131,6 +172,17 @@ if (!gotLock) {
     }
   })
 
+  // Pick up anything the last session left half-rendered. Before the window exists, so an
+  // interrupted item is already back in the queue by the time anything can look at it.
+  try {
+    const { recovered } = recoverQueueOnStartup()
+    if (recovered) {
+      logActivity('ai', `Put ${recovered} interrupted render${recovered === 1 ? '' : 's'} back in the queue`)
+    }
+  } catch {
+    // A queue that cannot be read must never stop the app from starting.
+  }
+
   app.whenReady().then(() => {
     // Registers exactly as before, and additionally remembers each handler so the same
     // function can be called from the phone. See remote/registry.ts for why it is
@@ -138,13 +190,119 @@ if (!gotLock) {
     captureHandlers(registerIpcHandlers)
     createWindow()
 
+    // Register (or un-register) the Windows sign-in entry on every launch, so the saved
+    // preference and what Windows actually believes cannot drift apart — a reinstall or a
+    // moved exe would otherwise leave a startup entry pointing at nothing.
+    if (!e2eUserData) {
+      try {
+        applyOpenAtLogin(getStartWithWindows(), app)
+      } catch {
+        // A startup entry that cannot be written is a nuisance, not a reason to fail
+        // the launch.
+      }
+    }
+
+    /**
+     * RESCUE A DEAD BRAIN. The hosted free service began demanding payment (HTTP 402) and
+     * every install pointed at it — the shipped default — was left refusing every request,
+     * 50 failures deep, with no sign that the thing it was configured to use had stopped
+     * existing. Changing the default only helps NEW installs; an existing one keeps its
+     * saved setting forever. So the switch happens here, on the machine, without the user
+     * visiting a screen he has said he will never open.
+     *
+     * Only ever towards a free, local brain — never a paid one, and never silently.
+     */
+    if (!e2eUserData) {
+      setTimeout(() => {
+        void (async () => {
+          try {
+            const active = getSettings().activeProvider
+            if (!isProviderDead(active)) return
+            const target = rescueTarget({
+              activeProvider: active,
+              activeIsPermanentlyDead: true,
+              ollamaAvailable: (await getOllamaStatus()).connected,
+              // Only relevant as a target when it is not the thing that just died.
+              freeAvailable: active !== 'free'
+            })
+            if (!target) return
+            setActiveProvider(target)
+            const message = rescueMessage(active, target)
+            logActivity('ai', 'Switched your AI brain automatically', message)
+            broadcastAiFallback({ provider: active, detail: message })
+          } catch {
+            // A rescue that cannot run must never take the app down with it.
+          }
+        })()
+      }, 12_000)
+    }
+
     // Quiet, delayed check for a newer shipped build (silent when offline/failing),
     // and the weekly copy-only backup — both skipped under the E2E harness, which
     // must not touch the network or write anything outside its isolated data home.
     if (!e2eUserData) {
       setTimeout(() => {
-        void checkForUpdate()
+        void (async () => {
+          await checkForUpdate()
+          // WINDOWS OPENED US, SO NOBODY IS WAITING: this is the one moment when the app
+          // can spend three minutes replacing itself without costing anyone anything, and
+          // it is what makes "turn the laptop on and it is already current" true. When the
+          // USER opened it they want to work, so they get the notice and the choice
+          // instead. See autoStart.ts for the full reasoning.
+          if (
+            shouldAutoInstall({
+              autoStarted: wasAutoStarted(process.argv),
+              updateAvailable: !!getAvailableUpdate(),
+              workInProgress: isBusy(),
+              underTest: !!e2eUserData
+            })
+          ) {
+            // stillSafeToQuit, not just the check above: the download takes minutes, and
+            // the user may have sat down and started a render in the meantime. If so the
+            // verified installer simply stays on disk and the banner's button becomes
+            // instant, because there is nothing left to fetch.
+            const res = await runSelfUpdate({ ...selfUpdateEnv(), stillSafeToQuit: () => !isBusy() })
+            if (!res.ok) {
+              // Silent to the user but never silent in the log: an auto-update that has
+              // been quietly failing for weeks is how a laptop ends up three builds
+              // behind while everything else is current.
+              try {
+                logActivity(
+                  'ai',
+                  res.deferred ? 'The update is downloaded and waiting' : 'The automatic update at sign-in did not run',
+                  res.error
+                )
+              } catch {
+                /* logging must never block startup */
+              }
+            }
+          }
+        })()
       }, 8000)
+
+      /**
+       * ONE DISK IS NOT A BACKUP. His work exists in one place and his own restore log
+       * already reads "8 missing file(s) brought back". Settings has said "not set -
+       * recommended" for weeks, unread, because he does not open Settings. So it comes to
+       * him instead — see backupNudge.ts for why fortnightly and why not on an empty
+       * studio.
+       */
+      setTimeout(() => {
+        try {
+          const nowIso = new Date().toISOString()
+          const workItems = listVideos().length + listLibrary().length
+          if (!shouldNudge({
+            hasSecondHome: !!getSecondBackupDir(),
+            workItems,
+            lastNudgedAt: getLastBackupNudgeAt(),
+            nowIso
+          })) return
+          setLastBackupNudgeAt(nowIso)
+          logActivity('ai', 'Your work is only on this laptop', nudgeMessage(workItems))
+        } catch {
+          // A reminder that cannot be worked out is never worth failing a launch for.
+        }
+      }, 45_000)
 
       // Weekly copy-only backup of the user's work (at most once every 7 days).
       // Delayed well past first paint so it never competes with app startup.
@@ -185,31 +343,17 @@ if (!gotLock) {
         })()
       }, 45_000)
 
-      // Weekly QUIET health check: the manual "Run full check" only helps when the
-      // user remembers it. This runs the same live checks in the background, stores
-      // the verdict (Settings shows a red badge when something is actually broken),
-      // and writes a plain-English line to the Activity Log. Never blocks startup.
+      // THE CARETAKER replaced the old weekly quiet health check: same live checks,
+      // plus the dead-brain rescue and the lost-videos scan, on a schedule the user can
+      // see and change (Settings → Caretaker), with every pass recorded. First pass 90s
+      // after start so launch stays instant; then every N hours (default 6) while open.
+      setCaretakerBusyCheck(isBusy)
       setTimeout(() => {
-        void (async () => {
-          try {
-            const last = getLastHealth()
-            const lastAt = last.at ? Date.parse(last.at) : NaN
-            if (!Number.isNaN(lastAt) && Date.now() - lastAt < 7 * 24 * 60 * 60 * 1000) return
-            const report = await runHealthCheck()
-            const failed = report.checks.filter((c) => c.status === 'fail').map((c) => c.name)
-            setLastHealth(failed)
-            if (failed.length) {
-              logActivity(
-                'ai',
-                `Weekly self-check found ${failed.length} problem(s): ${failed.join(', ')}`,
-                'Open Settings → "Run full check" for details and fixes. Everything else keeps working.'
-              )
-            }
-          } catch {
-            /* a failed self-check must never bother the user */
-          }
-        })()
+        void runCaretakerPass('start', isBusy).catch(() => {
+          /* a failed self-check must never bother the user */
+        })
       }, 90_000)
+      scheduleCaretaker(isBusy)
     }
 
     app.on('activate', () => {

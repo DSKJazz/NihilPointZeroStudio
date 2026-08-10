@@ -49,10 +49,14 @@ export default function PsxPage(): React.JSX.Element {
 
   async function analyze(): Promise<void> {
     setBusy('Fetching live data from the PSX portal…')
-    setError(null); setNote(null); setScript(''); setAnalysis(null); setStaleAsOf(null)
+    setError(null); setNote(null)
     try {
       const res = await window.api.psx.analyze(sym)
       if (!res.ok) { setError(res.error ?? 'Could not fetch PSX data.'); return }
+      // Replace the old analysis/script only AFTER a successful fetch — clearing
+      // them up front meant a typo'd symbol (or a portal hiccup) destroyed the
+      // current analysis, and autosave immediately persisted the empty state.
+      setScript('')
       setAnalysis(res.analysis ?? null)
       setSummary(res.summary ?? '')
       setStaleAsOf(res.staleAsOf ?? null)
@@ -63,10 +67,14 @@ export default function PsxPage(): React.JSX.Element {
     }
   }
 
+  // Excel/Script act on the symbol whose figures are ON SCREEN — not whatever is
+  // currently typed in the box, which may have changed since the last Analyze.
+  const analyzedSym = analysis?.symbol || sym
+
   async function downloadExcel(): Promise<void> {
     setBusy('Building Excel workbook…'); setError(null); setNote(null)
     try {
-      const res = await window.api.psx.excel(sym)
+      const res = await window.api.psx.excel(analyzedSym)
       if (res.saved) setNote(`Excel saved: ${res.path}`)
       else if (res.error) setError(res.error)
     } catch (err) {
@@ -79,9 +87,9 @@ export default function PsxPage(): React.JSX.Element {
   async function generateScript(): Promise<void> {
     setBusy('Writing a reasoned narration script from the figures…'); setError(null); setNote(null)
     try {
-      const res = await window.api.psx.script(sym, { style: 'documentary', instruction: instruction.trim() || undefined, language: language || undefined })
+      const res = await window.api.psx.script(analyzedSym, { style: 'documentary', instruction: instruction.trim() || undefined, language: language || undefined })
       if (!res.ok) { setError(res.error ?? 'Could not generate the script.'); return }
-      setTitle(res.title ?? `${sym} — PSX Analysis`)
+      setTitle(res.title ?? `${analyzedSym} — PSX Analysis`)
       setScript(res.script ?? '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Script generation failed.')
@@ -94,7 +102,7 @@ export default function PsxPage(): React.JSX.Element {
     if (!script.trim()) { setError('Generate or write a script first.'); return }
     setBusy('Building narration video (AI visuals)…'); setError(null); setNote(null); setProgress(null)
     try {
-      await window.api.video.build({ title: title || `${sym} — PSX Analysis`, body: script, engine: 'ai-free', style: 'cinematic', template: 'news' })
+      await window.api.video.build({ title: title || `${analyzedSym} — PSX Analysis`, body: script, engine: 'ai-free', style: 'cinematic', template: 'news' })
       setNote('Video built — open Video Studio to preview, voice-over, or export it.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Video build failed.')
@@ -119,7 +127,7 @@ export default function PsxPage(): React.JSX.Element {
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-serif text-gold-400">Live PSX Data
-        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
       </h1>
       <p className="text-ink-400 text-sm mt-1">
         Real end-of-day data straight from the PSX portal (dps.psx.com.pk). Figures (SMA/RSI/returns) are
