@@ -122,6 +122,9 @@ export default function VideoPage() {
   const [winVoiceId, setWinVoiceId] = useState('')
   const [previewing, setPreviewing] = useState(false)
   const [musicPath, setMusicPath] = useState<string | null>(null)
+  // The music EXAMPLES: 3 full-length beds to listen through, each with its why.
+  const [musicExamples, setMusicExamples] = useState<{ mood: string; why: string; path: string }[]>([])
+  const [makingExamples, setMakingExamples] = useState(false)
   const [soundEffects, setSoundEffects] = useState(true)
   // Default to the free per-scene AI engine so the visuals actually follow the script
   // (a real generated image per section) instead of plain text cards over a gradient.
@@ -137,6 +140,11 @@ export default function VideoPage() {
     () => ({ title, body, engine, style, resolution, aspect, template }),
     [title, body, engine, style, resolution, aspect, template]
   )
+  // True once the autosave restore has put real user content into the editor.
+  // The source-list loader below MUST NOT seed title/body over it: that seeding
+  // used to run after every restore (mount order makes it deterministic) and
+  // silently destroyed the user's pasted/typed script on every return to this tab.
+  const restoredContentRef = useRef(false)
   useAutosave('video-editor', editorPersist, (v) => {
     if (v.engine != null && v.engine in ENGINE_INFO) setEngine(v.engine)
     if (typeof v.style === 'string' && v.style) setStyle(v.style as VideoStyle)
@@ -146,6 +154,7 @@ export default function VideoPage() {
     if (wantScriptPad) return
     if (v.title != null) setTitle(v.title)
     if (v.body != null) setBody(v.body)
+    restoredContentRef.current = Boolean((v.title ?? '').trim() || (v.body ?? '').trim())
   })
   const [images, setImages] = useState<string[]>([])
   const [useStock, setUseStock] = useState(false)
@@ -355,6 +364,13 @@ export default function VideoPage() {
         if (c.hasPixabay) setUseStock(true)
       })
       if (selectedKey) return
+      // A restored draft owns the editor: select the paste slate WITHOUT touching
+      // title/body. (drafts.get is sent before this effect's requests and every
+      // handler is synchronous, so the restore has already landed by now.)
+      if (restoredContentRef.current) {
+        setSelectedKey(PASTE_KEY)
+        return
+      }
       // If the user arrived via the Script Pad's "Send to Video Generator", start
       // on that. Otherwise prefer a real script (Writer/Library/Pad) over the
       // blank slate, falling back to the blank slate when nothing else exists.
@@ -369,11 +385,68 @@ export default function VideoPage() {
   }, [])
 
   function handleSelect(key: string): void {
-    setSelectedKey(key)
+    if (key === selectedKey) return
     const src = sources.find((s) => s.key === key)
-    if (src) {
-      setTitle(src.title)
-      setBody(src.body)
+    if (!src) {
+      setSelectedKey(key)
+      return
+    }
+    // Park the editor's current content on the source it belongs to before
+    // switching. Without this, re-selecting "Paste / write my own" re-read the
+    // frozen empty PASTE_SOURCE constant and wiped everything the user had
+    // typed, pasted, or imported — with no confirm and no undo.
+    setSources((prev) => prev.map((s) => (s.key === selectedKey ? { ...s, title, body } : s)))
+    setSelectedKey(key)
+    setTitle(src.title)
+    setBody(src.body)
+  }
+
+  /**
+   * Every setting on this page, as one build request.
+   *
+   * Shared by "Build Video" and "Add to the queue" deliberately: two copies of this object
+   * would drift, and the queued video would quietly come out with different settings from
+   * the one the user was looking at when they pressed the button.
+   */
+  function currentBuildRequest(effectiveTitle: string): Parameters<typeof window.api.video.build>[0] {
+    return {
+      title: effectiveTitle,
+      body,
+      resolution,
+      aspect,
+      template,
+      narrationVoice,
+      captionsAndChapters,
+      winVoiceId: narrationVoice === 'winnatural' ? winVoiceId : undefined,
+      musicPath: musicPath ?? undefined,
+      soundEffects,
+      engine,
+      style,
+      images: engine === 'presets' && images.length ? images : undefined,
+      useStock: engine === 'presets' && useStock && hasStockKey
+    }
+  }
+
+  /** The same title-derivation Build uses, so a queued item is named the same way. */
+  function derivedTitle(): string {
+    return (
+      title.trim() ||
+      body.replace(/^[\s#*[\]]+/, '').split(/[\n.!?]/)[0].split(/\s+/).slice(0, 8).join(' ').slice(0, 60) ||
+      'My Video'
+    )
+  }
+
+  async function handleAddToQueue(): Promise<void> {
+    if (!body.trim()) {
+      toast('The script box is empty — write or pick the words to be spoken first.', 'error')
+      scriptBoxRef.current?.focus()
+      return
+    }
+    try {
+      await window.api.queue.add(currentBuildRequest(derivedTitle()))
+      toast('Added to the queue ✓ — you can close the app, it will not be lost', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not add it to the queue', 'error')
     }
   }
 
@@ -1476,6 +1549,50 @@ export default function VideoPage() {
               <p className="text-[10px] text-ink-600 mt-1">
                 Mixed softly under the narration (auto fade in/out). Use your own file, or grab a free track below.
               </p>
+              {/* HIS ASK: "it gives me multiple examples... I play, I listen... and it
+                  would tell me why." Three full-length beds from the offline synthesizer,
+                  each with one sentence of reasoning; he picks, nothing is picked for him. */}
+              <div className="mt-2">
+                <button
+                  onClick={() => {
+                    if (makingExamples) return
+                    setMakingExamples(true)
+                    const words = body.trim().split(/\s+/).filter(Boolean).length
+                    // Full length: narration runs ~2.4 words/second in this app's voices.
+                    const estSec = Math.max(20, Math.round(words / 2.4))
+                    void window.api.youtube
+                      .musicExamples(body, estSec)
+                      .then((r) => {
+                        setMusicExamples(r.examples)
+                        if (!r.examples.length) toast('Could not make music examples this time.', 'error')
+                      })
+                      .finally(() => setMakingExamples(false))
+                  }}
+                  disabled={makingExamples || !body.trim()}
+                  className="rounded-md border border-gold-500/40 text-gold-400 hover:bg-gold-500/10 disabled:opacity-40 text-xs px-3 py-1.5 transition-colors"
+                >
+                  {makingExamples ? 'Composing examples…' : '🎼 Make me examples to listen to'}
+                </button>
+                {musicExamples.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {musicExamples.map((ex) => (
+                      <div key={ex.path} className={`rounded-md border p-2 ${musicPath === ex.path ? 'border-gold-500/60 bg-gold-500/5' : 'border-ink-700 bg-ink-800/60'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-ink-100 font-medium capitalize">{ex.mood}</span>
+                          <button
+                            onClick={() => setMusicPath(ex.path)}
+                            className="rounded-md bg-gold-500 hover:bg-gold-400 text-ink-950 text-[11px] font-medium px-2.5 py-1 transition-colors"
+                          >
+                            {musicPath === ex.path ? '✓ Chosen' : 'Use this one'}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-ink-500 mt-1">{ex.why}</p>
+                        <audio controls preload="none" src={fileUrl(ex.path)} className="mt-1.5 w-full h-8" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <details className="mt-2 rounded-md border border-ink-700 bg-ink-800/60">
                 <summary className="cursor-pointer px-3 py-1.5 text-xs text-gold-400 select-none">
                   🎼 Get free, legal music ↗

@@ -1,3 +1,4 @@
+# Keeps every shipped document on the GitHub download page current.
 # Keeps the four shipped docs on the GitHub download page current.
 #
 # WHY THIS IS A SEPARATE WORKFLOW
@@ -20,6 +21,9 @@ on:
       - 'docs/NIHILPOINTZERO-GUIDE.txt'
       - 'docs/NIHILPOINTZERO-CHEATSHEET.txt'
       - 'docs/MEGA-DIAGNOSTIC-REPORT.md'
+      - 'SETUP_GUIDE.md'
+      - 'UPDATE-MY-STUDIO.cmd'
+      - 'BACKUP-NOW.cmd'
   workflow_dispatch:
 
 permissions:
@@ -54,5 +58,8 @@ jobs:
             "docs/NIHILPOINTZERO-GUIDE.txt" \
             "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
             "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
             --clobber
           echo "Docs on the download page now match main."

@@ -43,6 +43,10 @@ export default function StoryboardPage(): React.JSX.Element {
   const [fps, setFps] = useState(25)
   const [totalSeconds, setTotalSeconds] = useState(120)
   const [style, setStyle] = useState<VideoStyle>('cinematic')
+  // True once the USER has picked a style by hand. The AI director's suggestion
+  // then never overwrites it — "Direct storyboard" used to silently replace the
+  // chosen look and the film rendered in the wrong style.
+  const styleChosenByUser = useRef(false)
   const [beats, setBeats] = useState<StoryboardBeat[]>([])
   // Undo/redo over the shot list — deleting or mangling a beat is no longer final.
   const history = useHistory(beats, setBeats)
@@ -164,7 +168,8 @@ export default function StoryboardPage(): React.JSX.Element {
       const res = await window.api.storyboard.plan({ mode, title, brief, totalSeconds, language, width: dims.w, height: dims.h, fps })
       if (res.ok && res.storyboard) {
         setBeats(res.storyboard.beats)
-        setStyle(res.storyboard.style)
+        // Only adopt the AI's style suggestion when the user hasn't chosen one.
+        if (!styleChosenByUser.current) setStyle(res.storyboard.style)
         if (res.storyboard.title) setTitle(res.storyboard.title)
         toast(`Directed ${res.storyboard.beats.length} shots — review & edit below.`, 'success')
       } else {
@@ -244,6 +249,18 @@ export default function StoryboardPage(): React.JSX.Element {
     // maximum with no narration at all, and the app spent hours producing 78 minutes
     // of silence without a word. Show the user what they are about to get first.
     const silent = beats.every((b) => !b.narration?.trim())
+    // Shots that star "your photo" render as EMPTY scenes with nobody in them when no
+    // photo is attached — and the toast still said success. Say it before the render.
+    const photoBeats = beats.filter((b) => b.subject?.kind === 'photo').length
+    if (photoBeats > 0 && !photoPath) {
+      const ok = await confirmDialog({
+        title: 'No photo attached',
+        message: `${photoBeats} shot${photoBeats === 1 ? '' : 's'} feature your photo, but no photo is attached. Those shots would render as plain AI scenes with nobody in them.\n\nRender anyway?`,
+        confirmLabel: 'Render without my photo',
+        danger: true
+      })
+      if (!ok) return
+    }
     if (totalDur > 20 * 60 || silent) {
       const mins = Math.round(totalDur / 60)
       const lines = [
@@ -288,7 +305,7 @@ export default function StoryboardPage(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-serif text-gold-400">
             Storyboard Director
-            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
           </h1>
           <p className="text-ink-400 text-sm mt-1">
             Direct your film shot by shot, or paste a script and let the AI decide everything. Total so far:{' '}
@@ -331,7 +348,7 @@ export default function StoryboardPage(): React.JSX.Element {
           <select value={language} onChange={(e) => setLanguage(e.target.value)} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200">
             <option>English</option><option>Roman Urdu</option><option>Urdu</option>
           </select>
-          <select value={style} onChange={(e) => setStyle(e.target.value as VideoStyle)} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200" title="Visual style">
+          <select value={style} onChange={(e) => { styleChosenByUser.current = true; setStyle(e.target.value as VideoStyle) }} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200" title="Visual style">
             {VIDEO_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select

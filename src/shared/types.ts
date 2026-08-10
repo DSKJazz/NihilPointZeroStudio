@@ -6,7 +6,7 @@
  * - 'anthropic' — Claude, your key (paid, highest quality).
  * - 'openai'    — OpenAI, your key (paid).
  */
-export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama'
+export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama' | 'gemini'
 
 export interface ProviderSettings {
   activeProvider: LLMProviderId
@@ -15,6 +15,14 @@ export interface ProviderSettings {
   openaiModel: string
   ollamaModel: string
   hasAnthropicKey: boolean
+  /** Gemini is FREE-keyed (AI Studio) — keyed like YouTube, not billed like Anthropic. */
+  hasGeminiKey: boolean
+  geminiModel: string
+  /**
+   * The switchboard: which brains the app is ALLOWED to contact. A brain switched off
+   * is never used, not even as a fallback — "off" that still answers is not off.
+   */
+  providerEnabled: Record<LLMProviderId, boolean>
   hasOpenAIKey: boolean
   hasYouTubeKey: boolean
   /** Optional free AI Horde key for faster photo-to-scene (img2img) generation. */
@@ -33,6 +41,8 @@ export interface ProviderSettings {
   youtubeChannelId: string
   /** Which installable Piper voice narrates when narrationVoice is 'piper'. */
   piperVoiceId: string
+  /** Open the studio when Windows starts (default on). */
+  startWithWindows: boolean
 }
 
 export interface YouTubeSignal {

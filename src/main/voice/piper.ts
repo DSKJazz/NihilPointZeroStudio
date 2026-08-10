@@ -10,7 +10,7 @@ import { createWriteStream, existsSync, mkdirSync, mkdtempSync, rmSync, writeFil
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { app } from 'electron'
-import { runFfmpeg } from '../video/ffmpeg'
+import { runFfmpeg, throwIfCancelled } from '../video/ffmpeg'
 import { getSettings } from '../store'
 import {
   PIPER_VOICES,
@@ -46,7 +46,11 @@ function activeVoiceId(): string {
 
 /** True when the engine is installed AND that specific voice's model is present. */
 export function isPiperVoiceInstalled(voiceId: string): boolean {
-  return existsSync(piperExe()) && existsSync(voiceModelPath(voiceId))
+  const model = voiceModelPath(voiceId)
+  // piper.exe needs BOTH the .onnx model and its .onnx.json config. Checking only
+  // the model let a half-finished download show "Installed ✓" while every
+  // narration then failed.
+  return existsSync(piperExe()) && existsSync(model) && existsSync(`${model}.json`)
 }
 
 /** True once the engine + the ACTIVE voice are ready to narrate. */
@@ -57,7 +61,10 @@ export function isPiperInstalled(): boolean {
 /** Which catalogue voices are downloaded, for the Settings list. */
 export function installedPiperVoiceIds(): string[] {
   if (!existsSync(piperExe())) return []
-  return PIPER_VOICES.filter((v) => existsSync(join(piperRoot(), piperModelFileName(v)))).map((v) => v.id)
+  return PIPER_VOICES.filter((v) => {
+    const model = join(piperRoot(), piperModelFileName(v))
+    return existsSync(model) && existsSync(`${model}.json`)
+  }).map((v) => v.id)
 }
 
 async function downloadFile(url: string, dest: string, onFrac?: (frac: number) => void): Promise<void> {
@@ -67,18 +74,33 @@ async function downloadFile(url: string, dest: string, onFrac?: (frac: number) =
   if (!res.ok || !res.body) throw new Error(`Download failed (${res.status}) for ${url}`)
   const total = Number(res.headers.get('content-length') || 0)
   const ws = createWriteStream(dest)
+  // A disk-full/permission error must reject THIS promise — with no 'error' listener
+  // it was an uncaught exception that took down the whole main process.
+  const wsFailed = new Promise<never>((_, reject) => ws.on('error', reject))
   const reader = res.body.getReader()
   let done = 0
-  for (;;) {
-    const { done: finished, value } = await reader.read()
-    if (finished) break
-    if (value) {
-      ws.write(Buffer.from(value))
-      done += value.length
-      if (total) onFrac?.(done / total)
+  try {
+    for (;;) {
+      const { done: finished, value } = await Promise.race([reader.read(), wsFailed])
+      if (finished) break
+      if (value) {
+        ws.write(Buffer.from(value))
+        done += value.length
+        if (total) onFrac?.(done / total)
+      }
     }
+    await Promise.race([new Promise<void>((resolve) => ws.end(() => resolve())), wsFailed])
+  } catch (err) {
+    // Close the fd and remove the truncated file — a partial model left on disk
+    // would otherwise read as "installed" and fail every narration afterwards.
+    ws.destroy()
+    try {
+      rmSync(dest, { force: true })
+    } catch {
+      /* best effort */
+    }
+    throw err
   }
-  await new Promise<void>((resolve) => ws.end(() => resolve()))
 }
 
 /** Doubles single quotes so a value is safe inside a PowerShell single-quoted string. */
@@ -138,8 +160,10 @@ export async function downloadPiper(voiceId: string, onProgress?: (stage: string
 export function chunkForPiper(text: string, maxChars = 600): string[] {
   const clean = text.replace(/\s+/g, ' ').trim()
   if (!clean) return []
-  // Break on sentence boundaries, then greedily pack sentences up to maxChars per chunk.
-  const sentences = clean.match(/[^.!?]+[.!?]+|\S+[^.!?]*$/g) ?? [clean]
+  // Break on sentence boundaries — but ONLY at punctuation followed by a space.
+  // The old any-'.' split mutated decimal numbers ("45.3" was re-joined as "45. 3"),
+  // which a finance narration voice then read out wrong.
+  const sentences = clean.split(/(?<=[.!?])\s+/)
   const chunks: string[] = []
   let cur = ''
   for (const s of sentences) {
@@ -195,6 +219,9 @@ export async function synthesizeWithPiper(text: string, outWavPath: string): Pro
   try {
     const parts: string[] = []
     for (let i = 0; i < chunks.length; i++) {
+      // Honour Stop between chunks — narration used to ignore it entirely and
+      // kept spawning piper.exe for every remaining chunk of a long script.
+      throwIfCancelled()
       const part = join(work, `part-${String(i).padStart(4, '0')}.wav`)
       await piperOnce(chunks[i], part, modelPath)
       parts.push(part)

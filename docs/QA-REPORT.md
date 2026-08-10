@@ -4,6 +4,17 @@ _What was tested, how it was tested, what broke, what got fixed, and what genuin
 cannot be fixed. Written to be re-checkable: every claim here comes from an actual
 run, not from reading code and hoping._
 
+## Current release hardening (2026-08-08)
+
+The release process is now hardened so the latest shipped build carries a current changelog,
+CI validation, and the same documentation set across the workshop, Desktop studio folder,
+and GitHub release assets. The repository now includes:
+
+- `CHANGELOG.md` for the current shipped build summary.
+- `scripts/update-changelog.mjs` and `npm run changelog:update` for refreshing the changelog.
+- `.github/workflows/ci.yml` for push/PR validation.
+- Updated GitHub release uploads so the changelog and QA notes travel with the build.
+
 ## How the testing works now (the part that outlives this report)
 
 The app is tested by a machine, not by promises. A hard gate in the ship pipeline
@@ -84,6 +95,9 @@ reach you.
   the already-updated code** (the ship swaps it in place); on machines where that
   doesn't apply it falls back to revealing the installer/download page **and says so
   in the banner**.
+- **Update checks could silently fail when the GitHub release notes did not include
+  the expected build stamp**. The app now falls back to the release tag and published
+  timestamp, so the Settings page can still tell whether the installed app is current.
 - **Updates were being blocked by Windows Smart App Control** — every new unsigned
   installer is an unknown file to Windows. Ships now update the installed app in
   place; nothing new for Windows to judge.
@@ -129,3 +143,8 @@ reach you.
 
 _Regenerate this confidence at any time: `npm run test` then `npm run test:e2e` —
 or just ship, which runs both and refuses to proceed on any failure._
+
+## Phase 8 pre-push notes (automated) - 2026-08-10T02:12:00Z
+- Final history secret scan performed: no matches for private-key, Google API or AWS access key patterns across git history (see history_*.txt outputs).
+- Working-tree pattern scan (tracked files) still shows token-shaped placeholders only in docs and tests (intended fixtures). Recommend manual human review of scripts/ship.ps1 and any test fixtures before push. No push performed � awaiting explicit approval per Phase 8 gate.
+

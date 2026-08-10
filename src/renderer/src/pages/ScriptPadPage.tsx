@@ -18,7 +18,14 @@ export default function ScriptPadPage(): React.JSX.Element {
   const [loaded, setLoaded] = useState(false)
   const [savedAt, setSavedAt] = useState<string>('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Live copy of the pad + dirty flag so unmount can flush the last <600ms of
+  // typing — this page unmounts on every tab switch, and the debounce alone
+  // silently dropped whatever was typed just before navigating away.
+  const latest = useRef({ title: '', body: '' })
+  const dirty = useRef(false)
+  const loadedRef = useRef(false)
 
   // Let the YouTube Producer read + rewrite the pad's content.
   useProducerTarget({ label: 'Script Pad', kind: 'script', text: body, apply: (next) => setBody(next) })
@@ -47,19 +54,45 @@ export default function ScriptPadPage(): React.JSX.Element {
   // Debounced autosave whenever the text changes (after the initial load).
   useEffect(() => {
     if (!loaded) return
+    loadedRef.current = true
+    latest.current = { title, body }
+    dirty.current = true
     setSaving(true)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       void (async () => {
-        const pad = await window.api.scriptpad.save(title, body)
-        setSavedAt(pad.updatedAt)
-        setSaving(false)
+        try {
+          const pad = await window.api.scriptpad.save(title, body)
+          dirty.current = false
+          setSavedAt(pad.updatedAt)
+          setSaveError(null)
+        } catch (err) {
+          // A failed write must never masquerade as "Saving…" forever — say it plainly.
+          setSaveError(err instanceof Error ? err.message : 'Could not save your pad to disk.')
+        } finally {
+          setSaving(false)
+        }
       })()
     }, 600)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
   }, [title, body, loaded])
+
+  // Flush the pending save when the tab is left (unmount) or the app closes, so
+  // the final moments of typing always reach disk.
+  useEffect(() => {
+    const flush = (): void => {
+      if (loadedRef.current && dirty.current) {
+        void window.api.scriptpad.save(latest.current.title, latest.current.body).catch(() => {})
+      }
+    }
+    window.addEventListener('beforeunload', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      flush()
+    }
+  }, [])
 
   async function sendToVideo(): Promise<void> {
     // Ensure the very latest text is flushed before we hand off.
@@ -120,7 +153,15 @@ export default function ScriptPadPage(): React.JSX.Element {
           />
         </div>
         <div className="flex items-center justify-between text-[11px] text-ink-500">
-          <span>{saving ? 'Saving…' : savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString()}` : 'Not saved yet'}</span>
+          <span className={saveError ? 'text-red-400' : undefined}>
+            {saveError
+              ? `⚠ Not saved — ${saveError}`
+              : saving
+                ? 'Saving…'
+                : savedAt
+                  ? `Saved ${new Date(savedAt).toLocaleTimeString()}`
+                  : 'Not saved yet'}
+          </span>
           <span>Autosaves to your portable data folder.</span>
         </div>
 

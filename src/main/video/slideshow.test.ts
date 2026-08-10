@@ -28,6 +28,15 @@ describe('planSlideshowShots', () => {
     expect(planSlideshowShots(2, 600)).toHaveLength(12)
   })
 
+  // Regression: the old min(12, max(imgs, …)) clamp order let the 12-shot cap beat
+  // the one-shot-per-image floor, silently discarding every image past the 12th —
+  // e.g. 18 of 30 freshly generated AI scene images never appeared in the video.
+  it('shows EVERY image even when there are more than 12', () => {
+    const shots = planSlideshowShots(30, 1500)
+    expect(shots).toHaveLength(30)
+    expect(new Set(shots.map((s) => s.imageIndex)).size).toBe(30)
+  })
+
   it('is safe for zero/degenerate inputs', () => {
     expect(planSlideshowShots(0, 0).length).toBeGreaterThanOrEqual(1)
   })

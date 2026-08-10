@@ -59,16 +59,20 @@ export class PollinationsProvider implements LLMProvider {
         // July 2026 outage impossible to explain. Read it, log it, act on it.
         const body = await res.text().catch(() => '')
         if (res.status === 402) {
+          // No paid recommendation here, ever — PAID FEATURES SLEEP. The answer to a
+          // free service dying is the local free brain, not a credit card.
           fail(
-            'The free AI service now requires a paid account, so it can no longer answer. ' +
-              'Switch to Ollama (free, runs on this PC) or add a Claude/OpenAI key in Settings.',
+            'The free online AI now demands payment, so it can no longer answer. ' +
+              'Your local brain (Ollama) takes over automatically — if you are reading this, Ollama did not answer either. ' +
+              'Settings → Setup Health will say why (it usually just needs Ollama started).',
             { permanent: true, status: 402, body }
           )
         }
         if (res.status === 404) {
           fail(
-            `The free AI service no longer offers the "${model}" model — it was removed from their free API. ` +
-              'Switch to Ollama (free, runs on this PC) or add a Claude/OpenAI key in Settings.',
+            `The free online AI no longer offers the "${model}" model — it was withdrawn. ` +
+              'Your local brain (Ollama) takes over automatically — if you are reading this, Ollama did not answer either. ' +
+              'Settings → Setup Health will say why.',
             { permanent: true, status: 404, body }
           )
         }

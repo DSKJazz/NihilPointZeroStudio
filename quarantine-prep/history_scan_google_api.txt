@@ -1,0 +1,4 @@
+﻿Scanning pattern: AIza[0-9A-Za-z\-_]{35} -> quarantine-prep/history_scan_google_api.txt
+
+--- Working tree matches ---
+
