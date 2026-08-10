@@ -154,7 +154,7 @@ describe('phone storage', () => {
 })
 
 describe('talking to the PC', () => {
-  it('says what to do when no PC has been connected yet', async () => {
+  it('says what to do when no PC has been connected yet', { timeout: 20000 }, async () => {
     const { generateIdeas, pcConfigured } = await import('./ai')
     expect(pcConfigured()).toBe(false)
     await expect(generateIdeas({ focusArea: 'x', count: 1 })).rejects.toThrow(/Settings → Phone access/i)

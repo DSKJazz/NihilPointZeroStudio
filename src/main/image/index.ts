@@ -9,6 +9,7 @@
  */
 import { writeFileSync } from 'fs'
 import { logAiError } from '../llm/errorLog'
+import { nextDelayMs, worthRetrying } from './retryPolicy'
 
 const BASE = 'https://image.pollinations.ai/prompt/'
 
@@ -29,6 +30,19 @@ export interface ImageGenOptions {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * Keeps the status AND the service's own Retry-After alive up to the retry loop. Both used
+ * to be flattened into a message and thrown away, which is why the loop could only guess.
+ */
+export class ImageHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly retryAfter: string | null
+  ) {
+    super(`Free image service returned ${status}. It can get busy — retrying.`)
+  }
+}
+
 /** One HTTP attempt with a hard timeout, so a hung request can't stall the whole build. */
 async function fetchImageOnce(
   prompt: string,
@@ -44,6 +58,8 @@ async function fetchImageOnce(
     width: String(width),
     height: String(height),
     nologo: 'true',
+    // Strict content filter — see sceneImageUrl in styles.ts, which must stay identical.
+    safe: 'true',
     model,
     referrer: 'nihilpointzero-studio'
   })
@@ -60,7 +76,12 @@ async function fetchImageOnce(
   }
   try {
     const res = await fetch(url, { signal: ctrl.signal })
-    if (!res.ok) throw new Error(`Free image service returned ${res.status}. It can get busy — retrying.`)
+    if (!res.ok) {
+      // The status and Retry-After used to be flattened into a message string and lost.
+      // The retry loop then had to guess when to come back while the service was telling
+      // it exactly — see image/retryPolicy.ts.
+      throw new ImageHttpError(res.status, res.headers.get('retry-after'))
+    }
     const buf = Buffer.from(await res.arrayBuffer())
     // Pollinations sometimes returns a tiny placeholder/error body instead of a real JPEG.
     if (buf.length < 2000) throw new Error('Free image service returned an empty image.')
@@ -102,7 +123,21 @@ export async function generateImage(prompt: string, outPath: string, opts: Image
       // Exponential backoff with ±40% jitter, capped at 12s. The jitter matters: several
       // scenes generating in parallel used to retry in LOCKSTEP, hammering the busy free
       // queue at the same instants — so whole batches failed together.
-      if (i < attempts - 1) await sleep(Math.min(12_000, 1200 * 2 ** i) * (0.6 + Math.random() * 0.8))
+      const http = err instanceof ImageHttpError ? err : null
+      // A 4xx that is not 408/429 says the same thing every time; five tries just makes
+      // the user wait five times longer for one identical error.
+      if (!worthRetrying(http?.status)) break
+      if (i < attempts - 1) {
+        await sleep(
+          nextDelayMs({
+            attempt: i,
+            status: http?.status,
+            retryAfter: http?.retryAfter,
+            nowMs: Date.now(),
+            random: Math.random()
+          })
+        )
+      }
     }
   }
   const detail = lastErr instanceof Error ? lastErr.message : 'unknown error'

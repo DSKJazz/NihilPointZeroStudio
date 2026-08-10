@@ -6,6 +6,18 @@ export const IPC = {
   settingsSetYouTubeKey: 'settings:set-youtube-key',
   settingsSetYouTubeChannel: 'settings:set-youtube-channel',
   youtubePublish: 'youtube:publish',
+  // The free-key walkthrough: prove a pasted key really works before trusting it, and
+  // find the channel id from the @handle so nobody has to hunt for a 24-character string.
+  youtubeKeyVerify: 'youtube:key-verify',
+  // The switchboard and the Gemini walkthrough (a free AI-Studio key, tested for real).
+  settingsSetProviderEnabled: 'settings:set-provider-enabled',
+  geminiKeyVerify: 'gemini:key-verify',
+  // The Caretaker: the scheduled self-diagnostic and its record (see main/caretaker.ts).
+  caretakerStatus: 'caretaker:status',
+  caretakerRunNow: 'caretaker:run-now',
+  caretakerSetSchedule: 'caretaker:set-schedule',
+  caretakerClearLog: 'caretaker:clear-log',
+  youtubeChannelResolve: 'youtube:channel-resolve',
   settingsSetHordeKey: 'settings:set-horde-key',
   ollamaStatus: 'ollama:status',
   ideasGenerate: 'ideas:generate',
@@ -47,6 +59,8 @@ export const IPC = {
   // interface failures alongside AI ones instead of them vanishing silently.
   aiErrorsRecordUi: 'ai-errors:record-ui',
   musicSuggest: 'music:suggest',
+  // 3 full-length music candidates with a WHY each — play, compare, pick one.
+  musicExamples: 'music:examples',
   musicMoodSearch: 'music:mood-search',
   musicApplyRegion: 'music:apply-region',
   videoExtras: 'video:extras',
@@ -62,6 +76,16 @@ export const IPC = {
   updateRevealSetup: 'update:reveal-setup',
   // Restart onto code the ship pipeline already swapped in place (installed app only).
   updateRestart: 'update:restart',
+  // Download the installer and run it, with no browser and no file manager. The last
+  // manual step the user had; see main/selfUpdate.ts.
+  updateInstall: 'update:install',
+  updateInstallProgress: 'update:install-progress',
+  // "Am I up to date?" answered out loud. The banner only speaks when the app is BEHIND,
+  // and silence is indistinguishable from a broken check — see main/updateStatus.ts.
+  updateStatus: 'update:status',
+  // Open the studio when Windows starts. Combined with the silent sign-in update, this
+  // is what makes "turn the laptop on and it is open and current" true.
+  settingsSetStartWithWindows: 'settings:set-start-with-windows',
   // "What changed" — the new things in the build that is actually running.
   whatsNewGet: 'whats-new:get',
   whatsNewMarkSeen: 'whats-new:mark-seen',
@@ -75,6 +99,16 @@ export const IPC = {
   channelComments: 'channel:comments',
   // What other channels covered that this one has not.
   channelGaps: 'channel:gaps',
+  // Credit check before publishing (NOT a copyright detector — see copyrightCheck.ts).
+  copyrightCheck: 'copyright:check',
+  // The render queue: line up an evening's work and walk away. Survives a restart.
+  queueList: 'queue:list',
+  queueAdd: 'queue:add',
+  queueCancel: 'queue:cancel',
+  queueRetry: 'queue:retry',
+  queueReorder: 'queue:reorder',
+  queueClearFinished: 'queue:clear-finished',
+  queueChanged: 'queue:changed',
   // Hear the script read out at speed, to proof it by ear before recording.
   readAloudPlan: 'read-aloud:plan',
   readAloudSpeak: 'read-aloud:speak',
@@ -123,7 +157,13 @@ export const IPC = {
   videoCancel: 'video:cancel',
   timelineRender: 'timeline:render',
   timelineProbe: 'timeline:probe',
+  // A small stand-in for scrubbing a 4K clip. See main/video/proxy.ts for why it is
+  // built to be time-identical to its source.
+  timelineProxy: 'timeline:proxy',
   timelinePickClips: 'timeline:pick-clips',
+  // Separate picker for the audio track: the clips dialog filters to video/image
+  // only, which made it impossible to ever select a music/voice file.
+  timelinePickAudio: 'timeline:pick-audio',
   storyboardPlan: 'storyboard:plan',
   storyboardRender: 'storyboard:render',
   storyboardPickPhoto: 'storyboard:pick-photo',
@@ -182,6 +222,8 @@ export const IPC = {
   sceneGenerateFromPhoto: 'scene:generate-from-photo',
   sceneProgress: 'scene:progress',
   sceneSaveImage: 'scene:save-image',
+  // Watch ONE scene before committing to the whole render.
+  scenePreview: 'scene:preview',
   sceneSaveAllImages: 'scene:save-all-images',
   videoMakeShorts: 'video:make-shorts',
   videoPostMeta: 'video:post-meta',

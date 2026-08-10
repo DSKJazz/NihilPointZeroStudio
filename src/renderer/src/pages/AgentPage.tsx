@@ -7,6 +7,7 @@ import { useAutosave } from '../hooks/useAutosave'
 import { toast } from '../components/Toast'
 
 import { fileUrl } from '../../../shared/mediaUrl'
+import { releaseAgentRun, tryAcquireAgentRun } from '../store/agentRunLock'
 
 const EXAMPLES = [
   'Write a 2-minute anime-style script about Pakistan\'s rupee and build it in 4K with calm music',
@@ -95,6 +96,13 @@ export default function AgentPage(): React.JSX.Element {
 
   async function run(): Promise<void> {
     if (!plan || !plan.steps.length || running) return
+    // Same one-at-a-time lock the Producer/Expert widgets use: all three stream
+    // over the SAME un-scoped agent:progress channel, so a widget run and a tab
+    // run at once interleave stage lines into the wrong chat and race two builds.
+    if (!tryAcquireAgentRun()) {
+      toast('Another AI run is already in progress — wait for it to finish.', 'error')
+      return
+    }
     setRunning(true)
     setError(null)
     setResults(null)
@@ -114,6 +122,7 @@ export default function AgentPage(): React.JSX.Element {
     } finally {
       unsubscribe()
       unsubPreview()
+      releaseAgentRun()
       setRunning(false)
     }
   }
@@ -121,6 +130,10 @@ export default function AgentPage(): React.JSX.Element {
   async function runBatch(): Promise<void> {
     const topics = batchTopics.split('\n').map((t) => t.trim()).filter(Boolean)
     if (!topics.length || batchRunning) return
+    if (!tryAcquireAgentRun()) {
+      toast('Another AI run is already in progress — wait for it to finish.', 'error')
+      return
+    }
     setBatchRunning(true)
     setError(null)
     setBatchResults(null)
@@ -150,6 +163,7 @@ export default function AgentPage(): React.JSX.Element {
       toast('Batch failed', 'error')
     } finally {
       unsub()
+      releaseAgentRun()
       setBatchRunning(false)
     }
   }
@@ -211,7 +225,7 @@ export default function AgentPage(): React.JSX.Element {
           {interpreting && <BusyTimer label="Planning" />}
           <span className="text-[11px] text-ink-600">Ctrl+Enter to plan · 🎤 to speak</span>
           <span className="ml-auto text-[11px] text-ink-500">
-            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}
+            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}
           </span>
         </div>
 

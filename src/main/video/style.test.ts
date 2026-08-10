@@ -60,12 +60,12 @@ describe('buildFfmpegArgs background', () => {
     expect(args.join(' ')).toContain('color=c=0x05010D')
   })
 
-  it('uses a file input (no lavfi color) when the background is a file', () => {
+  it('uses a looped file input (no lavfi color) when the background is a file', () => {
     const args = buildFfmpegArgs({ ...common, background: { kind: 'file', path: 'bg.mp4' } })
     expect(args.join(' ')).not.toContain('color=c=')
-    expect(args).toContain('bg.mp4')
-    // first input is the background file, then the audio.
-    expect(args.slice(0, 4)).toEqual(['-y', '-i', 'bg.mp4', '-i'])
+    // First input is the background file, LOOPED: the output uses -shortest, so an
+    // unlooped background shorter than the narration cut off the end of the video.
+    expect(args.slice(0, 6)).toEqual(['-y', '-stream_loop', '-1', '-i', 'bg.mp4', '-i'])
   })
 
   it('uses a gradients lavfi source for an animated background', () => {

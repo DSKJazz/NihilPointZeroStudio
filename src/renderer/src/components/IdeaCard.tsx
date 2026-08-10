@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useStudio } from '../store/StudioContext'
 import type { VideoIdea } from '../../../shared/types'
 
 const scoreColor = (score: number): string => {
@@ -15,6 +16,7 @@ const competitionLabel: Record<VideoIdea['competitionLevel'], string> = {
 
 export default function IdeaCard({ idea }: { idea: VideoIdea }) {
   const navigate = useNavigate()
+  const { setWriter } = useStudio()
 
   return (
     <div className="rounded-lg border border-ink-700 bg-ink-900 p-4 flex flex-col gap-3">
@@ -49,7 +51,17 @@ export default function IdeaCard({ idea }: { idea: VideoIdea }) {
 
       <div className="flex gap-2 pt-1">
         <button
-          onClick={() => navigate('/writer', { state: { idea } })}
+          onClick={() => {
+            setWriter({
+              topic: idea.title,
+              ideaContext: `${idea.angle}\nHook: ${idea.hook}`,
+              length: idea.suggestedLength,
+              script: null,
+              body: '',
+              thumbnailBrief: null
+            })
+            navigate('/writer', { state: { idea } })
+          }}
           className="flex-1 rounded-md bg-gold-500 hover:bg-gold-400 text-ink-950 text-sm font-medium py-1.5 transition-colors"
         >
           Write Script

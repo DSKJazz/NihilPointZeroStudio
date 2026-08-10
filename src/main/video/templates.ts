@@ -41,7 +41,15 @@ export function templateFor(t: VideoTemplate = 'clean'): TemplateConfig {
  * `[v3]<finishing>[vfinal]`. Returns null when the template adds nothing (clean).
  * `w`/`h` are the frame size (for letterbox bar height). Pure + unit-tested.
  */
-export function finishingChain(cfg: TemplateConfig, inLabel: string, outLabel: string, w: number, h: number): string | null {
+/**
+ * The finishing FILTERS for a template, with no labels attached.
+ *
+ * Split out from finishingChain so a plain `-vf` caller — the scene preview — applies the
+ * identical look rather than an approximation of it. A preview built from its own copy of
+ * these numbers would eventually disagree with the render, and a preview you cannot trust
+ * is worse than none: you stop looking at it and go back to rendering blind.
+ */
+export function finishingFilters(cfg: TemplateConfig, w: number, h: number): string[] {
   const parts: string[] = []
   if (cfg.contrast != null || cfg.saturation != null || cfg.gamma != null) {
     parts.push(`eq=contrast=${cfg.contrast ?? 1}:saturation=${cfg.saturation ?? 1}:gamma=${cfg.gamma ?? 1}`)
@@ -53,6 +61,11 @@ export function finishingChain(cfg: TemplateConfig, inLabel: string, outLabel: s
     parts.push(`drawbox=x=0:y=0:w=${w}:h=${bar}:color=black@1:t=fill`)
     parts.push(`drawbox=x=0:y=${h - bar}:w=${w}:h=${bar}:color=black@1:t=fill`)
   }
+  return parts
+}
+
+export function finishingChain(cfg: TemplateConfig, inLabel: string, outLabel: string, w: number, h: number): string | null {
+  const parts = finishingFilters(cfg, w, h)
   if (!parts.length) return null
   return `[${inLabel}]${parts.join(',')}[${outLabel}]`
 }
