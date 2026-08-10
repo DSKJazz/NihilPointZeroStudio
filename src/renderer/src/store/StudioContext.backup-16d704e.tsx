@@ -30,6 +30,11 @@ export interface WriterState {
   thumbnailBrief: string | null
 }
 
+export interface SceneState {
+  title: string
+  body: string
+}
+
 const DEFAULT_IDEAS: IdeasState = {
   focusArea: 'Pakistan economy & personal finance',
   audienceNote: '',
@@ -50,14 +55,10 @@ const DEFAULT_WRITER: WriterState = {
   thumbnailBrief: null
 }
 
-interface SceneState {
-  title: string
-  body: string
-  // images or other scene metadata can be added later; keep minimal for compatibility
-  images?: any[]
+const DEFAULT_SCENE: SceneState = {
+  title: '',
+  body: ''
 }
-
-const DEFAULT_SCENE: SceneState = { title: '', body: '', images: [] }
 
 interface StudioContextValue {
   ideas: IdeasState
@@ -71,13 +72,9 @@ interface StudioContextValue {
    */
   setWriter: (patch: Partial<WriterState> | ((prev: WriterState) => Partial<WriterState>)) => void
   clearWriter: () => void
-  /**
-   * Shared scene state to allow Ideas → Writer → Scene Studio handoff. Kept
-   * backwards-compatible: always present and never undefined so older pages
-   * won't crash if they read it.
-   */
   scene: SceneState
   setScene: (patch: Partial<SceneState> | ((prev: SceneState) => Partial<SceneState>)) => void
+  clearScene: () => void
   /** Autosave status for a "Saving…/Saved ✓" indicator. */
   saveStatus: SaveStatus
 }
@@ -110,30 +107,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   // Autosave (debounced) whenever Ideas/Writer/Scene change.
   useEffect(() => {
-    // Diagnostic guard: allow disabling autosave for targeted E2E debugging by
-    // setting window.__npz_diag_disable_autosave = true in the page context.
-    try {
-      if ((window as any).__npz_diag_disable_autosave) return
-    } catch (_) {}
-
     if (!loaded.current) return
     setSaveStatus('saving')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
-      try {
-        console.log('[STUDIO-AUTOSAVE] writing draft at', Date.now(), 'writer.topic=', String(writer.topic).slice(0,50))
-      } catch (_) {}
       window.api.drafts
         .set(DRAFT_KEY, { ideas, writer, scene })
-        .then(() => {
-          try { console.log('[STUDIO-AUTOSAVE] write complete at', Date.now()) } catch (_) {}
-          setSaveStatus('saved')
-        })
+        .then(() => setSaveStatus('saved'))
         // A failed write must not sit on "Saving…" forever pretending to work.
-        .catch((e) => {
-          try { console.log('[STUDIO-AUTOSAVE] write failed', e && e.message ? e.message : String(e)) } catch (_) {}
-          setSaveStatus('error')
-        })
+        .catch(() => setSaveStatus('error'))
     }, 600)
     return () => {
       if (timer.current) clearTimeout(timer.current)
@@ -145,25 +127,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setIdeas: (patch) => setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
     clearIdeas: () => setIdeasState(DEFAULT_IDEAS),
     writer,
-    setWriter: (patch) => {
-      try { console.log('[STUDIO] setWriter called — patch type:', typeof patch === 'function' ? 'fn' : 'object') } catch (_) {}
-      // Defer the state update to avoid synchronous re-entrancy that can interfere with
-      // routing in tight E2E sequences (diagnostic/backwards-compatible safety).
-      setTimeout(() => {
-        try {
-          setWriterState((prev) => {
-            const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
-            try { console.log('[STUDIO] setWriter result snapshot: topic=', String(next.topic).slice(0,80)) } catch (_) {}
-            return next
-          })
-        } catch (_) {}
-      }, 0)
-    },
-
+    setWriter: (patch) => setWriterState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
     clearWriter: () => setWriterState(DEFAULT_WRITER),
-    // scene is intentionally always present to avoid consumer crashes
     scene,
     setScene: (patch) => setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
+    clearScene: () => setSceneState(DEFAULT_SCENE),
     saveStatus
   }
 

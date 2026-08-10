@@ -101,6 +101,10 @@ const PASTE_SOURCE: VideoSource = {
 }
 
 export default function VideoPage() {
+  useEffect(() => {
+    console.log('[DIAG] VideoPage mounted — pathname=' + window.location.pathname + ' hash=' + window.location.hash)
+    return () => console.log('[DIAG] VideoPage unmounted')
+  }, [])
   const { writer } = useStudio()
   const location = useLocation()
   // Set when the user clicked "Send to Video Generator" on the Script Pad.

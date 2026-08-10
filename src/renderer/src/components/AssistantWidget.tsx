@@ -84,7 +84,12 @@ export default function AssistantWidget(): React.JSX.Element {
   const pageName = PAGE_NAMES[location.pathname] ?? 'the app'
 
   // Track which field (if any) is currently editable so we can ground + apply.
-  useEffect(() => subscribeProducerTarget(() => setTarget(getProducerTarget())), [])
+  useEffect(() => subscribeProducerTarget(() => {
+    try {
+      console.log('[PRODUCER-LISTENER] invoked at', Date.now(), 'currentTarget=', getProducerTarget() && { label: getProducerTarget()?.label, kind: getProducerTarget()?.kind })
+    } catch (_) {}
+    setTarget(getProducerTarget())
+  }), [])
   // Two separate effects on purpose. The old single effect checked `nearBottom || open`,
   // and `open` is true for every stream token — so the guard was dead code and every
   // token yanked the reader to the bottom while they were scrolled up reading.
