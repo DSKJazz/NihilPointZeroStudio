@@ -450,6 +450,55 @@ export default function VideoPage() {
     }
   }
 
+  /**
+   * Every setting on this page, as one build request.
+   *
+   * Shared by "Build Video" and "Add to the queue" deliberately: two copies of this object
+   * would drift, and the queued video would quietly come out with different settings from
+   * the one the user was looking at when they pressed the button.
+   */
+  function currentBuildRequest(effectiveTitle: string): Parameters<typeof window.api.video.build>[0] {
+    return {
+      title: effectiveTitle,
+      body,
+      resolution,
+      aspect,
+      template,
+      narrationVoice,
+      captionsAndChapters,
+      winVoiceId: narrationVoice === 'winnatural' ? winVoiceId : undefined,
+      musicPath: musicPath ?? undefined,
+      soundEffects,
+      engine,
+      style,
+      images: engine === 'presets' && images.length ? images : undefined,
+      useStock: engine === 'presets' && useStock && hasStockKey
+    }
+  }
+
+  /** The same title-derivation Build uses, so a queued item is named the same way. */
+  function derivedTitle(): string {
+    return (
+      title.trim() ||
+      body.replace(/^[\s#*[\]]+/, '').split(/[\n.!?]/)[0].split(/\s+/).slice(0, 8).join(' ').slice(0, 60) ||
+      'My Video'
+    )
+  }
+
+  async function handleAddToQueue(): Promise<void> {
+    if (!body.trim()) {
+      toast('The script box is empty — write or pick the words to be spoken first.', 'error')
+      scriptBoxRef.current?.focus()
+      return
+    }
+    try {
+      await window.api.queue.add(currentBuildRequest(derivedTitle()))
+      toast('Added to the queue ✓ — you can close the app, it will not be lost', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not add it to the queue', 'error')
+    }
+  }
+
   async function handleBuild(): Promise<void> {
     // Only a script is required — a missing title is auto-derived from the first line.
     // No script yet? Don't sit there disabled: SAY it and point at the exact box.
