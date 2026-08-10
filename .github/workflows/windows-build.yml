@@ -131,6 +131,9 @@ jobs:
           # QA-REPORT.md, SETUP_GUIDE.md and UPDATE-MY-STUDIO.cmd are maintained on the
           # same footing as the four core studio docs so they can never go stale next to
           # the others.
+          # SIX documents, not four (user's instruction, 2026-08-01): SETUP_GUIDE.md and
+          # UPDATE-MY-STUDIO.cmd are maintained on exactly the same footing as the four,
+          # so they can never go stale next to the others.
           gh release upload "$TAG" \
             "release/NIHILPOINTZERO-OS-setup.exe" \
             "release/NIHILPOINTZERO-OS-portable.exe" \
