@@ -40,11 +40,11 @@ const RouterTracer = ({ children }: { children: React.ReactNode }) => {
     renders.current += 1
     try {
       console.log('[ROUTER-TRACER] layout', Date.now(), 'render=', renders.current, 'loc=', JSON.stringify(loc), 'hash=', window.location.hash)
-    } catch (_) {}
+    } catch (e) { /* ignore */ }
   }, [loc])
   // effect for async observation
   useEffect(() => {
-    try { console.log('[ROUTER-TRACER] effect', Date.now(), 'loc=', JSON.stringify(loc), 'hash=', window.location.hash) } catch (_) {}
+    try { console.log('[ROUTER-TRACER] effect', Date.now(), 'loc=', JSON.stringify(loc), 'hash=', window.location.hash) } catch (e) { /* ignore */ }
   }, [loc])
   return <>{children}</>
 }
@@ -61,7 +61,7 @@ export default function App() {
       // @ts-ignore - diagnostic global
       window.__npz_navTo = (p: string) => navigate(p)
       console.log('[APP-TRACE] __npz_navTo shim installed')
-    } catch (_) {}
+    } catch (e) { /* ignore */ }
     // Also listen for a custom test-only event that forces the router to re-run navigation
     const onForce = () => {
       try {
@@ -76,20 +76,20 @@ export default function App() {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         delete window.__npz_navTo
-      } catch (_) {}
+      } catch (e) { /* ignore */ }
       window.removeEventListener('npz-force-nav', onForce)
     }
   }, [navigate])
 
   // Diagnostic trace: log router-visible pathname changes during E2E investigations
   useEffect(() => {
-    try { console.log('[APP-TRACE] pathname=', pathname, 'hash=', window.location.hash) } catch (_) {}
+    try { console.log('[APP-TRACE] pathname=', pathname, 'hash=', window.location.hash) } catch (e) { /* ignore */ }
   }, [pathname])
 
   // Also trace raw hashchange events directly to see whether the browser fires them
   useEffect(() => {
     const onHash = () => {
-      try { console.log('[HASHCHANGE-EVENT] window.location.hash=', window.location.hash, 'location.pathname=', location.pathname) } catch (_) {}
+      try { console.log('[HASHCHANGE-EVENT] window.location.hash=', window.location.hash, 'location.pathname=', location.pathname) } catch (e) { /* ignore */ }
       try {
         // Test-only diagnostic: if enabled, force the router to navigate from the raw hash
         // This is guarded by window.__npz_diag_force_hash_nav so normal behavior is unchanged.
@@ -98,10 +98,10 @@ export default function App() {
         // @ts-ignore
         if (window.__npz_diag_force_hash_nav) {
           const target = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
-          try { console.log('[APP-TRACE] __npz_diag_force_hash_nav navigating to', target) } catch (_) {}
+          try { console.log('[APP-TRACE] __npz_diag_force_hash_nav navigating to', target) } catch (e) { /* ignore */ }
           navigate(target || '/')
         }
-      } catch (_) {}
+      } catch (e) { /* ignore */ }
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
@@ -115,7 +115,7 @@ export default function App() {
         ticks += 1
         console.log('[APP-POLL] t=', Date.now(), 'tick=', ticks, 'pathname=', pathname, 'hash=', window.location.hash)
         if (ticks >= 30) clearInterval(id)
-      } catch (_) {}
+      } catch (e) { /* ignore */ }
     }, 200)
     return () => clearInterval(id)
   }, [])

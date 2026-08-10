@@ -87,7 +87,7 @@ export default function AssistantWidget(): React.JSX.Element {
   useEffect(() => subscribeProducerTarget(() => {
     try {
     console.log('[PRODUCER-LISTENER] invoked at', Date.now(), 'currentTarget=', getProducerTarget() && { label: getProducerTarget()?.label, kind: getProducerTarget()?.kind })
-    } catch (_) {}
+      } catch (e) { /* ignore */ }
     setTarget(getProducerTarget())
   }), [])
   // Two separate effects on purpose. The old single effect checked `nearBottom || open`,
