@@ -27,6 +27,10 @@ type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
 type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
 type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
 
+type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
+type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
+type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
+
 export default function ChannelPage(): React.JSX.Element {
   const [learned, setLearned] = useState<Learned | null>(null)
   const [mined, setMined] = useState<Mined | null>(null)
@@ -36,6 +40,13 @@ export default function ChannelPage(): React.JSX.Element {
   const [titleDraft, setTitleDraft] = useState('')
   const [score, setScore] = useState<Awaited<ReturnType<typeof window.api.channel.scoreTitle>> | null>(null)
   const [scoring, setScoring] = useState(false)
+  const [openSeries, setOpenSeries] = useState<Series | null>(null)
+
+  async function run(which: 'learn' | 'comments' | 'gaps'): Promise<void> {
+  const [busy, setBusy] = useState<'learn' | 'comments' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [score, setScore] = useState<Awaited<ReturnType<typeof window.api.channel.scoreTitle>> | null>(null)
   const [openSeries, setOpenSeries] = useState<Series | null>(null)
 
   async function run(which: 'learn' | 'comments' | 'gaps'): Promise<void> {
@@ -63,6 +74,8 @@ export default function ChannelPage(): React.JSX.Element {
         Needs the free YouTube connection — Settings has a three-minute walkthrough that finds your channel from your
         @name. Reading a hundred of your own videos costs about four of the ten thousand daily free requests, so this
         is effectively free to run.
+        Needs your YouTube key and channel ID in Settings. Reading a hundred of your own videos costs about four of
+        the ten thousand daily free requests, so this is effectively free to run.
       </p>
 
       {error && <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/5 p-3 text-xs text-red-300">{error}</div>}
@@ -92,6 +105,11 @@ export default function ChannelPage(): React.JSX.Element {
         )}
         {learned && learned.videoCount === 0 && (
           <p className="text-xs text-ink-500">With no data the honest answer is nothing, so nothing is claimed.</p>
+        {learned && learned.videoCount === 0 && (
+          <p className="text-xs text-ink-400">
+            No videos could be read. Check the YouTube key and channel ID in Settings — with no data the honest answer
+            is nothing, so nothing is claimed.
+          </p>
         )}
 
         {learned && learned.videoCount > 0 && (
@@ -211,6 +229,14 @@ export default function ChannelPage(): React.JSX.Element {
                 </div>
               )}
               {score && !score.problem && (
+                  onClick={() => void window.api.channel.scoreTitle(titleDraft).then(setScore)}
+                  disabled={!titleDraft.trim()}
+                  className="rounded-md border border-gold-500/40 text-gold-400 hover:bg-gold-500/10 disabled:opacity-40 text-xs px-3 py-1.5 transition-colors"
+                >
+                  Score it
+                </button>
+              </div>
+              {score && (
                 <div className="mt-2 rounded-md border border-ink-800 bg-ink-950 p-2 space-y-1">
                   {score.reasons.map((r, i) => (
                     <div key={i} className="text-xs text-ink-300">
@@ -253,6 +279,11 @@ export default function ChannelPage(): React.JSX.Element {
         )}
 
         {gaps && (!gaps.problem || gaps.problem.kind === 'partial') && (
+          {gaps
+            ? gaps.headline
+            : 'Trending tells you what is popular. This tells you what is popular that YOU have never made — demonstrated demand, with nothing of your own competing for it.'}
+        </p>
+        {gaps && (
           <div className="text-[11px] text-ink-600 mt-1">
             Compared {gaps.myVideos} of your videos against {gaps.competitorVideos} from other channels
             {gaps.unmatched > 0 && `, ${gaps.unmatched} of which were about something outside finance`}.
@@ -323,6 +354,10 @@ export default function ChannelPage(): React.JSX.Element {
           </div>
         )}
 
+          {mined
+            ? mined.summary
+            : 'Nobody reads two thousand comments. The same question asked forty times is a video with an audience before you record a frame.'}
+        </p>
         {mined && mined.clusters.length > 0 && (
           <div className="mt-3 space-y-2">
             {mined.clusters.map((c: QuestionCluster) => (

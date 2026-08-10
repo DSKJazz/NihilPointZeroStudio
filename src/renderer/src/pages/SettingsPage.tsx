@@ -470,6 +470,8 @@ export default function SettingsPage() {
         </label>
       </div>
 
+      <WhatsNewCard />
+
       {/* Setup health — at-a-glance readiness of every subsystem. */}
       <div className="mt-4 rounded-lg border border-ink-700 bg-ink-900 p-4">
         <div className="flex items-center justify-between mb-2">
