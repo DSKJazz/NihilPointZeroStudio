@@ -128,3 +128,58 @@ describe('buildShortArgs', () => {
     expect(a).toContain('scale=720:1280')
   })
 })
+
+describe('housekeeping never opens a short', () => {
+  const junk = [
+    "Don't forget to subscribe and hit the bell.",
+    'Like and share if this helped you today.',
+    "In today's video we look at the rupee.",
+    'As I said earlier, watch the reserves print.',
+    'Link in the description below.',
+    'Channel ko subscribe karein.'
+  ]
+
+  it('scores every kind of plug below zero', () => {
+    for (const line of junk) expect(scoreSegment(line).score, line).toBeLessThan(0)
+  })
+
+  it('beats every other rule — a plug stuffed with hooks is still a plug', () => {
+    // Without the override this scores well: hook word, a number, and urgency. A Short
+    // that opens on a plug is dead on arrival however good the rest of the clip is.
+    const s = scoreSegment('Subscribe today and you could save 50 percent right now.')
+    expect(s.score).toBeLessThan(0)
+    expect(s.reason).toMatch(/housekeeping/)
+  })
+
+  it('does not mistake ordinary speech for a plug', () => {
+    expect(scoreSegment('The reason nobody watches import cover is that it is boring.').score).toBeGreaterThan(0)
+  })
+})
+
+describe('Roman Urdu scores, not just English', () => {
+  it('picks up the contradiction, the question, the stake', () => {
+    // This channel is spoken in mixed Roman Urdu. An English-only word list was blind
+    // to roughly half of every script's strongest moments.
+    for (const line of [
+      'Lekin asal haqiqat yeh hai ke reserves gir rahe hain.',
+      'Kyun koi import cover ki baat nahi karta?',
+      'Aap ka nuqsan is mein sab se zyada hai.'
+    ]) {
+      expect(scoreSegment(line).score, line).toBeGreaterThan(0)
+    }
+  })
+
+  it('scores a Roman Urdu hook comparably to its English twin', () => {
+    const urdu = scoreSegment('Lekin asal wajah kuch aur hai aur aap ko nuqsan ho raha hai.')
+    const english = scoreSegment('But the actual reason is different and you are losing money.')
+    // Not identical wording, so not identical scores — but the Urdu line must not be
+    // scored as filler while the English one is a hook.
+    expect(urdu.score).toBeGreaterThan(0)
+    expect(english.score).toBeGreaterThan(0)
+  })
+
+  it('rewards naming a real institution', () => {
+    expect(scoreSegment('State Bank reserves fell again this month.').score).toBeGreaterThan(0)
+    expect(scoreSegment('PSX volumes tell a different story here.').score).toBeGreaterThan(0)
+  })
+})

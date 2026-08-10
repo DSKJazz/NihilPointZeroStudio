@@ -9,6 +9,7 @@ const BUILD_TAG = __BUILD_TAG__
 const links = [
   { to: '/', label: '🏠 Today', end: true },
   { to: '/ideas', label: 'Ideas & Trends', end: false },
+  { to: '/channel', label: '📊 Your Channel', end: false },
   { to: '/agent', label: '✦ AI Command', end: false },
   { to: '/scenes', label: '🎬 Scene Studio', end: false },
   { to: '/writer', label: 'Script Writer', end: false },

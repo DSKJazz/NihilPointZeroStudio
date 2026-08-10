@@ -1,0 +1,4 @@
+﻿Scanning pattern: AKIA[0-9A-Z]{16} -> quarantine-prep/history_scan_aws_access_key.txt
+
+--- Working tree matches ---
+

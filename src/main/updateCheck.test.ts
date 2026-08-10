@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diskIsNewerThanRunning, isNewer, tagDate } from './updateCheck'
+import { buildTagFromRelease, diskIsNewerThanRunning, isNewer, tagDate } from './updateCheck'
 
 describe('tagDate', () => {
   it('parses the timestamp out of a build tag', () => {
@@ -9,6 +9,33 @@ describe('tagDate', () => {
     expect(tagDate('v0.1.1')).toBeNull()
     expect(tagDate('')).toBeNull()
     expect(tagDate('garbage')).toBeNull()
+  })
+})
+
+describe('buildTagFromRelease', () => {
+  it('uses the Build line when present', () => {
+    expect(buildTagFromRelease({ body: 'Build v0.1.1 · 2026-09-01 10:00 · abc' })).toBe('Build v0.1.1 · 2026-09-01 10:00 · abc'.match(/Build (v[^\n*]+)/)![1])
+  })
+
+  it('falls back to the published_at timestamp when the release notes lack a build line', () => {
+    const tag = buildTagFromRelease({ body: '', tag_name: 'v0.2.0', published_at: '2026-09-01T10:00:00Z' })
+    expect(tag).toContain('v0.2.0')
+    expect(tag).toContain('published')
+    expect(tag).toMatch(/^v0\.2\.0 · 2026-09-01 \d{2}:\d{2} · published$/)
+    expect(tagDate(tag!)).not.toBeNull()
+  })
+
+  it('returns null when neither a build line nor published_at/created_at are available', () => {
+    expect(buildTagFromRelease({ body: '', tag_name: 'v0.2.0' })).toBeNull()
+    expect(buildTagFromRelease({ body: '', published_at: '2026-09-01T10:00:00Z' })).toBeNull()
+  })
+
+  it('falls back to created_at when published_at is unavailable', () => {
+    const tag = buildTagFromRelease({ body: '', tag_name: 'v0.2.1', published_at: null, created_at: '2026-09-01T11:15:00Z' })
+    expect(tag).toContain('v0.2.1')
+    expect(tag).toContain('published')
+    expect(tag).toMatch(/^v0\.2\.1 · 2026-09-01 \d{2}:\d{2} · published$/)
+    expect(tagDate(tag!)).not.toBeNull()
   })
 })
 

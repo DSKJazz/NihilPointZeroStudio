@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useHistory } from '../hooks/useHistory'
 import { useNavigate } from 'react-router-dom'
 import type { SceneTransition, VideoAspect, VideoJob, VideoResolution, VideoStyle, VideoTemplate } from '../../../shared/types'
 import { SCENE_TRANSITIONS, VIDEO_STYLES, VIDEO_TEMPLATES } from '../../../shared/types'
 import MicButton, { appendDictation } from '../components/MicButton'
 import { useAutosave } from '../hooks/useAutosave'
 import { toast } from '../components/Toast'
+import { confirmDialog } from '../components/Confirm'
+import { useStudio } from '../store/StudioContext'
 
 import { fileUrl, pathFromFileUrl as plainPath } from '../../../shared/mediaUrl'
 
@@ -40,8 +43,9 @@ function parsePct(stage: string | null): number | null {
  */
 export default function SceneStudioPage(): React.JSX.Element {
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
+  const { scene, setScene, saveStatus } = useStudio()
+  const title = scene.title
+  const body = scene.body
   const [style, setStyle] = useState<VideoStyle>('cinematic')
   const [direction, setDirection] = useState('')
   const [resolution, setResolution] = useState<VideoResolution>('1080p')
@@ -54,26 +58,24 @@ export default function SceneStudioPage(): React.JSX.Element {
   // the stills automatically, so the build never breaks.
   const [motion, setMotion] = useState<'stills' | 'ai-free-video' | 'ai-local'>('stills')
   const [photoStrength, setPhotoStrength] = useState(0.5)
-
-  // Autosave the script + settings (not the generated images, which are files).
-  const inputs = useMemo(
-    () => ({ title, body, style, direction, resolution, aspect, template, fast, soundEffects }),
-    [title, body, style, direction, resolution, aspect, template, fast, soundEffects]
-  )
-  const saveStatus = useAutosave('scene-inputs', inputs, (v) => {
-    const o = (v ?? {}) as Partial<typeof inputs>
-    if (typeof o.title === 'string') setTitle(o.title)
-    if (typeof o.body === 'string') setBody(o.body)
-    if (o.style) setStyle(o.style)
-    if (typeof o.direction === 'string') setDirection(o.direction)
-    if (o.resolution) setResolution(o.resolution)
-    if (o.aspect) setAspect(o.aspect)
-    if (o.template) setTemplate(o.template)
-    if (typeof o.fast === 'boolean') setFast(o.fast)
-    if (typeof o.soundEffects === 'boolean') setSoundEffects(o.soundEffects)
-  })
+  // The GLOBAL scene length. Typed once here, it fills every card's "Stays" box in one
+  // go; any card can still be edited afterwards to run longer or shorter than the rest.
+  // Empty = automatic pacing (the total always stretches to fit the narration).
+  const [everySceneSec, setEverySceneSec] = useState<number | ''>('')
 
   const [scenes, setScenes] = useState<Scene[]>([])
+  // Undo/redo over the scene list. Scene Studio was the one editing surface without it:
+  // deleting a scene, or rewriting a prompt you liked, was final for the session — and it
+  // is the surface where a scene can represent several minutes of generation.
+  const sceneHistory = useHistory(scenes, setScenes)
+  // Watch ONE scene before committing to the whole render. A still cannot show whether the
+  // camera move drifts the subject out of frame, or whether the grade suits this picture.
+  const [previewingIndex, setPreviewingIndex] = useState<number | null>(null)
+  // Which scene the CURRENT preview belongs to. Separate from previewingIndex, which only
+  // means "busy" — the player has to stay visible after the render finishes, and it must
+  // appear under the right scene rather than under whichever one was last touched.
+  const [previewedIndex, setPreviewedIndex] = useState<number | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   // Persist the generated scenes too — NOT just the script. The images are files on disk,
   // so a restored scene shows its picture again; a scene that was mid-generation when you
   // left comes back as ready (idle) rather than stuck "generating". Without this, all your
@@ -97,6 +99,11 @@ export default function SceneStudioPage(): React.JSX.Element {
   // Refs so the async generation loop always reads the latest prompts/pause state.
   const scenesRef = useRef<Scene[]>([])
   const pausedRef = useRef(false)
+  // Each generateRemaining() run gets its own id; a worker whose id is stale exits.
+  // Without this, pressing Resume while a paused run still had a request in flight
+  // reset pausedRef and REVIVED the old pool alongside the new one — doubling the
+  // request rate against the rate-limited free image service.
+  const runIdRef = useRef(0)
   const fastRef = useRef(fast)
   const strengthRef = useRef(photoStrength)
   useEffect(() => {
@@ -149,14 +156,27 @@ export default function SceneStudioPage(): React.JSX.Element {
 
   async function useScriptPad(): Promise<void> {
     const pad = await window.api.scriptpad.get()
-    if (pad.title) setTitle(pad.title)
-    if (pad.body) setBody(pad.body)
+    if (pad.title) setScene((prev) => ({ ...prev, title: pad.title }))
+    if (pad.body) setScene((prev) => ({ ...prev, body: pad.body }))
   }
 
   async function plan(): Promise<void> {
     if (!body.trim()) {
       setError('Paste or write a script first (use [SECTION] headers for scene boundaries).')
       return
+    }
+    // Same guard the Storyboard page has: re-planning replaces the whole board —
+    // hand-edited prompts, attached photos, every generated image — so never do
+    // that silently over existing work.
+    if (scenes.length > 0) {
+      const ok = await confirmDialog({
+        title: 'Re-plan and replace your scenes?',
+        message:
+          'This replaces the current scene board — including edited prompts, attached photos and generated pictures — with a fresh plan from the script. (The last board stays in autosave history.)',
+        confirmLabel: 'Re-plan',
+        danger: true
+      })
+      if (!ok) return
     }
     setError(null)
     setBuilt(null)
@@ -168,14 +188,37 @@ export default function SceneStudioPage(): React.JSX.Element {
   async function genOne(index: number, seedBump = 0): Promise<void> {
     const s = scenesRef.current.find((x) => x.index === index)
     if (!s) return
+
+    const retryable = (err: unknown): boolean => {
+      const msg = err instanceof Error ? err.message : String(err)
+      return /429|rate[- ]limit|too many requests|service busy|busy right now|queue/i.test(msg)
+    }
+
+    const delay = (attempt: number): Promise<void> =>
+      new Promise((resolve) => setTimeout(resolve, 2000 * Math.pow(2, attempt) + Math.round(Math.random() * 800)))
+
     patchScene(index, { status: 'generating', msg: undefined })
-    try {
-      const img = s.photo
-        ? await window.api.scene.generateFromPhoto(index, s.prompt, s.photo, strengthRef.current)
-        : await window.api.scene.generate(s.prompt, index + 1 + seedBump, fastRef.current)
-      patchScene(index, { img: `${fileUrl(img)}?t=${Date.now()}`, status: 'done', msg: undefined })
-    } catch (err) {
-      patchScene(index, { status: 'error', msg: err instanceof Error ? err.message : 'failed' })
+    let attempt = 0
+    while (true) {
+      try {
+        const img = s.photo
+          ? await window.api.scene.generateFromPhoto(index, s.prompt, s.photo, strengthRef.current)
+          : await window.api.scene.generate(s.prompt, index + 1 + seedBump, fastRef.current)
+        patchScene(index, { img: `${fileUrl(img)}?t=${Date.now()}`, status: 'done', msg: undefined })
+        return
+      } catch (err) {
+        if (!retryable(err) || attempt >= 2) {
+          patchScene(index, { status: 'error', msg: err instanceof Error ? err.message : 'failed' })
+          return
+        }
+        attempt += 1
+        const retryMsg = err instanceof Error ? err.message : String(err)
+        patchScene(index, {
+          status: 'generating',
+          msg: `Rate-limited; retrying in ${Math.round(2 * Math.pow(2, attempt) + 0.5)}s…`
+        })
+        await delay(attempt)
+      }
     }
   }
 
@@ -186,6 +229,8 @@ export default function SceneStudioPage(): React.JSX.Element {
    * busy, instead of leaving scenes on "✗ failed" for the user to regenerate by hand.
    */
   async function generateRemaining(): Promise<void> {
+    // Starting a run invalidates any previous pool instantly (see runIdRef note).
+    const myRun = ++runIdRef.current
     setGenerating(true)
     setPaused(false)
     pausedRef.current = false
@@ -199,7 +244,7 @@ export default function SceneStudioPage(): React.JSX.Element {
       const worker = async (offsetMs: number): Promise<void> => {
         await new Promise((r) => setTimeout(r, offsetMs))
         while (true) {
-          if (pausedRef.current) return
+          if (pausedRef.current || runIdRef.current !== myRun) return
           const at = cursor++
           if (at >= indexes.length) return
           await genOne(indexes[at], seedBump)
@@ -208,14 +253,16 @@ export default function SceneStudioPage(): React.JSX.Element {
       await Promise.all(Array.from({ length: workers }, (_, w) => worker(w * 700)))
     }
     await runPool(scenesRef.current.filter((s) => s.status !== 'done').map((s) => s.index), 0)
-    for (let round = 1; round <= 2 && !pausedRef.current; round++) {
+    for (let round = 1; round <= 2 && !pausedRef.current && runIdRef.current === myRun; round++) {
       const failed = scenesRef.current.filter((s) => s.status === 'error').map((s) => s.index)
       if (!failed.length) break
       toast(`Retrying ${failed.length} failed scene${failed.length === 1 ? '' : 's'} — the free queue was busy…`, 'info')
       await new Promise((r) => setTimeout(r, 8000))
       await runPool(failed, round * 1000)
     }
-    setGenerating(false)
+    // Only the run that still owns the board may clear the busy flag — a stale
+    // (superseded) run finishing must not hide a newer run's progress.
+    if (runIdRef.current === myRun) setGenerating(false)
   }
 
   function pause(): void {
@@ -306,12 +353,63 @@ export default function SceneStudioPage(): React.JSX.Element {
     }
   }
 
+  // The same four moves the render cycles through, in the same order, so the preview shows
+  // the move this scene will really get. Named here rather than imported because they live
+  // in src/main and the renderer cannot reach into that — the main process validates the
+  // name it receives and falls back to zoom-in, so a drift here cannot break a preview.
+  const PREVIEW_MOTIONS = ['zoom-in', 'pan-right', 'zoom-out', 'pan-left'] as const
+
+  /** Renders this one scene, exactly as the final video will treat it, and plays it. */
+  async function handleScenePreview(scene: Scene): Promise<void> {
+    if (!scene.img) return
+    setPreviewingIndex(scene.index)
+    setPreviewUrl(null)
+    setPreviewedIndex(null)
+    try {
+      const imagePath = plainPath(scene.img)
+      const res = await window.api.scenePreview(
+        imagePath,
+        scene.seconds ?? 4,
+        PREVIEW_MOTIONS[scene.index % PREVIEW_MOTIONS.length],
+        aspect,
+        template
+      )
+      // fileUrl() here in the page, not in main — that is what makes it play on the phone.
+      if (res.ok) {
+        setPreviewUrl(`${fileUrl(res.path)}?t=${Date.now()}`)
+        setPreviewedIndex(scene.index)
+      } else toast(res.error, 'error')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not make the preview', 'error')
+    } finally {
+      setPreviewingIndex(null)
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-8 py-8">
       <header className="mb-5">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-serif text-gold-400">Scene Studio</h1>
-          <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+          <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={sceneHistory.undo}
+              disabled={!sceneHistory.canUndo}
+              title="Undo (Ctrl+Z)"
+              className="rounded-md border border-ink-700 px-2 py-1.5 text-sm text-ink-200 hover:border-gold-500 disabled:opacity-40"
+            >
+              ↩
+            </button>
+            <button
+              onClick={sceneHistory.redo}
+              disabled={!sceneHistory.canRedo}
+              title="Redo (Ctrl+Y)"
+              className="rounded-md border border-ink-700 px-2 py-1.5 text-sm text-ink-200 hover:border-gold-500 disabled:opacity-40"
+            >
+              ↪
+            </button>
+          </div>
         </div>
         <p className="text-ink-400 text-sm mt-1">
           Generate your video scene by scene and watch each one appear. Pause anytime, rewrite any scene’s
@@ -325,24 +423,24 @@ export default function SceneStudioPage(): React.JSX.Element {
         <div className="flex gap-2">
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setScene((prev) => ({ ...prev, title: e.target.value }))}
             placeholder="Title"
             className="flex-1 rounded-md bg-ink-950 border border-ink-800 px-3 py-2 text-sm text-ink-100"
           />
-          <MicButton onText={(t) => setTitle((prev) => appendDictation(prev, t))} className="px-3 py-2" />
+          <MicButton onText={(t) => setScene((prev) => ({ ...prev, title: appendDictation(prev.title, t) }))} className="px-3 py-2" />
           <button onClick={useScriptPad} className="rounded-md border border-ink-700 px-3 text-xs text-ink-300 hover:border-gold-500">
             Use Script Pad
           </button>
         </div>
         <textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => setScene((prev) => ({ ...prev, body: e.target.value }))}
           placeholder="Paste your script. Put [SECTION HEADERS] on their own lines to define scenes."
           rows={4}
           className="w-full resize-y rounded-md bg-ink-950 border border-ink-800 px-3 py-2 text-sm text-ink-100"
         />
         <div className="flex justify-end -mt-1">
-          <MicButton onText={(t) => setBody((prev) => appendDictation(prev, t))} />
+          <MicButton onText={(t) => setScene((prev) => ({ ...prev, body: appendDictation(prev.body, t) }))} />
         </div>
         <div className="flex gap-2 items-start">
           <input
@@ -410,14 +508,44 @@ export default function SceneStudioPage(): React.JSX.Element {
             <input type="range" min={0.2} max={0.9} step={0.05} value={photoStrength} onChange={(e) => setPhotoStrength(Number(e.target.value))} />
             <span className="tabular-nums">{Math.round(photoStrength * 100)}%</span>
           </label>
+          <label
+            className="flex items-center gap-1"
+            title="Sets every scene's 'Stays' time in one go — 0.5 seconds to minutes. After applying, change any single scene's own box to make just that one longer or shorter. Empty = automatic pacing."
+          >
+            ⏱ Every scene stays
+            <input
+              type="number"
+              min={0.5}
+              max={600}
+              step={0.5}
+              value={everySceneSec}
+              placeholder="auto"
+              onChange={(e) => setEverySceneSec(e.target.value === '' ? '' : Math.max(0.5, Number(e.target.value)))}
+              className="w-16 rounded bg-ink-950 border border-ink-800 px-1 py-0.5 text-[10px] text-ink-200"
+            />
+            sec
+            <button
+              onClick={() => {
+                const v = everySceneSec === '' ? undefined : everySceneSec
+                setScenes((prev) => prev.map((sc) => ({ ...sc, seconds: v })))
+              }}
+              disabled={!scenes.length}
+              className="rounded border border-gold-500/40 px-2 py-0.5 text-gold-400 hover:bg-gold-500/10 disabled:opacity-40"
+              title="Writes this time into every scene card below (you can still change single cards afterwards)"
+            >
+              Apply to all
+            </button>
+          </label>
           <button onClick={plan} disabled={generating || building} className="ml-auto rounded-md bg-gold-500 px-4 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400 disabled:opacity-40">
             Plan scenes
           </button>
         </div>
         </div>
         <p className="text-[10px] text-ink-500">
-          ⏱ Each scene card below has its own “Stays … sec” box and an “Arrives by” transition (fade, slide,
-          dissolve…). Leave them alone for automatic pacing — the total always stretches to fit the narration.
+          ⏱ “Every scene stays … sec” sets ALL the cards in one go (0.5 sec to minutes — your call), and each
+          card’s own “Stays” box can then override just that scene: pick 1.5 sec for everything and give scene 12
+          five seconds. Leave everything empty for automatic pacing — the total always stretches to fit the
+          narration.
         </p>
         <p className="text-[10px] text-ink-500">
           📎 “Put me in (photo)” on any scene uses your photo as the base (free image-to-image). It keeps your
@@ -511,8 +639,8 @@ export default function SceneStudioPage(): React.JSX.Element {
                     ⏱ Stays
                     <input
                       type="number"
-                      min={1}
-                      max={120}
+                      min={0.5}
+                      max={600}
                       step={0.5}
                       value={s.seconds ?? ''}
                       placeholder="auto"
@@ -555,8 +683,43 @@ export default function SceneStudioPage(): React.JSX.Element {
                       ⬇ Save
                     </button>
                   )}
+                  {/* Watch just this one, with its real camera move and grade, instead of
+                      rendering the whole video to check six seconds. */}
+                  {s.img && s.status === 'done' && (
+                    <button
+                      onClick={() => void handleScenePreview(s)}
+                      disabled={previewingIndex !== null}
+                      title="Renders just this scene with the camera move and look the final video will use — a few seconds"
+                      className="rounded border border-gold-500/40 px-2 py-1 text-[11px] text-gold-400 hover:bg-gold-500/10 disabled:opacity-40"
+                    >
+                      {previewingIndex === s.index ? 'Making it…' : '▶ Watch this scene'}
+                    </button>
+                  )}
                   <MicButton onText={(t) => patchScene(s.index, { prompt: appendDictation(s.prompt, t) })} />
                 </div>
+                {/* Only under the scene it belongs to, so there is never any doubt about
+                    which one you are looking at. */}
+                {previewUrl && previewedIndex === s.index && (
+                  <div className="mt-2 rounded border border-gold-500/30 bg-ink-950 p-2">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-[11px] text-gold-400">Scene {s.index + 1}, as the video will show it</span>
+                      <button
+                        onClick={() => {
+                          setPreviewUrl(null)
+                          setPreviewedIndex(null)
+                        }}
+                        className="text-[11px] text-ink-500 hover:text-ink-300"
+                      >
+                        close
+                      </button>
+                    </div>
+                    <video src={previewUrl} controls autoPlay loop className="w-full rounded" />
+                    <div className="mt-1 text-[10px] text-ink-600">
+                      No sound — the narration is the same either way. This is here to show the camera move and the
+                      look on this particular picture.
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

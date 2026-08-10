@@ -3,11 +3,263 @@
 _What actually works, what needs internet, what needs a one-time setup, and what it
 deliberately doesn't do. No hype — this is the "will it do X?" reference._
 
-## Build: v0.1.1 · 2026-08-01 04:30
+## Build: v0.1.1 · 2026-08-10 03:02
 The running app shows this in the sidebar (under "OS") as a gold badge. The badge is now stamped
 **automatically at build time** (version · build date+time · code id) — it can never be forgotten
 or go stale by hand. If yours shows an older tag, you launched a stale copy — see **"If updates
 don't show up"** at the bottom of this file.
+
+## Fixed (2026-08-01, late — the update notice that never appeared)
+
+**What went wrong.** The app finds the newest published version by looking for a line
+reading `Build v0.1.1 · <date> · <code>` in the GitHub release notes. `ship.ps1` writes
+that line. The CI workflow — added earlier the same day, so that releases could be built
+without a Windows PC — wrote something different: *"Built automatically from main on
+&lt;date&gt; UTC"*, with no `Build v...` anywhere.
+
+So the check found nothing to compare, decided there was no update, and returned. Silently.
+**Every release published from a cloud session was invisible to every installed app.**
+
+**Why it took so long to notice.** Nothing failed. No test broke, no build went red, no
+error was logged. Two files simply stopped agreeing — and the app's response to *"I could
+not read it"* was identical to its response to *"you are up to date"*: say nothing at all.
+From the outside there was no way to tell a working app from a broken one.
+
+**The three fixes, in order of what each one is for:**
+
+1. **The workflow now writes the line the app reads**, and decides the build tag once and
+   exports it, so the stamp baked into the exe and the stamp quoted in the notes are
+   provably the same string. If they differed by a minute, the app could update
+   successfully and still believe it was behind — an update loop.
+2. **A failed read is now on the record.** An unreadable version line writes a line into
+   the activity log instead of returning in silence, so this class of fault leaves
+   evidence next time.
+3. **Settings → Version says it out loud.** Up to date, newer available, or "could not
+   check just now" — never reported as up to date when the check did not run — with the
+   running build shown beside the published one and a **Check now** button. This is the
+   real fix: the app was missing a sentence, and its absence was indistinguishable from a
+   failure.
+
+There is a test (`src/main/releaseNotes.test.ts`) that reads the actual workflow and the
+actual ship script and asserts each still produces something the actual parser can read.
+That is the only kind of test that could have caught this, because the defect lived in the
+gap between two files rather than inside either one.
+
+## New in this build (2026-08-01, evening — updating is no longer your job)
+
+### 🔌 It opens with Windows, and that is when it updates itself
+
+The honest limit first: **nothing can update an app that is not running.** While the
+studio is closed, no code of ours is on the CPU — there is no process to notice a new
+release, download it, or install it. Any claim otherwise would be a lie.
+
+What *can* be arranged is that the app is already current by the time you look at it, and
+the way to arrange it is to have Windows open the app at sign-in. That is now the default.
+And sign-in is the deliberately chosen moment for the update, not an afterthought: nobody
+is waiting for the app, nothing is running, so it is the only point in the day when
+spending three minutes replacing itself costs nothing.
+
+Three guarantees, each one closing a way this could have gone wrong:
+
+- **It never updates while a render or a queue is running.** The app does not destroy the
+  user's work, and restarting under a running render would do exactly that.
+- **The busy check happens again AFTER the download, not only before it.** A ~210 MB
+  download takes minutes; an update that was safe to install when it started can become
+  unsafe by the time it finishes, because you sat down in between. If that happens the
+  verified installer simply stays on disk, and the blue notice becomes instant — there is
+  nothing left to fetch.
+- **A launch you made yourself is never hijacked.** You opened it to work; a forced
+  download before you can type would be worse than a button. Only a launch that Windows
+  made updates silently.
+
+Rejected alternatives, and why: a resident background updater service is a second thing to
+install, sign and debug when it silently stops. An hourly scheduled task is worse than it
+sounds — this installer relaunches the app when it finishes, so an hourly task means the
+studio window appearing on its own at some random point in the afternoon. Tying it to
+sign-in turns that relaunch into the behaviour that was asked for instead of a surprise.
+
+Off switch: **Settings → "Open the studio when Windows starts"**. Turning it off returns
+you to the one-button update, which still works exactly as described below.
+
+
+### ⬆ The app installs its own updates
+The honest description of the old "Get the update" button, in its most common case, was
+*"we opened a web page for you"*. After that you still had to get past the browser's
+warning about downloading an .exe, find the file in your Downloads folder, and
+double-click it. That is four things, each of them a place to get stuck — and none of
+them a job a person should be doing.
+
+Now the button does the work: it downloads the installer (with a progress bar), checks
+the file against the checksum GitHub itself published, runs it, and closes the app so the
+installer can replace it. Windows asks once whether to allow it; after that the app
+reopens updated.
+
+Details that matter:
+- **The download is verified, not just finished.** Size *and* sha256 are both checked
+  against GitHub's own values, and a file that fails either is deleted rather than run.
+  An installer is the one download where "probably fine" is not good enough.
+- **An interrupted download is not wasted.** Press the button again and it re-uses what
+  it already has.
+- **It refuses to start without room.** Under ~1.2 GB free, it says so in plain words
+  instead of half-downloading.
+- **Nothing was removed.** The instant restart (when a ship already put the new code on
+  disk) is still tried first because it is faster, and revealing the setup file is still
+  the fallback — now with the reason the download failed printed in the banner, so it
+  can never read as a shrug.
+- **Not available from the phone.** Running a Windows installer and quitting the app
+  would kill the very connection the phone is using, so that channel is refused with an
+  explanation rather than half-working.
+
+### 📱 The phone app publishes itself now
+The phone app was finished and correctly uploaded, but GitHub was storing the files
+without serving them, because publishing was switched off — and that switch is buried in
+settings pages. It is now turned on by the workflow itself, so a push publishes the phone
+app with nobody hunting for a toggle.
+
+## New in this build (2026-08-01, afternoon — twenty-seven upgrades, and an honest correction)
+
+### The correction first
+Ten of these features were written, tested and correct — and **not reachable from the
+app**. Nothing in the interface called them, so there was no button, no tab, and no way
+for you to use a single one. They were counted as finished because their tests passed.
+A tested piece of code the app never calls is not a feature.
+
+They are all wired now, and there is a check in place that lists any module the app
+cannot reach, so this cannot quietly happen again. Where a claim below says "verified",
+it means it was run against the real bundled ffmpeg and the numbers are printed — not
+that a unit test passed.
+
+### A new tab: Your Channel
+Reads **your own** uploads and answers three questions from your own data rather than
+from general advice:
+
+- **Which title shapes worked here.** Median views, never mean — one video that went
+  viral would otherwise set your strategy for a year. Every claim carries the number of
+  videos behind it, and anything below 8 videos (or 3 in either group) is reported as
+  "not enough videos to tell yet" rather than answered. Differences under 10% are called
+  no real difference, because they are noise.
+- **When your audience shows up.** Grouped by day and by hour separately — a channel
+  would need thousands of videos before any single day-and-hour slot meant anything.
+- **Which of your videos are a series.** Read out of your titles (#4, Part 2, Episode 3,
+  Hissa 2, Qist 3, 2 of 5), so it works on the whole back catalogue immediately. It never
+  reads a number that is part of the topic: "Budget 2026" is not episode 2026, "PSX
+  crosses 78000" is not episode 78000. It flags missing numbers and two videos claiming
+  the same one, and writes the description block, pinned comment and end-screen line.
+
+It also reads your **comments**, finds the questions, groups the ones asking the same
+thing across English and Roman Urdu, and ranks them by how many different people asked.
+Every question is quoted verbatim from a real comment. No model summarises them, because
+a summary that reads well and matches no actual comment is indistinguishable from one
+that does.
+
+**Cost:** about 4 of the free 10,000 daily YouTube requests to read a hundred videos. It
+goes through the uploads playlist, not the search endpoint — search costs 100 units per
+call, so eight calls would burn a tenth of your day. Checking a key costs 1 unit; finding
+your channel from an @name costs 1 more.
+
+**When it reads nothing, it now says which of seven reasons it was.** This used to be a
+single sentence — "no videos could be read, check the YouTube key and channel ID in
+Settings" — printed for every case, and it described most of them wrongly. The seven: no
+key yet; a key but no channel set; Google refused the request (with Google's own reason
+translated); Google itself erroring; could not reach YouTube at all; only part of the
+channel readable; or everything working and the channel genuinely has no videos yet.
+
+Only the first three are things to act on. The rest are the app saying "I could not tell",
+shown in amber, and it will never dress one of those up as a fault of yours — a partial
+read in particular now says its numbers are a floor rather than a total, instead of
+letting half a history pass as the whole story.
+call, so eight calls would burn a tenth of your day.
+
+### In the Script Writer
+- **Read it to me.** Hears the script back at 2x with the pitch held, so it still sounds
+  like a person talking quickly. A twelve-minute script proofs in six minutes. It also
+  lists what to listen for: sentences too long for one breath, a word said twice in a
+  row, a figure that cannot be read aloud ("11.2bn"), a line that switches language.
+  Deliberately restrained — a check that flags forty things in a finance script is a
+  check you switch off, after which it catches nothing forever.
+- **Five openings.** The same material as a contradiction, a number, a question, what is
+  at stake, and dropped mid-scene — using only sentences already in your script, with the
+  source sentence shown under each one.
+- **Where your numbers came from.** Reads the "Verified data" box back against the script
+  and flags any figure it cannot trace, plus a sources block for the description.
+
+### In Video Studio and Charts
+- **Dead air.** Tells you what would be cut, then cuts it to a NEW video. Verified on a
+  file with silence planted at 8-16s and 24-31s of 40: found exactly those, kept
+  0-8.25 / 16-24.25 / 31-40 (the quarter-second of breath is visible in those numbers),
+  predicted 25.499s and produced 25.60s with picture and sound cut together.
+- **Draw it on.** The chart draws itself over four seconds and holds.
+
+### Quietly, on every render
+- **One encode instead of four.** Colour, captions, watermark and trimming used to be
+  four separate passes, and each one throws away a little picture quality. Measured
+  earlier with SSIM: 4 passes scored 0.9508 against the master, 1 pass scored 0.9957.
+- **Audio at -14 LUFS.** YouTube normalises every upload to about that. Delivering louder
+  does not make you louder, it makes YouTube turn you down — and you lose the dynamics
+  rather than gain the loudness. Verified: a source at -16.1 LUFS came out at exactly
+  -14.0, on both the narration-only and the music-mix paths, duration unchanged.
+- **Movement on footage.** Footage was the one background that sat completely still —
+  stills already had camera moves, a video clip got nothing, and a locked-off frame for a
+  whole minute is the single thing that most makes a video look cheap. Verified on frozen
+  footage: frame-to-frame difference went from 0.00014 to 0.604, output size exactly as
+  asked in 16:9, 9:16 and 4K.
+- **Scenes tighten toward the end**, where finance videos lose people, with the total
+  length preserved exactly so the narration stays in sync.
+- **B-roll lands on the word** it belongs to, in both languages, instead of on an equal
+  split that had gold on screen three sentences after you said gold.
+- **A one-second pre-flight.** Checks that ffmpeg really *runs* (antivirus quarantine
+  leaves the file exactly where it was and refuses to execute it, so "the file is there"
+  is not the check), that the work folder can be written to, and that there is disk space.
+  It refuses **only** when the render genuinely cannot finish — warnings never stop a
+  render, because this app is built to work offline with software encoding and a
+  pre-flight that blocks that takes away more than it protects.
+
+### And a "What changed" screen
+Settings → What changed. An old build looks exactly like a new one; the gold badge proves
+*which* build is running but never what was in it. This lists what is new in the build you
+are actually running — and **withholds** anything dated after that build, so it can never
+send you looking for a button that is not there yet. What you have already read is
+remembered per item, not per date, because this project ships more than once a day.
+
+### Not yet done, so you know
+**All twenty-seven are now built.** The last three were the render-lifecycle ones, and
+they are the ones where a mistake loses somebody a finished video, so they were left until
+last and each was verified against the real bundled ffmpeg rather than only in tests:
+
+- **Resuming a failed render.** A twenty-minute render dying at minute eighteen used to
+  throw away all eighteen. The narration is the slow part and it finishes before anything
+  that usually goes wrong has started, so pressing Build again now reuses it. It only ever
+  reuses a recording made for *exactly* these words in *exactly* this voice — the folder is
+  named after a fingerprint of those inputs, so a changed script cannot even see the old
+  narration. Narration that does not match the words would be far worse than the time lost.
+- **Watching one scene first.** A still cannot show whether the slow camera move drifts
+  your subject out of frame, or whether the colour treatment suits that particular photo.
+  Any finished scene can now be watched on its own in a few seconds, using the render's own
+  camera maths and the same finishing filters — not an approximation of them, because a
+  preview you cannot trust is worse than none.
+- **Smooth scrubbing on big videos.** Editing against a small stand-in instead of decoding
+  4K on every drag. The stand-in is built to be time-identical to the original and that is
+  *checked* afterwards, not assumed: verified on a 4K master at 29.97fps over 37.3 seconds,
+  the copy came out 0.0000s different in length at an identical frame rate, 281.6 MB down
+  to 2.4 MB. A copy that ever drifted is refused with a reason rather than silently edited
+  against, because a cut made on a drifting stand-in lands further and further out as the
+  video goes on — fine at the start, ruined at the end, invisible until somebody watches
+  the whole thing. The finished video is always made from the master.
+
+Undo already existed for the Timeline and Storyboard and was extended to the Scene Studio
+rather than a second undo being written alongside it.
+
+On **thumbnail A/B specifically**, one thing is worth being straight about: a properly
+automated test is not possible from this app. YouTube does not expose click-through per
+thumbnail to any application — the figure lives behind an OAuth login and is per video, so
+swapping the image overwrites it. What the app does instead is give genuinely different
+variants, catch the faults that need no data at all, and do the arithmetic that says whether
+a difference is real or chance. The swapping and the reading of two numbers are the user's
+to do, and the panel says so rather than implying an automation that does not exist.
+Eight of the twenty-seven are still not built: thumbnail A/B testing, competitor topic
+gaps, dual-language upload metadata, a copyright pre-check, resuming a failed render,
+proxy editing, scene preview, and a crash reporter. Undo and the render queue partly
+exist already and were left alone rather than duplicated.
 
 ## New in this build (2026-08-01, morning — the whole studio on your phone)
 
@@ -638,7 +890,14 @@ numbers** — if a figure can't be derived, it says so.
 - **Natural voice (Piper)** — a one-time ~80 MB download (already done on this PC).
 - **Offline music separation (Demucs)** — needs Python (already set up on this PC); not needed
   if you have internet (the Online button removes music).
-- **YouTube signals / Pixabay stock footage** — optional free API keys in Settings.
+- **YouTube (Your channel, comment questions, competitor gaps)** — needs the free YouTube
+  Data API key, and **Settings → Connect YouTube** now walks you through getting one: five
+  numbered steps, a button on each that opens the exact Google page, then a real test of the
+  key with a plain-English answer if it fails. It also finds your channel ID from your @name,
+  so the buried "UC..." string is no longer something you have to know. Free, ~3 minutes, no
+  card. **Until it is done, those three features read nothing** — and they now say so with
+  the reason, instead of showing an empty panel.
+- **Pixabay / Pexels stock footage** — optional free API keys in Settings.
 
 ## What it deliberately does NOT do (so you're never misled)
 - **NCCPL live auto-fetch** — NCCPL's portal blocks automated access, so the app does NOT scrape
@@ -652,6 +911,41 @@ numbers** — if a figure can't be derived, it says so.
   can't be accurate from a screenshot; the app charts real PSX data itself instead.
 - **"Beautify" is a retouch, not plastic surgery** — it smooths/brightens/sharpens; it does not
   reshape hair/skin/muscles into someone else.
+
+## Added on 2026-08-07 — the Caretaker
+The studio checks itself on a visible, user-controlled schedule (Settings → Caretaker):
+live health checks, dead-brain rescue, lost-video detection, every pass recorded. Honest
+scope: it fixes settings, state and services; it cannot rewrite its own code, and it
+never runs during a render. Only the user can delete its record.
+
+## Added on 2026-08-07 — the honesty gate on video builds
+A build where MOST scenes failed to get their real image now refuses to finish, naming
+the failed scenes and the reason, instead of shipping a dark void with a filename (one
+or two lost scenes still pass — that has always been the soft-fail promise). This is the
+fix for the "8 or 9 empty black videos" found in the output folder.
+
+## Added on 2026-08-07 — the switchboard and Gemini
+- **AI switchboard** (Settings): every brain with a real ON/OFF. Off = never contacted,
+  not even as a fallback. Free-online defaults OFF (it went paid); Ollama ON; paid asleep.
+- **Gemini** as a full brain via Google's genuinely free AI-Studio key, with a two-minute
+  tested walkthrough. ChatGPT/Grok: open-in-browser buttons only — no free machinery
+  exists, and the studio will never store passwords.
+
+## Fixed on 2026-08-07, from the owner's screen recording
+- **A percent sign in a headline crashed the whole video build** ("Stray %", "ffmpeg
+  exited with code null"). Finance titles are full of percent signs, so this was the main
+  case, not a corner. Fixed at the filter level and pinned with a test.
+- **Scene images could come out with inappropriate, mostly-female subjects** on scripts
+  that never mentioned a person. Two causes: the image service's strict content filter was
+  never being sent (now sent on every request), and the model invents a person for abstract
+  finance prompts (scenes that don't mention one now ban people from the frame; scenes that
+  do require modest professional dress).
+- **The app recommended buying a paid key when the free online AI died.** Removed
+  everywhere; the free local brain is the answer, and a dead free service is no longer
+  consulted on every request.
+- **GitHub "storage full" emails**: every build was storing 435 MB of exes as a 14-day
+  Actions artifact against a 500 MB allowance. It now stores nothing unless the release
+  upload itself fails; the old copies expire by themselves within two weeks.
 
 ## Honest note on "bug-free forever"
 The logic and math are tested and correct today. The parts that reach the internet (live PSX

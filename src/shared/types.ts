@@ -6,7 +6,7 @@
  * - 'anthropic' — Claude, your key (paid, highest quality).
  * - 'openai'    — OpenAI, your key (paid).
  */
-export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama'
+export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama' | 'gemini'
 
 export interface ProviderSettings {
   activeProvider: LLMProviderId
@@ -15,6 +15,14 @@ export interface ProviderSettings {
   openaiModel: string
   ollamaModel: string
   hasAnthropicKey: boolean
+  /** Gemini is FREE-keyed (AI Studio) — keyed like YouTube, not billed like Anthropic. */
+  hasGeminiKey: boolean
+  geminiModel: string
+  /**
+   * The switchboard: which brains the app is ALLOWED to contact. A brain switched off
+   * is never used, not even as a fallback — "off" that still answers is not off.
+   */
+  providerEnabled: Record<LLMProviderId, boolean>
   hasOpenAIKey: boolean
   hasYouTubeKey: boolean
   /** Optional free AI Horde key for faster photo-to-scene (img2img) generation. */
@@ -33,6 +41,8 @@ export interface ProviderSettings {
   youtubeChannelId: string
   /** Which installable Piper voice narrates when narrationVoice is 'piper'. */
   piperVoiceId: string
+  /** Open the studio when Windows starts (default on). */
+  startWithWindows: boolean
 }
 
 export interface YouTubeSignal {
@@ -485,6 +495,13 @@ export interface VideoJob {
   template?: VideoTemplate
   engine?: LookEngine
   style?: VideoStyle
+  /**
+   * What went into the video that might need crediting — the music track the app fetched,
+   * stock footage, images. Recorded at build time so the pre-publish credit check has
+   * something to check: without it the app knew a track needed attribution and had no way
+   * to tell WHICH video it went into. Older jobs simply lack it.
+   */
+  credits?: import('./copyrightCheck').CreditedItem[]
 }
 
 /** How a cut is applied: keep only the selected range, or remove it (see main/video/trim.ts). */
@@ -931,4 +948,24 @@ export interface AiErrorEntry {
   ms?: number
   message: string
   body?: string
+}
+
+/** One video waiting to be built. See shared/renderQueue.ts for the rules around it. */
+export type { QueueItem, QueueState, QueueSummary } from './renderQueue'
+
+/** A stretch of the recording to KEEP. See main/video/silence.ts — spans to keep are
+ * planned rather than spans to remove, which makes an overlap or a backwards span
+ * structurally impossible. */
+export interface KeepSpan {
+  startSec: number
+  endSec: number
+}
+
+/** What the dead-air cut did, for the user. */
+export interface SilenceSummary {
+  removedSec: number
+  keptSec: number
+  cuts: number
+  /** One line for the user. */
+  headline: string
 }

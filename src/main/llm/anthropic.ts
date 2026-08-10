@@ -4,12 +4,18 @@ import { buildIdeaPrompt, buildScriptPrompt, buildThumbnailPrompt, buildTrendPro
 import { LLMRequestError, type LLMProvider } from './types'
 import { extractJson, parseScriptResponse } from './parse'
 import { logAiError } from './errorLog'
+import { CHOSEN_TIMEOUT_MS, SDK_MAX_RETRIES } from './limits'
 
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic
 
-  constructor(apiKey: string, private model: string) {
-    this.client = new Anthropic({ apiKey })
+  /**
+   * `timeout` and `maxRetries` are not optional polish. Left to the SDK's defaults
+   * (10 minutes, 2 retries) a hung service held one request for half an hour in
+   * silence, which is exactly the "the panel never responds" fault. See llm/limits.ts.
+   */
+  constructor(apiKey: string, private model: string, timeoutMs = CHOSEN_TIMEOUT_MS) {
+    this.client = new Anthropic({ apiKey, timeout: timeoutMs, maxRetries: SDK_MAX_RETRIES })
   }
 
   private async complete(prompt: string, maxTokens: number): Promise<string> {
