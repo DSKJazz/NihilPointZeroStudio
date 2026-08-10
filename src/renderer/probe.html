@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<!--
+  DEV-ONLY visual probe. Not part of the app, not referenced by electron-vite's build
+  (only index.html is the renderer entry). Loads the REAL React app with a stubbed
+  window.api so every tab can be rendered and measured in a plain browser.
+  Safe to delete at any time.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NIHILPOINTZERO probe</title>
+    <script>
+      // Realistic worst-case data: long titles and long absolute paths are exactly what
+      // made the real layout bug visible.
+      const LONG_TITLE =
+        "Mining Supercycle in Pakistan \u2013 Why the Country's Strike\u2011Like Potential is Set to Rake in Gold, Copper and More (no music) (new music)"
+      const LONG_PATH =
+        'C:\\Users\\Shoaib Khan\\Desktop\\NihilPointZeroStudio\\nihilpointzero-data\\videos\\mining-supercycle-in-pakistan-why-the-country-s-st-67eff46a.mp4'
+      const mkJob = (i) => ({
+        id: 'job-' + i,
+        title: i % 2 ? LONG_TITLE : 'Video',
+        path: LONG_PATH,
+        createdAt: new Date(Date.now() - i * 3600e3).toISOString(),
+        status: 'done',
+        hasCustomVoice: i % 3 === 0,
+        narrationPath: LONG_PATH + '.narration.wav',
+        durationSec: 4649
+      })
+      const JOBS = Array.from({ length: 4 }, (_, i) => mkJob(i))
+
+      const ARRAYS = {
+        list: JOBS, listVideos: JOBS, videos: JOBS,
+        listLibrary: [{ id: 'l1', kind: 'script', savedAt: new Date().toISOString(), data: { title: LONG_TITLE, body: 'body', estimatedWordCount: 900, estimatedDurationMinutes: 6 } }],
+        listDrafts: [], history: [], models: ['llama3.2:3b'], voices: [],
+        screenSources: [{ id: 's1', name: 'Screen 1' }]
+      }
+
+      const BY_GROUP_LIST = [
+        { id: 'e1', kind: 'script', savedAt: new Date().toISOString(), deletedAt: null, data: { title: LONG_TITLE, body: 'Body text.', estimatedWordCount: 900, estimatedDurationMinutes: 6 } },
+        { id: 'e2', kind: 'image', savedAt: new Date().toISOString(), deletedAt: null, data: { title: 'Scene image', path: LONG_PATH, source: 'pollinations' } },
+        { id: 'e3', kind: 'idea', savedAt: new Date().toISOString(), deletedAt: null, data: { title: LONG_TITLE, angle: 'a', hook: 'h', score: 82, whyNow: 'w', keywords: ['k'] } }
+      ]
+
+      // Group-aware: library.list() must return LibraryEntry[], video.list() VideoJob[].
+      const BY_GROUP = {
+        library: {
+          // Set window.__forceCrash = true to simulate a malformed library.json record
+          // (no .data), which is what used to blank the ENTIRE app. Used to prove the
+          // ErrorBoundary contains it.
+          get list() {
+            return window.__forceCrash
+              ? [{ id: 'bad', kind: 'script', savedAt: new Date().toISOString() }]
+              : BY_GROUP_LIST
+          }
+        },
+        video: { list: JOBS },
+        activity: { list: [{ id: 'a1', timestamp: new Date().toISOString(), actor: 'ai', action: 'Built a video', details: LONG_PATH }] }
+      }
+
+      function fake(groupName, prop) {
+        const p0 = String(prop)
+        const g = BY_GROUP[groupName]
+        if (g && g[p0] !== undefined) { const v = g[p0]; return async () => v }
+        // Subscribe-style methods must return the unsubscribe function SYNCHRONOUSLY —
+        // effects do `const off = api.x.onFoo(cb); return () => off()`.
+        if (/^on[A-Z]/.test(p0) || p0.startsWith('subscribe')) return () => () => {}
+        return async (...args) => {
+          const p = p0
+          if (ARRAYS[p]) return ARRAYS[p]
+          if (/voices$|voiceCatalogue$|piperCatalogue$/i.test(p))
+            return [
+              { id: 'en_US-lessac-low', label: 'English — Lessac (low)', language: 'en_US', installed: true },
+              { id: 'ur_PK-fasih-medium', label: 'Urdu — Fasih (male)', language: 'ur_PK', installed: false },
+              { id: 'ur_PK-aegis_female-medium', label: 'Urdu — Aegis (female)', language: 'ur_PK', installed: false }
+            ]
+          if (/^(list|all|get.*s|search|history)/i.test(p)) return []
+          // Any plural-looking accessor is a collection: return an array so .map/.find work.
+          if (/List$/.test(p))
+            return [{ id: 'ur-PK-AsadNeural', label: 'Urdu (Pakistan) — Asad', language: 'ur-PK' },
+                    { id: 'en-US-AriaNeural', label: 'English (US) — Aria', language: 'en-US' }]
+          if (/catalogue|catalog|options|presets|items|sources|tracks|entries|jobs|models|devices|clips|beats/i.test(p)) return []
+          if (/s$/.test(p) && !/status|settings|progress|address|success/i.test(p)) return []
+          if (/status|health|check/i.test(p))
+            return SAFE({
+              ok: true, connected: false, models: [], failCount: 1, warnCount: 2,
+              checkedAt: new Date().toISOString(),
+              checks: [
+                { name: 'Internet', status: 'ok', detail: 'connected' },
+                { name: 'Free AI (text)', status: 'fail', detail: 'service returned 402 — the free AI now requires payment' },
+                { name: 'Ollama (local AI)', status: 'warn', detail: 'not running' }
+              ],
+              // Mirrors the real HardwareReport shape (src/main/gpu.ts) on THIS machine.
+              gpu: { name: 'Intel(R) UHD Graphics', vramGB: 2, hasCuda: false, integrated: true, totalRamGB: 16 },
+              summary: 'Intel(R) UHD Graphics · integrated · AI video generation not supported'
+            })
+          if (/settings|config/i.test(p))
+            return SAFE({ activeProvider: 'free', freeModel: 'openai', narrationVoice: 'windows', piperVoiceId: '', winVoiceId: '', language: 'roman-urdu' })
+          return SAFE({ ok: true, path: LONG_PATH, title: LONG_TITLE, body: '', text: '' })
+        }
+      }
+
+      // Unknown property reads return '' rather than undefined, so a page doing
+      // result.foo.trim() or rendering result.bar degrades instead of crashing the
+      // whole React tree (which blanked every route on the first attempt).
+      function SAFE(obj) {
+        return new Proxy(obj, {
+          get(t, prop) {
+            if (prop in t) return t[prop]
+            if (typeof prop === 'symbol' || prop === 'then' || prop === 'toJSON') return t[prop]
+            return ''
+          }
+        })
+      }
+      const group = (name) => new Proxy({}, { get: (_, prop) => (prop === 'then' ? undefined : fake(name, prop)) })
+      // Top-level api.exportText(...) is a direct method, not a group — support both shapes.
+      window.api = new Proxy({}, {
+        get: (_, prop) => {
+          if (prop === 'then') return undefined
+          const name = String(prop)
+          const g = group(name)
+          return new Proxy(fake('', name), { get: (_t, k) => g[k], apply: undefined })
+        }
+      })
+
+      // Surface anything the stub fails to satisfy, instead of a blank screen.
+      window.__probeErrors = []
+      window.addEventListener('error', (e) => window.__probeErrors.push(String(e.message)))
+      window.addEventListener('unhandledrejection', (e) => window.__probeErrors.push('rejection: ' + String(e.reason)))
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

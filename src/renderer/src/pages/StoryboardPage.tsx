@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAutosave } from '../hooks/useAutosave'
+import { useHistory } from '../hooks/useHistory'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/Confirm'
 import MicButton, { appendDictation } from '../components/MicButton'
 import { useProducerTarget } from '../store/ProducerContext'
 import { MOODS, SFX_KINDS, VIDEO_STYLES } from '../../../shared/types'
 import type { BeatSound, ShotSubjectKind, StoryboardBeat, StoryboardDoc, VideoStyle } from '../../../shared/types'
+import type { ImportedProject } from '../../../shared/project'
+import { fileUrl } from '../../../shared/mediaUrl'
 
 /**
  * Storyboard Director — write your film shot by shot ("0–15s: I arrive in a Ferrari,
@@ -40,14 +43,26 @@ export default function StoryboardPage(): React.JSX.Element {
   const [fps, setFps] = useState(25)
   const [totalSeconds, setTotalSeconds] = useState(120)
   const [style, setStyle] = useState<VideoStyle>('cinematic')
+  // True once the USER has picked a style by hand. The AI director's suggestion
+  // then never overwrites it — "Direct storyboard" used to silently replace the
+  // chosen look and the film rendered in the wrong style.
+  const styleChosenByUser = useRef(false)
   const [beats, setBeats] = useState<StoryboardBeat[]>([])
+  // Undo/redo over the shot list — deleting or mangling a beat is no longer final.
+  const history = useHistory(beats, setBeats)
   const [photoPath, setPhotoPath] = useState<string | null>(null)
   const [beautifyStrength, setBeautifyStrength] = useState(0.6)
+  // Scene motion: classic animated stills, or REAL AI video per beat (free cloud / local
+  // GPU). Failures fall back to the still for that beat — a render never breaks over this.
+  const [motion, setMotion] = useState<'stills' | 'ai-free-video' | 'ai-local'>('stills')
   const [beautyPreview, setBeautyPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
   const [renderedTimeline, setRenderedTimeline] = useState<unknown | null>(null)
   const [renderedPath, setRenderedPath] = useState<string | null>(null)
+  // Scenes a phone plan marked "my photo goes here" without attaching one. Shown as a
+  // checklist after an import so nothing silently renders with a missing subject.
+  const [needMedia, setNeedMedia] = useState<ImportedProject['needMedia']>([])
 
   const unsub = useRef<(() => void) | null>(null)
   useEffect(() => {
@@ -69,19 +84,64 @@ export default function StoryboardPage(): React.JSX.Element {
     if (v.language) setLanguage(v.language)
     if (v.resKey) setResKey(v.resKey)
     if (typeof v.fps === 'number') setFps(v.fps)
-    if (typeof v.totalSeconds === 'number') setTotalSeconds(v.totalSeconds)
+    // Clamp on the way back in too: a project saved with a wild total (9999s was real)
+    // would otherwise restore the same runaway length forever.
+    if (typeof v.totalSeconds === 'number') setTotalSeconds(Math.max(10, Math.min(3600, v.totalSeconds)))
     if (v.style) setStyle(v.style)
     if (Array.isArray(v.beats)) setBeats(v.beats)
     if (v.photoPath !== undefined) setPhotoPath(v.photoPath)
     if (typeof v.beautifyStrength === 'number') setBeautifyStrength(v.beautifyStrength)
   })
 
+  /**
+   * Loads a plan made in the phone app. The import happens in the main process (it
+   * writes any attached photos/recordings to disk); here we just adopt the result.
+   * The previous storyboard is not lost — the draft store keeps it in history.
+   */
+  async function importFromPhone(): Promise<void> {
+    if (beats.length > 0) {
+      const ok = await confirmDialog({
+        title: 'Replace your shots with the phone plan?',
+        message: 'This replaces the shots currently open with the ones from your phone. (Your last version stays in autosave history.)',
+        confirmLabel: 'Open the plan',
+        danger: true
+      })
+      if (!ok) return
+    }
+    setBusy('Opening your plan…')
+    try {
+      const res = await window.api.project.importPick()
+      if (res.canceled) return
+      if (!res.ok || !res.result) {
+        toast(res.error ?? 'That plan could not be opened.', 'error')
+        return
+      }
+      const p = res.result
+      setMode('auto')
+      setTitle(p.title)
+      if (p.script?.body) setBrief(p.script.body)
+      setBeats(p.storyboardBeats)
+      setStyle(p.style)
+      setResKey(p.resKey)
+      setFps(p.fps)
+      setTotalSeconds(Math.max(10, Math.min(3600, Math.round(p.seconds))))
+      if (p.photoPath) setPhotoPath(p.photoPath)
+      setNeedMedia(p.needMedia)
+      for (const w of p.warnings) toast(w, 'error')
+      toast(`${p.scenes} scenes loaded from your phone.`, 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'That plan could not be opened.', 'error')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function previewBeautify(): Promise<void> {
     if (!photoPath) return
     setBusy('Beautifying preview…')
     try {
       const res = await window.api.storyboard.beautify(photoPath, beautifyStrength)
-      if (res.ok && res.path) setBeautyPreview(`file:///${res.path.replace(/\\/g, '/').replace(/^\/+/, '')}?t=${Date.now()}`)
+      if (res.ok && res.path) setBeautyPreview(`${fileUrl(res.path)}?t=${Date.now()}`)
       else toast(res.error ?? 'Beautify failed.', 'error')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Beautify failed.', 'error')
@@ -108,7 +168,8 @@ export default function StoryboardPage(): React.JSX.Element {
       const res = await window.api.storyboard.plan({ mode, title, brief, totalSeconds, language, width: dims.w, height: dims.h, fps })
       if (res.ok && res.storyboard) {
         setBeats(res.storyboard.beats)
-        setStyle(res.storyboard.style)
+        // Only adopt the AI's style suggestion when the user hasn't chosen one.
+        if (!styleChosenByUser.current) setStyle(res.storyboard.style)
         if (res.storyboard.title) setTitle(res.storyboard.title)
         toast(`Directed ${res.storyboard.beats.length} shots — review & edit below.`, 'success')
       } else {
@@ -184,10 +245,45 @@ export default function StoryboardPage(): React.JSX.Element {
 
   async function render(): Promise<void> {
     if (!beats.length) { toast('Plan or add at least one shot first.', 'error'); return }
+    // A real project once asked for 9999s, got 39 shots all clamped to the 120s
+    // maximum with no narration at all, and the app spent hours producing 78 minutes
+    // of silence without a word. Show the user what they are about to get first.
+    const silent = beats.every((b) => !b.narration?.trim())
+    // Shots that star "your photo" render as EMPTY scenes with nobody in them when no
+    // photo is attached — and the toast still said success. Say it before the render.
+    const photoBeats = beats.filter((b) => b.subject?.kind === 'photo').length
+    if (photoBeats > 0 && !photoPath) {
+      const ok = await confirmDialog({
+        title: 'No photo attached',
+        message: `${photoBeats} shot${photoBeats === 1 ? '' : 's'} feature your photo, but no photo is attached. Those shots would render as plain AI scenes with nobody in them.\n\nRender anyway?`,
+        confirmLabel: 'Render without my photo',
+        danger: true
+      })
+      if (!ok) return
+    }
+    if (totalDur > 20 * 60 || silent) {
+      const mins = Math.round(totalDur / 60)
+      const lines = [
+        `This will render ${beats.length} shots into a film about ${mins} minute${mins === 1 ? '' : 's'} long.`,
+        silent ? 'None of the shots have narration, so the film will be SILENT.' : '',
+        totalDur > 20 * 60 ? `Long films take a long time to render and can run to several GB.` : '',
+        'Carry on?'
+      ].filter(Boolean)
+      const ok = await confirmDialog({
+        title: silent ? 'Render a silent film?' : `Render a ${mins}-minute film?`,
+        message: lines.join('\n\n'),
+        confirmLabel: 'Render it'
+      })
+      if (!ok) return
+    }
     const doc: StoryboardDoc = { title: title || 'Storyboard film', style, width: dims.w, height: dims.h, fps, language, beats }
     setBusy('Rendering your film…'); setProgress(null); setRenderedPath(null); setRenderedTimeline(null)
     try {
-      const res = await window.api.storyboard.render(doc, { photoPath: photoPath ?? undefined, beautifyStrength })
+      const res = await window.api.storyboard.render(doc, {
+        photoPath: photoPath ?? undefined,
+        beautifyStrength,
+        motionEngine: motion === 'stills' ? undefined : motion
+      })
       if (res.ok && res.video) {
         setRenderedPath(res.video.path)
         setRenderedTimeline(res.timeline ?? null)
@@ -202,7 +298,6 @@ export default function StoryboardPage(): React.JSX.Element {
     }
   }
 
-  const fileUrl = (p: string): string => `file:///${p.replace(/\\/g, '/').replace(/^\/+/, '')}`
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -210,12 +305,30 @@ export default function StoryboardPage(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-serif text-gold-400">
             Storyboard Director
-            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+            <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
           </h1>
           <p className="text-ink-400 text-sm mt-1">
             Direct your film shot by shot, or paste a script and let the AI decide everything. Total so far:{' '}
             <span className="text-ink-200">{totalDur.toFixed(1)}s</span>.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={history.undo}
+            disabled={!history.canUndo}
+            title="Undo (Ctrl+Z)"
+            className="rounded-md border border-ink-700 px-2 py-1.5 text-sm text-ink-200 hover:border-gold-500 disabled:opacity-40"
+          >
+            ↩
+          </button>
+          <button
+            onClick={history.redo}
+            disabled={!history.canRedo}
+            title="Redo (Ctrl+Y)"
+            className="rounded-md border border-ink-700 px-2 py-1.5 text-sm text-ink-200 hover:border-gold-500 disabled:opacity-40"
+          >
+            ↪
+          </button>
         </div>
       </div>
 
@@ -235,12 +348,30 @@ export default function StoryboardPage(): React.JSX.Element {
           <select value={language} onChange={(e) => setLanguage(e.target.value)} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200">
             <option>English</option><option>Roman Urdu</option><option>Urdu</option>
           </select>
-          <select value={style} onChange={(e) => setStyle(e.target.value as VideoStyle)} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200" title="Visual style">
+          <select value={style} onChange={(e) => { styleChosenByUser.current = true; setStyle(e.target.value as VideoStyle) }} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200" title="Visual style">
             {VIDEO_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            value={motion}
+            onChange={(e) => setMotion(e.target.value as 'stills' | 'ai-free-video' | 'ai-local')}
+            className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-sm text-ink-200"
+            title="Real AI motion generates actual video per shot; any failure falls back to the animated still — the render never breaks."
+          >
+            <option value="stills">Scenes: animated stills (default)</option>
+            <option value="ai-free-video">Scenes: REAL AI video — free cloud</option>
+            <option value="ai-local">Scenes: REAL AI video — local GPU</option>
           </select>
           {mode === 'auto' && (
             <label className="text-xs text-ink-400">Target length
-              <input type="number" min={10} value={totalSeconds} onChange={(e) => setTotalSeconds(Number(e.target.value))} className="ml-2 w-20 rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-100" />s
+              <input
+                type="number"
+                min={10}
+                max={3600}
+                title="Roughly how long the finished film should be. Kept to 60 minutes — a bigger number here silently produced a 78-minute silent film once."
+                value={totalSeconds}
+                onChange={(e) => setTotalSeconds(Math.max(10, Math.min(3600, Number(e.target.value) || 10)))}
+                className="ml-2 w-20 rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-100"
+              />s
             </label>
           )}
         </div>
@@ -277,10 +408,29 @@ export default function StoryboardPage(): React.JSX.Element {
             className="mt-1 w-full rounded-md border border-ink-700 bg-ink-950 p-3 text-sm text-ink-200"
           />
         </div>
-        <button onClick={plan} disabled={!!busy} className="rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950">
-          ✦ Direct storyboard
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={plan} disabled={!!busy} className="rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950">
+            ✦ Direct storyboard
+          </button>
+          <button onClick={() => void importFromPhone()} disabled={!!busy} className="rounded-md border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-800 disabled:opacity-40">
+            📱 Open a plan from my phone
+          </button>
+        </div>
       </div>
+
+      {/* Scenes the phone marked as "my photo goes here" but had no file for. */}
+      {needMedia.length > 0 && (
+        <div className="mt-3 rounded-md border border-gold-700/50 bg-gold-950/20 p-3 text-sm text-gold-200">
+          <div className="font-medium">{needMedia.length} scene{needMedia.length === 1 ? '' : 's'} from your phone need a photo or clip.</div>
+          <ul className="mt-1 list-disc pl-5 text-xs text-gold-300/90">
+            {needMedia.slice(0, 6).map((n) => (
+              <li key={n.index}>Scene {n.index + 1} ({n.kind}) — {n.visual.slice(0, 70)}</li>
+            ))}
+            {needMedia.length > 6 && <li>…and {needMedia.length - 6} more</li>}
+          </ul>
+          <div className="mt-2 text-xs text-gold-300/80">Set your photo above, or open each shot below and choose its own file.</div>
+        </div>
+      )}
 
       {busy && <div className="mt-3 text-sm text-gold-300">{busy}{progress ? ` — ${progress}` : ''}</div>}
 

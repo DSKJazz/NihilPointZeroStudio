@@ -39,7 +39,7 @@ export function escapeSubtitlesPath(p: string): string {
 }
 
 /** The Windows Fonts dir, escaped for the subtitles filter's `fontsdir=`. */
-function fontsDirArg(): string {
+export function fontsDirArg(): string {
   return `${process.env.WINDIR ?? 'C:\\Windows'}\\Fonts`.replace(/\\/g, '/').replace(/:/g, '\\:')
 }
 

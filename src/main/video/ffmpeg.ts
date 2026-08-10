@@ -29,6 +29,14 @@ let lastCancelAt = 0
  */
 let cancelRequested = false
 
+/**
+ * True only between beginRenderSession() and endRenderSession(). The sticky cancel
+ * flag must only gate work INSIDE the session it stopped: it used to outlive the
+ * build, and the next unrelated one-shot ffmpeg call (e.g. Scene Studio's photo
+ * conversion) died with "Render cancelled by user" — a real user hit exactly that.
+ */
+let sessionOpen = false
+
 /** Marker text put on the rejection when a run was cancelled by the user. */
 export const CANCELLED_MESSAGE = 'Render cancelled by user.'
 
@@ -46,9 +54,25 @@ let sessionAbort = new AbortController()
  * fresh abort signal for the new session.
  */
 export function beginRenderSession(): void {
+  sessionOpen = true
   cancelRequested = false
   lastCancelAt = 0
   sessionAbort = new AbortController()
+}
+
+/**
+ * Call in the OUTERMOST finally of every function that called beginRenderSession().
+ * A Stop must not outlive the run it stopped — once the cancelled pipeline has
+ * unwound, later unrelated work starts clean.
+ */
+export function endRenderSession(): void {
+  sessionOpen = false
+  cancelRequested = false
+}
+
+/** Exposed for tests only. */
+export function isRenderSessionOpen(): boolean {
+  return sessionOpen
 }
 
 /**
@@ -131,12 +155,54 @@ export function makeFfmpegProgressLogger(
   }
 }
 
+/**
+ * Actually RUNS ffmpeg and returns its version banner.
+ *
+ * Deliberately an execution rather than an existsSync: antivirus quarantine leaves the
+ * file exactly where it was and refuses to run it, so "the file is there" is not the
+ * check. This is what the preflight uses to tell a missing ffmpeg from a blocked one.
+ * Bypasses the cancel machinery on purpose — it is not part of any render session.
+ */
+export function ffmpegVersionText(): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn(ffmpegPath, ['-version'])
+    let out = ''
+    proc.stdout.on('data', (d) => {
+      out += d.toString()
+    })
+    proc.on('error', reject)
+    proc.on('exit', (code) => (code === 0 ? resolve(out) : reject(new Error(`ffmpeg -version exited ${code}`))))
+  })
+}
+
+/**
+ * Runs ffmpeg and returns its FULL stderr, for the filters that report by printing.
+ *
+ * `silencedetect` and `ebur128` have no output file — the answer is the log. runFfmpeg
+ * only keeps the last 2000 characters for error messages, which on a long recording
+ * throws away most of the silences it found, so those readings need their own runner.
+ * Resolves on a non-zero exit too: a partial reading is worth more than an exception,
+ * and the caller can see whether it got anything usable.
+ */
+export function runFfmpegCapture(args: string[]): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const proc = spawn(ffmpegPath, args)
+    let err = ''
+    proc.stderr.on('data', (d) => {
+      err += d.toString()
+    })
+    proc.on('error', reject)
+    proc.on('exit', () => resolve(err))
+  })
+}
+
 /** Runs ffmpeg with the given args; streams stderr to onLog. Rejects on non-zero exit. */
 export function runFfmpeg(args: string[], onLog?: (line: string) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    // A Stop pressed between stages must stop the NEXT ffmpeg step too, not just the
-    // one that was running when Stop was pressed.
-    if (cancelRequested) return reject(new Error(CANCELLED_MESSAGE))
+    // A Stop pressed between stages must stop the NEXT ffmpeg step of that SAME
+    // session — but never a later, unrelated one-shot call (photo conversion,
+    // captions, exports). Outside a session the kill of the live process is enough.
+    if (cancelRequested && sessionOpen) return reject(new Error(CANCELLED_MESSAGE))
     const proc = spawn(ffmpegPath, args)
     activeFfmpeg.add(proc)
     let stderrTail = ''
@@ -172,6 +238,49 @@ export function ffprobeVideoSize(file: string): Promise<[number, number]> {
     proc.on('exit', () => {
       const m = /(\d+)x(\d+)/.exec(out.trim())
       resolve(m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : [1920, 1080])
+    })
+  })
+}
+
+/**
+ * True when the file has at least one audio stream. Matters because a filtergraph
+ * referencing [0:a] fails outright ("matches no streams") on a silent video — which
+ * is exactly what a screen recording or a downloaded clip often is.
+ */
+export function ffprobeHasAudio(file: string): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const proc = spawn(ffprobePath, [
+      '-v', 'error', '-select_streams', 'a:0',
+      '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', file
+    ])
+    let out = ''
+    proc.stdout.on('data', (d) => (out += d.toString()))
+    proc.on('error', () => resolve(false))
+    proc.on('exit', () => resolve(out.trim().includes('audio')))
+  })
+}
+
+/**
+ * True only when the file is a REAL, finished, playable video.
+ *
+ * An mp4 that ffmpeg was killed part-way through (Stop pressed, crash, power cut)
+ * keeps its bytes but never gets its `moov` index written — ffprobe reports
+ * "moov atom not found" and no player can open it. Two such files were found on a
+ * real machine at 10.7 GB and 2.3 GB. Anything offering the user "recovered videos"
+ * must check this, or it hands them multi-gigabyte corpses and calls them work.
+ */
+export function ffprobeIsPlayable(file: string): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const proc = spawn(ffprobePath, [
+      '-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'format=duration:stream=codec_type', '-of', 'csv=p=0', file
+    ])
+    let out = ''
+    proc.stdout.on('data', (d) => (out += d.toString()))
+    proc.on('error', () => resolve(false))
+    proc.on('exit', (code) => {
+      const seconds = parseFloat((/\d+(\.\d+)?/.exec(out) ?? ['0'])[0])
+      resolve(code === 0 && out.includes('video') && seconds > 0)
     })
   })
 }

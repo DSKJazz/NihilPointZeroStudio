@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>NIHILPOINTZERO</title>
+<meta name="description" content="NihilPointZero — ideas, scripts and advice for your finance channel, on your phone." />
+<meta name="theme-color" content="#0b0f1a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="NihilPointZero" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<style>
+  :root { color-scheme: dark; --gold: #e8b923; --bg: #0b0f1a; --panel: #101725; --line: #1c2333; --muted: #8894a8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: #e8eaf0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header { padding: 14px 16px calc(14px + env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
+  header b { color: var(--gold); letter-spacing: .15em; font-size: 15px; }
+  header .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tabs { display: flex; gap: 6px; padding: 10px; position: sticky; top: 0; background: var(--bg); z-index: 5; overflow-x: auto; }
+  .tabs button { flex: 1 0 auto; background: #131a2a; color: #aab; border: 1px solid #222c40; border-radius: 8px; padding: 10px 12px; font-size: 13px; white-space: nowrap; }
+  .tabs button.on { background: #1a2334; color: var(--gold); border-color: var(--gold); }
+  main { padding: 12px 14px 48px; }
+  label { font-size: 12px; color: var(--muted); display: block; margin: 12px 0 4px; }
+  input, textarea, select {
+    width: 100%; background: #131a2a; color: #e8eaf0; border: 1px solid #222c40;
+    border-radius: 8px; padding: 11px; font-size: 16px; font-family: inherit;
+  }
+  button.go { width: 100%; margin-top: 14px; background: var(--gold); color: var(--bg); font-weight: 600; border: 0; border-radius: 8px; padding: 13px; font-size: 15px; }
+  button.go.alt { background: transparent; color: var(--gold); border: 1px solid var(--gold); margin-top: 8px; }
+  button.go:disabled { opacity: .5; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .card h3 { margin: 0 0 6px; font-size: 15px; color: #f5e9c8; }
+  .muted { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 14px; line-height: 1.6; margin: 6px 0 0; }
+  pre.clamp { max-height: 8.5em; overflow: hidden; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .mini { background: #1a2334; color: #cbd3e1; border: 1px solid #222c40; border-radius: 7px; padding: 8px 12px; font-size: 13px; }
+  .mini.danger { color: #ff9b9b; border-color: #40222c; }
+  .hidden { display: none; }
+  .err { color: #ff7a7a; font-size: 13px; margin-top: 10px; line-height: 1.5; }
+  .note { background: #131a2a; border: 1px solid #222c40; border-left: 3px solid var(--gold); border-radius: 6px; padding: 10px 12px; margin-top: 14px; }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; background: #1a2334; border: 1px solid var(--gold); color: var(--gold); padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 30; }
+
+  /* Scene cards */
+  .scene { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+  .scene .top { display: flex; gap: 10px; padding: 10px; }
+  .scene .thumb { width: 92px; min-width: 92px; height: 62px; border-radius: 6px; background: #0d1420 center/cover no-repeat; border: 1px solid #222c40; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7893; text-align: center; padding: 4px; }
+  .scene .meta { flex: 1; min-width: 0; }
+  .scene .n { color: var(--gold); font-size: 11px; letter-spacing: .08em; }
+  .scene .vis { font-size: 13px; line-height: 1.45; margin-top: 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .scene .narr { font-size: 12px; color: #9fb0c9; margin-top: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .scene .acts { display: flex; gap: 6px; padding: 0 10px 10px; flex-wrap: wrap; }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin: 4px 4px 0 0; background: #16202f; border: 1px solid #26344a; color: #9fb0c9; }
+  .tag.warn { color: #ffcf7a; border-color: #4a3d26; }
+  .tag.ok { color: #7ad3a0; border-color: #26463a; }
+
+  /* Full-screen beat editor */
+  #editor { position: fixed; inset: 0; background: var(--bg); z-index: 25; display: flex; flex-direction: column; }
+  #editor.hidden { display: none; }
+  .ed-bar { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px; border-bottom: 1px solid var(--line); }
+  .ed-body { overflow-y: auto; padding: 12px 14px 60px; flex: 1; }
+  .ed-body img.preview { width: 100%; border-radius: 8px; border: 1px solid var(--line); display: block; }
+  .rec { color: #ff7a7a; }
+
+  /* Teleprompter stage — a fixed reading line with the script travelling past it,
+     which is what keeps your eyes at one height instead of tracking down the page. */
+  #tp-stage { position: relative; margin-top: 14px; height: 62vh; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; }
+  #tp-scroll { height: 100%; overflow: hidden; padding: 0 6%; }
+  .tp-line { position: absolute; left: 0; right: 0; top: 35%; height: 1px; background: rgba(232,185,35,.45); z-index: 2; }
+</style>
+</head>
+<body>
+<header>
+  <b>NIHILPOINTZERO</b>
+  <div class="sub">on your phone · works without your PC</div>
+</header>
+
+<div class="tabs">
+  <button id="t-ideas" class="on">Ideas</button>
+  <button id="t-writer">Writer</button>
+  <button id="t-scenes">Scenes</button>
+  <button id="t-video">Video</button>
+  <button id="t-prompter">Prompter</button>
+  <button id="t-advisor">Advisor</button>
+  <button id="t-saved">Saved</button>
+  <button id="t-settings">Settings</button>
+</div>
+
+<main>
+  <section id="s-ideas">
+    <label>Focus area</label>
+    <input id="i-focus" placeholder="e.g. Pakistan economy &amp; personal finance" />
+    <label>Audience (optional)</label>
+    <input id="i-aud" placeholder="e.g. new investors in Karachi" />
+    <label>How many ideas</label>
+    <input id="i-count" type="number" value="5" min="1" max="10" />
+    <button class="go" id="i-go">Generate Ideas</button>
+    <div id="i-out"></div>
+  </section>
+
+  <section id="s-writer" class="hidden">
+    <label>Topic</label>
+    <textarea id="w-topic" rows="2" placeholder="e.g. Why the rupee keeps devaluing"></textarea>
+    <label>Length</label>
+    <select id="w-len">
+      <option value="short">Short (6-8 min)</option>
+      <option value="long" selected>Long (12-17 min)</option>
+      <option value="deep-dive">Deep dive (20-28 min)</option>
+    </select>
+    <label>Language</label>
+    <select id="w-lang">
+      <option value="balanced">Balanced Roman Urdu + English</option>
+      <option value="mostly-english">Mostly English</option>
+      <option value="mostly-roman-urdu">Mostly Roman Urdu</option>
+      <option value="formal-urdu">Formal Urdu</option>
+    </select>
+    <label>Style</label>
+    <select id="w-style">
+      <option value="standard">Standard</option>
+      <option value="deep-dive">Deep Dive</option>
+      <option value="masterclass">Masterclass</option>
+      <option value="institutional-framework">Institutional Framework</option>
+      <option value="financial-research">Financial Research</option>
+      <option value="technical-charting">Technical Charting</option>
+      <option value="fundamental-deep-dive">Fundamental Deep Dive</option>
+      <option value="infotainment">Infotainment</option>
+      <option value="normal">Normal</option>
+      <option value="hooking">Hooking</option>
+    </select>
+    <button class="go" id="w-go">Write Script</button>
+    <button class="go alt" id="w-thumb">Thumbnail brief</button>
+    <div id="w-out"></div>
+    <div class="note muted">
+      Feature-length (90 and 180 minute) scripts are PC-only — they are written in many
+      chunks and would time out on a phone.
+    </div>
+  </section>
+
+  <section id="s-scenes" class="hidden">
+    <div id="sc-start">
+      <div class="muted">
+        Plan the whole video here — every scene, how long it lasts, what it shows, what you
+        say over it, the music. Then send the plan to your PC and just press Render.
+      </div>
+      <label>Video title</label>
+      <input id="sc-title" placeholder="e.g. Why the rupee keeps sliding" />
+      <label>Use which script?</label>
+      <select id="sc-source"></select>
+      <label>Roughly how long (minutes, optional)</label>
+      <input id="sc-mins" type="number" min="1" max="60" placeholder="leave empty to follow the script" />
+      <button class="go" id="sc-ai">Let the AI direct it</button>
+      <button class="go alt" id="sc-offline">Build it without AI (works offline)</button>
+      <button class="go alt" id="sc-blank">Start from an empty scene</button>
+      <div id="sc-start-out"></div>
+    </div>
+
+    <div id="sc-have" class="hidden">
+      <div id="sc-summary" class="card"></div>
+      <div id="sc-list"></div>
+      <button class="go alt" id="sc-add">+ Add a scene</button>
+      <div class="note">
+        <div style="font-size:12px;color:#f5e9c8;font-weight:600;margin-bottom:6px">Send this plan to your PC</div>
+        <div class="row">
+          <button class="mini" id="sc-save">Save file</button>
+          <button class="mini" id="sc-share">Share</button>
+          <button class="mini" id="sc-push">Send over Wi-Fi</button>
+        </div>
+        <div id="sc-send-out" class="muted" style="margin-top:8px"></div>
+      </div>
+      <div class="row">
+        <button class="mini danger" id="sc-clear">Start a new plan</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="s-video" class="hidden">
+    <div class="muted">How the finished video should look. Your PC uses these when it renders.</div>
+    <label>Visual style</label>
+    <select id="v-style"></select>
+    <label>Finishing template</label>
+    <select id="v-template"></select>
+    <label>Shape</label>
+    <select id="v-aspect"></select>
+    <label>Quality</label>
+    <select id="v-resolution"></select>
+    <label>Narration voice</label>
+    <select id="v-voice">
+      <option value="silent">Silent — I'll record my own voice on the PC</option>
+      <option value="winnatural">Windows natural voice (best free)</option>
+      <option value="piper">Built-in offline voice</option>
+      <option value="windows">Old robotic voice</option>
+    </select>
+    <label style="margin-top:16px"><input type="checkbox" id="v-captions" style="width:auto;margin-right:8px" />Subtitles + chapters</label>
+    <label><input type="checkbox" id="v-overlays" style="width:auto;margin-right:8px" />Titles drawn on the picture</label>
+    <label><input type="checkbox" id="v-sfx" style="width:auto;margin-right:8px" />Soft sound at each section change</label>
+    <div id="v-out"></div>
+  </section>
+
+  <section id="s-prompter" class="hidden">
+    <div class="muted">
+      Read your script while you film. Bracketed notes like [SCENE 1] are shown but never
+      counted in the timing, so the speed stays honest. Tap the text to pause or resume.
+    </div>
+    <label>What to read</label>
+    <select id="tp-source"></select>
+    <div id="tp-paste-row" class="hidden">
+      <label>Your text</label>
+      <textarea id="tp-paste" rows="4" placeholder="Paste anything you want to read…"></textarea>
+    </div>
+
+    <div class="row" style="align-items:center">
+      <button class="mini" id="tp-play" style="font-size:18px;min-width:52px">▶</button>
+      <button class="mini" id="tp-restart">↺</button>
+      <span id="tp-clock" class="muted" style="color:#e8b923"></span>
+      <span id="tp-words" class="muted"></span>
+    </div>
+
+    <label>Speed <span id="tp-wpm-label" class="muted"></span></label>
+    <input id="tp-wpm" type="range" min="60" max="300" step="5" value="150" />
+    <label>Text size</label>
+    <input id="tp-size" type="range" min="18" max="60" value="30" />
+    <label><input type="checkbox" id="tp-mirror" style="width:auto;margin-right:8px" />Mirror (for a glass rig)</label>
+
+    <div class="row">
+      <span class="muted" style="align-self:center">Finish in:</span>
+      <button class="mini" id="tp-fit-3">3m</button>
+      <button class="mini" id="tp-fit-5">5m</button>
+      <button class="mini" id="tp-fit-10">10m</button>
+      <button class="mini" id="tp-fit-15">15m</button>
+      <button class="mini" id="tp-fit-20">20m</button>
+    </div>
+
+    <div id="tp-stage">
+      <div class="tp-line"></div>
+      <div id="tp-scroll"></div>
+    </div>
+  </section>
+
+  <section id="s-advisor" class="hidden">
+    <div id="a-log"></div>
+    <label>Ask the advisor</label>
+    <textarea id="a-in" rows="2" placeholder="e.g. Is this topic too saturated? Give me a sharper angle."></textarea>
+    <button class="go" id="a-go">Send</button>
+  </section>
+
+  <section id="s-saved" class="hidden">
+    <div class="muted">Everything you make on the phone is kept here, on this phone only. Your PC's Library is separate and untouched.</div>
+    <div id="sv-out"></div>
+  </section>
+
+  <section id="s-settings" class="hidden">
+    <label>AI brain</label>
+    <select id="st-provider">
+      <option value="free">Free — no key, no signup (default)</option>
+      <option value="anthropic">Claude — my own key (better quality)</option>
+      <option value="openai">OpenAI — my own key</option>
+    </select>
+    <div id="st-keyrow" class="hidden">
+      <label>Your key</label>
+      <input id="st-key" type="password" placeholder="Paste your key" autocomplete="off" />
+      <div class="muted" style="margin-top:6px">
+        Stored only on this phone, and sent only to that AI company. It is never uploaded
+        anywhere else and never leaves this device otherwise.
+      </div>
+    </div>
+    <label style="margin-top:18px">My PC link — this is what turns this into the FULL studio</label>
+    <p class="muted" style="margin:4px 0 6px">
+      On the PC: Settings &rarr; Phone access. Copy the link it shows (or scan its QR code) and paste it
+      here. From then on, opening this icon gives you every screen your PC has &mdash; the PC does the work.
+      When the PC is off you get these writing tools instead.
+    </p>
+    <input id="st-pclink" placeholder="http://192.168.…/?t=…" autocomplete="off" />
+    <div class="muted" style="margin-top:6px">
+      In the studio on your PC: Settings → "Phone access (same Wi-Fi)" → turn it on → copy the
+      whole link and paste it here. It stays on this phone. Leave it empty if you'd rather
+      always send plans by file.
+    </div>
+
+    <button class="go" id="st-save">Save</button>
+    <div id="st-out"></div>
+
+    <div class="note">
+      <div style="font-size:12px;color:#f5e9c8;font-weight:600;margin-bottom:6px">Writing with your PC switched off</div>
+      <div class="muted">
+        Your writing instructions live on your PC, not in this app — this app is a public web
+        page, so anything inside it could be read by anyone. Copy them to this phone once and
+        you can write ideas and scripts anywhere, with your PC off. They stay on this handset.
+      </div>
+      <div class="row">
+        <button class="mini" id="st-syncpack">Copy my prompts to this phone</button>
+        <button class="mini danger" id="st-forgetpack">Remove them</button>
+      </div>
+      <div id="st-pack-out" class="muted"></div>
+    </div>
+
+    <div class="note">
+      <div class="row">
+        <button class="mini" id="st-testpc">Test my PC connection</button>
+        <button class="mini" id="st-open">Open a plan file</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Loads a .npzproject.json plan back into this phone.</div>
+      <div id="st-open-out" class="muted"></div>
+    </div>
+
+    <div class="note muted">
+      <b style="color:#f5e9c8">What this phone app cannot do.</b><br />
+      Making videos, voice-over, subtitles, chart rendering and your PC Library all need
+      your computer — they use tools that cannot run on a phone. This app covers the
+      thinking and writing: ideas, scripts, thumbnail briefs and advice. Use
+      <b>Send to PC</b> on anything you want to move over.
+    </div>
+    <div class="note muted">
+      <b style="color:#f5e9c8">Same brain as your desktop.</b><br />
+      This uses the exact same instructions your desktop NIHILPOINTZERO-OS uses, so the
+      writing style matches what you already get on the PC.
+    </div>
+
+    <!--
+      The phone's answer to the desktop's gold sidebar badge: the only honest proof of
+      which version is actually running on this handset. An old cached app looks
+      identical to a new one without it.
+    -->
+    <div class="note">
+      <b style="color:#f5e9c8">This app's version</b>
+      <div id="st-build" class="muted" style="margin-top:4px">—</div>
+      <div class="row"><button class="mini" id="st-refresh">Check for a newer version</button></div>
+      <div id="st-refresh-out" class="muted"></div>
+    </div>
+  </section>
+</main>
+
+<div id="editor" class="hidden">
+  <div class="ed-bar">
+    <button class="mini" id="ed-close">‹ Done</button>
+    <span id="ed-title" class="muted"></span>
+  </div>
+  <div class="ed-body" id="ed-body"></div>
+</div>
+
+<input type="file" id="pick-media" accept="image/*,video/*" class="hidden" />
+<!--
+  Opens the phone's own camera app rather than a browser preview. That is deliberate
+  and it is the single biggest quality decision in this app: the native camera uses
+  the real sensor pipeline, hardware encoding, stabilisation and autofocus, and
+  records at the phone's full quality. A web page cannot get near it. `capture` is
+  what makes the camera app open instead of the gallery.
+-->
+<input type="file" id="shoot-media" accept="video/*" capture="environment" class="hidden" />
+<input type="file" id="shoot-selfie" accept="video/*" capture="user" class="hidden" />
+<input type="file" id="pick-plan" accept=".json,application/json" class="hidden" />
+
+<div id="toast" class="hidden"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

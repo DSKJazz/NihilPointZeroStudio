@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAutosave } from '../hooks/useAutosave'
+import DualDecks from '../components/DualDecks'
 import {
   MOODS,
   SFX_KINDS,
@@ -11,10 +12,7 @@ import {
   type VideoJob
 } from '../../../shared/types'
 
-/** Turns an absolute path into a file:// URL usable in <audio>/<video>. */
-function fileUrl(p: string): string {
-  return `file:///${p.replace(/\\/g, '/').replace(/^\/+/, '')}`
-}
+import { fileUrl } from '../../../shared/mediaUrl'
 
 interface PackItem {
   id: string
@@ -31,9 +29,17 @@ interface SoundSource {
   resolve: () => Promise<string>
 }
 
-let clipSeq = 0
+// Random-suffix ids: a plain counter reset to 0 on every app start while the
+// autosaved timeline still holds clip-0, clip-1… — so the first sound added
+// after a restart collided with an existing clip and edits hit the wrong one.
+function newClipId(): string {
+  return `clip-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
 
-export default function DjStationPage({ embedded = false }: { embedded?: boolean } = {}): React.JSX.Element {
+export default function DjStationPage({
+  embedded = false,
+  deckFile
+}: { embedded?: boolean; deckFile?: { path: string; name: string } } = {}): React.JSX.Element {
   const [jobs, setJobs] = useState<VideoJob[]>([])
   const [pack, setPack] = useState<PackItem[]>([])
   const [userFiles, setUserFiles] = useState<{ label: string; file: string }[]>([])
@@ -158,7 +164,7 @@ export default function DjStationPage({ embedded = false }: { embedded?: boolean
     try {
       const path = await resolveCached(src)
       const clip: AudioClip = {
-        id: `clip-${clipSeq++}`,
+        id: newClipId(),
         src: path,
         label: src.label,
         atSec: 0,
@@ -251,6 +257,26 @@ export default function DjStationPage({ embedded = false }: { embedded?: boolean
             Listen to built-in music &amp; sound effects, place them on a timeline, then mix them onto any built video.
             Everything here is generated on your machine — free and offline.
           </p>
+        </div>
+      )}
+
+      {/* Live two-deck mixing — separate from the timeline below: decks are for
+          performing/practicing by ear; the timeline is for placing sounds onto videos. */}
+      <details open={!!deckFile} className={`${embedded ? '' : 'mt-6 '}rounded-lg border border-ink-800 bg-ink-950`}>
+        <summary className="cursor-pointer px-3 py-2 text-sm text-gold-400 select-none">
+          🎛 Dual decks — mix two tracks live (EQ · loops · hot cues · crossfader · BPM)
+        </summary>
+        <div className="p-2">
+          <DualDecks initialFile={deckFile} />
+        </div>
+      </details>
+
+      {/* Errors surface ABOVE both columns: they used to render only at the very
+          bottom of the right-hand column, so a failed Listen/＋Timeline click in
+          the left column gave no visible feedback at all. */}
+      {error && (
+        <div className={`${embedded ? '' : 'mt-4 '}rounded-md border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-300`}>
+          {error}
         </div>
       )}
 

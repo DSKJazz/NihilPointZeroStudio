@@ -5,7 +5,7 @@ export function appendDictation(existing: string, text: string): string {
   return existing.trim() ? `${existing.trim()} ${text}` : text
 }
 
-type MicState = 'idle' | 'recording' | 'working' | 'error'
+type MicState = 'idle' | 'recording' | 'working' | 'error' | 'heard-nothing'
 
 /**
  * A small dictation button. Records from the mic, sends the clip to the offline
@@ -37,7 +37,14 @@ export default function MicButton({
     }
   }, [])
 
+  // True from the moment start() is called until getUserMedia settles. A second
+  // click during that window used to open a SECOND mic stream that nothing ever
+  // stopped — the OS mic indicator then stayed on for the rest of the session.
+  const startingRef = useRef(false)
+
   async function start(): Promise<void> {
+    if (startingRef.current || streamRef.current) return
+    startingRef.current = true
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
@@ -52,8 +59,15 @@ export default function MicButton({
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
           const bytes = new Uint8Array(await blob.arrayBuffer())
           const text = await window.api.speech.transcribe(bytes)
-          if (text) onText(text)
-          setState('idle')
+          if (text && text.trim()) {
+            onText(text)
+            setState('idle')
+          } else {
+            // Nothing transcribed must LOOK different from success, or a dead/wrong
+            // microphone is indistinguishable from working dictation.
+            setState('heard-nothing')
+            setTimeout(() => setState('idle'), 3000)
+          }
         } catch {
           setState('error')
           setTimeout(() => setState('idle'), 2500)
@@ -65,12 +79,14 @@ export default function MicButton({
     } catch {
       setState('error')
       setTimeout(() => setState('idle'), 2500)
+    } finally {
+      startingRef.current = false
     }
   }
 
   function handleClick(): void {
     if (state === 'recording') recorderRef.current?.stop()
-    else if (state === 'idle' || state === 'error') void start()
+    else if (state === 'idle' || state === 'error' || state === 'heard-nothing') void start()
   }
 
   const label =
@@ -80,13 +96,17 @@ export default function MicButton({
         ? '… transcribing'
         : state === 'error'
           ? '⚠ mic error'
-          : '🎤 Speak'
+          : state === 'heard-nothing'
+            ? '🔇 heard nothing'
+            : '🎤 Speak'
   const tone =
     state === 'recording'
       ? 'border-red-500 text-red-300'
       : state === 'error'
         ? 'border-red-500/60 text-red-300'
-        : 'border-ink-600 hover:border-gold-500 text-ink-300 hover:text-gold-400'
+        : state === 'heard-nothing'
+          ? 'border-amber-500/60 text-amber-300'
+          : 'border-ink-600 hover:border-gold-500 text-ink-300 hover:text-gold-400'
 
   return (
     <button

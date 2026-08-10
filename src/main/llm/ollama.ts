@@ -3,6 +3,7 @@ import type { IdeaGenRequest, OllamaStatus, ScriptGenRequest, TrendTopic, VideoI
 import { buildIdeaPrompt, buildScriptPrompt, buildThumbnailPrompt, buildTrendPrompt } from '../prompts'
 import { LLMRequestError, type LLMProvider } from './types'
 import { extractJson, parseScriptResponse } from './parse'
+import { logAiError } from './errorLog'
 
 export const OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
 const OLLAMA_HOST = '127.0.0.1'
@@ -26,7 +27,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
   }
 }
 
-function ollamaChat(model: string, prompt: string, numPredict: number): Promise<string> {
+function ollamaChat(model: string, prompt: string, numPredict: number, timeoutMs = SOCKET_IDLE_TIMEOUT_MS): Promise<string> {
   const payload = JSON.stringify({
     model,
     messages: [{ role: 'user', content: prompt }],
@@ -65,11 +66,11 @@ function ollamaChat(model: string, prompt: string, numPredict: number): Promise<
       }
     )
 
-    req.setTimeout(SOCKET_IDLE_TIMEOUT_MS, () => {
+    req.setTimeout(timeoutMs, () => {
       req.destroy()
       reject(
         new LLMRequestError(
-          `Ollama did not respond within ${SOCKET_IDLE_TIMEOUT_MS / 60000} minutes. On a CPU-only machine long scripts are slow — try a shorter length, or switch to a cloud provider in Settings for speed.`
+          `Ollama did not respond within ${Math.round(timeoutMs / 60000)} minute(s). On a CPU-only machine long scripts are slow — try a shorter length, or switch on Gemini (free, Settings → Connect Gemini) for cloud speed at no cost.`
         )
       )
     })
@@ -171,10 +172,28 @@ export function ollamaChatStream(
 }
 
 export class OllamaProvider implements LLMProvider {
-  constructor(private model: string) {}
+  /**
+   * timeoutMs defaults to the generous 20-minute allowance the user's CHOSEN provider
+   * deserves. When Ollama is only a fallback the caller passes something far shorter —
+   * waiting 20 minutes on a backup brain is indistinguishable from a frozen app.
+   */
+  constructor(private model: string, private timeoutMs = SOCKET_IDLE_TIMEOUT_MS) {}
 
-  private complete(prompt: string, numPredict = 2048): Promise<string> {
-    return ollamaChat(this.model, prompt, numPredict)
+  private async complete(prompt: string, numPredict = 2048): Promise<string> {
+    const started = Date.now()
+    try {
+      return await ollamaChat(this.model, prompt, numPredict, this.timeoutMs)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ollama request failed'
+      logAiError({
+        at: new Date().toISOString(),
+        provider: `ollama/${this.model}`,
+        feature: 'text',
+        ms: Date.now() - started,
+        message
+      })
+      throw err
+    }
   }
 
   async generateTrendTopics(focusArea: string, count: number): Promise<TrendTopic[]> {

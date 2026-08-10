@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChatMessage } from '../../../shared/types'
 import MicButton, { appendDictation } from '../components/MicButton'
+import BusyTimer from '../components/BusyTimer'
 import { confirmDialog } from '../components/Confirm'
 import { useStudio } from '../store/StudioContext'
 
@@ -10,7 +11,6 @@ export default function AdvisorPage() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [streaming, setStreaming] = useState('')
-  const [confirmClear, setConfirmClear] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -84,13 +84,16 @@ export default function AdvisorPage() {
   }
 
   async function clearAll(): Promise<void> {
-    if (!confirmClear) {
-      setConfirmClear(true)
-      setTimeout(() => setConfirmClear(false), 3000)
-      return
-    }
+    // Same modal as deleting ONE message — deleting ALL memory must never be
+    // easier than deleting one (a double-click used to wipe it with no dialog).
+    const ok = await confirmDialog({
+      title: 'Clear the whole conversation?',
+      message: 'Permanently deletes all saved advisor messages. There is no undo.',
+      confirmLabel: 'Clear all',
+      danger: true
+    })
+    if (!ok) return
     setMessages(await window.api.advisor.clear())
-    setConfirmClear(false)
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>): void {
@@ -112,13 +115,9 @@ export default function AdvisorPage() {
         </div>
         <button
           onClick={clearAll}
-          className={`shrink-0 rounded-md border text-xs px-3 py-1.5 transition-colors ${
-            confirmClear
-              ? 'border-red-500 text-red-300'
-              : 'border-ink-700 hover:border-ink-500 text-ink-400'
-          }`}
+          className="shrink-0 rounded-md border border-ink-700 hover:border-ink-500 text-ink-400 text-xs px-3 py-1.5 transition-colors"
         >
-          {confirmClear ? 'Click again to clear all' : 'Clear conversation'}
+          Clear conversation
         </button>
       </div>
 
@@ -155,7 +154,7 @@ export default function AdvisorPage() {
             </div>
           </div>
         )}
-        {busy && !streaming && <div className="text-ink-500 text-xs">Advisor is thinking…</div>}
+        {busy && !streaming && <BusyTimer label="Advisor is thinking" />}
       </div>
 
       <div className="mt-4 flex gap-2 items-end">

@@ -6,6 +6,18 @@ export const IPC = {
   settingsSetYouTubeKey: 'settings:set-youtube-key',
   settingsSetYouTubeChannel: 'settings:set-youtube-channel',
   youtubePublish: 'youtube:publish',
+  // The free-key walkthrough: prove a pasted key really works before trusting it, and
+  // find the channel id from the @handle so nobody has to hunt for a 24-character string.
+  youtubeKeyVerify: 'youtube:key-verify',
+  // The switchboard and the Gemini walkthrough (a free AI-Studio key, tested for real).
+  settingsSetProviderEnabled: 'settings:set-provider-enabled',
+  geminiKeyVerify: 'gemini:key-verify',
+  // The Caretaker: the scheduled self-diagnostic and its record (see main/caretaker.ts).
+  caretakerStatus: 'caretaker:status',
+  caretakerRunNow: 'caretaker:run-now',
+  caretakerSetSchedule: 'caretaker:set-schedule',
+  caretakerClearLog: 'caretaker:clear-log',
+  youtubeChannelResolve: 'youtube:channel-resolve',
   settingsSetHordeKey: 'settings:set-horde-key',
   ollamaStatus: 'ollama:status',
   ideasGenerate: 'ideas:generate',
@@ -17,6 +29,9 @@ export const IPC = {
   libraryList: 'library:list',
   librarySave: 'library:save',
   libraryDelete: 'library:delete',
+  libraryRestore: 'library:restore',
+  libraryDeleteForever: 'library:delete-forever',
+  libraryEmptyTrash: 'library:empty-trash',
   exportText: 'export:text',
   voiceoverGenerate: 'voiceover:generate',
   dataImportFile: 'data:import-file',
@@ -36,10 +51,68 @@ export const IPC = {
   videoEnhance: 'video:enhance',
   activityList: 'activity:list',
   activityClear: 'activity:clear',
+  aiErrorsList: 'ai-errors:list',
+  aiErrorsReveal: 'ai-errors:reveal',
+  // Validates the saved (or a just-typed) Pollinations key WITHOUT spending Pollen.
+  aiTestPollinationsKey: 'ai:test-pollinations-key',
+  // A tab crashed in the UI. Recorded into the same log so Known Issues shows
+  // interface failures alongside AI ones instead of them vanishing silently.
+  aiErrorsRecordUi: 'ai-errors:record-ui',
+  musicSuggest: 'music:suggest',
+  // 3 full-length music candidates with a WHY each — play, compare, pick one.
+  musicExamples: 'music:examples',
+  musicMoodSearch: 'music:mood-search',
+  musicApplyRegion: 'music:apply-region',
+  videoExtras: 'video:extras',
+  hardwareCheck: 'hardware:check',
   advisorSend: 'advisor:send',
   advisorStream: 'advisor:stream',
   assistantAsk: 'assistant:ask',
   assistantStream: 'assistant:stream',
+  guideAsk: 'guide:ask',
+  guideStream: 'guide:stream',
+  updateAvailable: 'update:available',
+  updateGet: 'update:get',
+  updateRevealSetup: 'update:reveal-setup',
+  // Restart onto code the ship pipeline already swapped in place (installed app only).
+  updateRestart: 'update:restart',
+  // Download the installer and run it, with no browser and no file manager. The last
+  // manual step the user had; see main/selfUpdate.ts.
+  updateInstall: 'update:install',
+  updateInstallProgress: 'update:install-progress',
+  // "Am I up to date?" answered out loud. The banner only speaks when the app is BEHIND,
+  // and silence is indistinguishable from a broken check — see main/updateStatus.ts.
+  updateStatus: 'update:status',
+  // Open the studio when Windows starts. Combined with the silent sign-in update, this
+  // is what makes "turn the laptop on and it is open and current" true.
+  settingsSetStartWithWindows: 'settings:set-start-with-windows',
+  // "What changed" — the new things in the build that is actually running.
+  whatsNewGet: 'whats-new:get',
+  whatsNewMarkSeen: 'whats-new:mark-seen',
+  // Cut the dead air out of a take (plan first, then apply to a NEW file).
+  silencePlan: 'silence:plan',
+  silenceApply: 'silence:apply',
+  // Learn from YOUR channel: which title shapes worked, when the audience shows up,
+  // which videos form a series, and the questions your comments keep asking.
+  channelLearn: 'channel:learn',
+  channelScoreTitle: 'channel:score-title',
+  channelComments: 'channel:comments',
+  // What other channels covered that this one has not.
+  channelGaps: 'channel:gaps',
+  // Credit check before publishing (NOT a copyright detector — see copyrightCheck.ts).
+  copyrightCheck: 'copyright:check',
+  // The render queue: line up an evening's work and walk away. Survives a restart.
+  queueList: 'queue:list',
+  queueAdd: 'queue:add',
+  queueCancel: 'queue:cancel',
+  queueRetry: 'queue:retry',
+  queueReorder: 'queue:reorder',
+  queueClearFinished: 'queue:clear-finished',
+  queueChanged: 'queue:changed',
+  // Hear the script read out at speed, to proof it by ear before recording.
+  readAloudPlan: 'read-aloud:plan',
+  readAloudSpeak: 'read-aloud:speak',
+  healthRun: 'health:run',
   advisorHistory: 'advisor:history',
   advisorDelete: 'advisor:delete',
   advisorClear: 'advisor:clear',
@@ -60,6 +133,20 @@ export const IPC = {
   videoStitch: 'video:stitch',
   videoSetMusic: 'video:set-music',
   videoSeparateMusic: 'video:separate-music',
+  // 🎧 AI DJ: pick a mood from the video's own content (or the user's words) and lay
+  // a ducked music bed under the voice. Returns { job, mood, how }.
+  videoAiDj: 'video:ai-dj',
+  // Extract a video's audio to an MP3 (for loading into the DJ decks).
+  videoExtractAudio: 'video:extract-audio',
+  // Read an audio file's bytes for WebAudio decoding (renderers can't fetch file://).
+  // Guarded: only paths inside the app's own data folder are ever served.
+  audioReadFile: 'audio:read-file',
+  // Where the app is keeping this user's work right now (shown in Settings).
+  dataActiveDir: 'data:active-dir',
+  // Finished videos sitting in a data folder the app is NOT using, and the one-click
+  // copy that brings them in. See main/strandedData.ts.
+  dataStrandedScan: 'data:stranded-scan',
+  dataStrandedImport: 'data:stranded-import',
   videoCaptions: 'video:captions',
   videoWatermark: 'video:watermark',
   settingsSetMvsepToken: 'settings:set-mvsep-token',
@@ -70,17 +157,43 @@ export const IPC = {
   videoCancel: 'video:cancel',
   timelineRender: 'timeline:render',
   timelineProbe: 'timeline:probe',
+  // A small stand-in for scrubbing a 4K clip. See main/video/proxy.ts for why it is
+  // built to be time-identical to its source.
+  timelineProxy: 'timeline:proxy',
   timelinePickClips: 'timeline:pick-clips',
+  // Separate picker for the audio track: the clips dialog filters to video/image
+  // only, which made it impossible to ever select a music/voice file.
+  timelinePickAudio: 'timeline:pick-audio',
   storyboardPlan: 'storyboard:plan',
   storyboardRender: 'storyboard:render',
   storyboardPickPhoto: 'storyboard:pick-photo',
+  projectImport: 'project:import',
+  projectImportPick: 'project:import-pick',
+  teleprompterOpen: 'teleprompter:open',
+  teleprompterClose: 'teleprompter:close',
+  teleprompterState: 'teleprompter:state',
+  teleprompterProtect: 'teleprompter:protect',
   photoBeautify: 'photo:beautify',
   producerEdit: 'producer:edit',
   aiEngineStatus: 'ai:engine-status',
   aiGetConfig: 'ai:get-config',
   aiSetConfig: 'ai:set-config',
+  aiFallback: 'ai:fallback',
   stockGetConfig: 'stock:get-config',
   stockSetKey: 'stock:set-key',
+  // Last quiet weekly health check result (drives the Settings red badge).
+  healthLast: 'health:last',
+  // Backups: status, options (second home + delete-sync), restore, orphan cleanup.
+  backupStatus: 'backup:status',
+  backupSetOptions: 'backup:set-options',
+  backupPickSecondDir: 'backup:pick-second-dir',
+  backupRunNow: 'backup:run-now',
+  backupRestore: 'backup:restore',
+  backupOrphans: 'backup:orphans',
+  backupCleanOrphans: 'backup:clean-orphans',
+  templatesList: 'templates:list',
+  templatesSave: 'templates:save',
+  templatesDelete: 'templates:delete',
   scriptpadGet: 'scriptpad:get',
   scriptpadSave: 'scriptpad:save',
   draftGet: 'draft:get',
@@ -108,11 +221,23 @@ export const IPC = {
   sceneGenerate: 'scene:generate',
   sceneGenerateFromPhoto: 'scene:generate-from-photo',
   sceneProgress: 'scene:progress',
+  sceneSaveImage: 'scene:save-image',
+  // Watch ONE scene before committing to the whole render.
+  scenePreview: 'scene:preview',
+  sceneSaveAllImages: 'scene:save-all-images',
+  videoMakeShorts: 'video:make-shorts',
+  videoPostMeta: 'video:post-meta',
   webServerStatus: 'webserver:status',
   webServerStart: 'webserver:start',
   webServerStop: 'webserver:stop',
   speechTranscribe: 'speech:transcribe',
+  voiceWinNaturalList: 'voice:win-natural-list',
+  voiceWinNaturalPreview: 'voice:win-natural-preview',
+  voiceOpenSpeechSettings: 'voice:open-speech-settings',
+  weeklyPlanRun: 'weekly:plan-run',
   voicePiperStatus: 'voice:piper-status',
   voicePiperDownload: 'voice:piper-download',
-  voicePiperProgress: 'voice:piper-progress'
+  voicePiperProgress: 'voice:piper-progress',
+  voicePiperCatalogue: 'voice:piper-catalogue',
+  settingsSetPiperVoice: 'settings:set-piper-voice'
 } as const

@@ -1,0 +1,4 @@
+﻿Scanning pattern: ASIA[0-9A-Z]{16} -> quarantine-prep/history_scan_aws_session.txt
+
+--- Working tree matches ---
+

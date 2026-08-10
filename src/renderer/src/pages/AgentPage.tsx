@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import type { AgentPlan, AgentStep, AgentStepResult, VideoJob, VideoResolution, VideoStyle } from '../../../shared/types'
 import { VIDEO_STYLES } from '../../../shared/types'
 import MicButton, { appendDictation } from '../components/MicButton'
+import BusyTimer from '../components/BusyTimer'
 import { useAutosave } from '../hooks/useAutosave'
 import { toast } from '../components/Toast'
 
-/** Turns an absolute path into a file:// URL usable in a <video>/<img src>. */
-function fileUrl(p: string): string {
-  return `file:///${p.replace(/\\/g, '/').replace(/^\/+/, '')}`
-}
+import { fileUrl } from '../../../shared/mediaUrl'
+import { releaseAgentRun, tryAcquireAgentRun } from '../store/agentRunLock'
 
 const EXAMPLES = [
   'Write a 2-minute anime-style script about Pakistan\'s rupee and build it in 4K with calm music',
@@ -67,6 +66,13 @@ export default function AgentPage(): React.JSX.Element {
   const [batchAi, setBatchAi] = useState(false)
   const [batchRunning, setBatchRunning] = useState(false)
   const [batchResults, setBatchResults] = useState<{ topic: string; ok: boolean; video?: VideoJob; error?: string }[] | null>(null)
+  // "Overnight plan": same batch, but also cuts Shorts and drafts posting text per video —
+  // pick topics before bed, wake up to publish-ready material instead of raw builds.
+  const [overnight, setOvernight] = useState(false)
+  const [shortsPerVideo, setShortsPerVideo] = useState(2)
+  const [weeklyResults, setWeeklyResults] = useState<
+    { topic: string; ok: boolean; videoId?: string; shorts: number; postingText?: string; error?: string }[] | null
+  >(null)
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -90,6 +96,13 @@ export default function AgentPage(): React.JSX.Element {
 
   async function run(): Promise<void> {
     if (!plan || !plan.steps.length || running) return
+    // Same one-at-a-time lock the Producer/Expert widgets use: all three stream
+    // over the SAME un-scoped agent:progress channel, so a widget run and a tab
+    // run at once interleave stage lines into the wrong chat and race two builds.
+    if (!tryAcquireAgentRun()) {
+      toast('Another AI run is already in progress — wait for it to finish.', 'error')
+      return
+    }
     setRunning(true)
     setError(null)
     setResults(null)
@@ -109,6 +122,7 @@ export default function AgentPage(): React.JSX.Element {
     } finally {
       unsubscribe()
       unsubPreview()
+      releaseAgentRun()
       setRunning(false)
     }
   }
@@ -116,22 +130,52 @@ export default function AgentPage(): React.JSX.Element {
   async function runBatch(): Promise<void> {
     const topics = batchTopics.split('\n').map((t) => t.trim()).filter(Boolean)
     if (!topics.length || batchRunning) return
+    if (!tryAcquireAgentRun()) {
+      toast('Another AI run is already in progress — wait for it to finish.', 'error')
+      return
+    }
     setBatchRunning(true)
     setError(null)
     setBatchResults(null)
+    setWeeklyResults(null)
     setLog([])
     const unsub = window.api.agent.onProgress((stage) => setLog((prev) => [...prev, stage]))
     try {
-      const res = await window.api.agent.batch(topics, batchStyle, batchRes, batchAi)
-      setBatchResults(res.results)
-      const ok = res.results.filter((r) => r.ok).length
-      toast(`Batch done — ${ok}/${res.results.length} videos built`, ok ? 'success' : 'error')
+      if (overnight) {
+        const res = await window.api.weekly.planRun(topics, {
+          style: batchStyle,
+          resolution: batchRes,
+          aiVisuals: batchAi,
+          shortsPerVideo
+        })
+        setWeeklyResults(res.report)
+        const ok = res.report.filter((r) => r.ok).length
+        const shorts = res.report.reduce((n, r) => n + r.shorts, 0)
+        toast(`Overnight plan done — ${ok}/${res.report.length} videos, ${shorts} short(s)`, ok ? 'success' : 'error')
+      } else {
+        const res = await window.api.agent.batch(topics, batchStyle, batchRes, batchAi)
+        setBatchResults(res.results)
+        const ok = res.results.filter((r) => r.ok).length
+        toast(`Batch done — ${ok}/${res.results.length} videos built`, ok ? 'success' : 'error')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Batch failed.')
       toast('Batch failed', 'error')
     } finally {
       unsub()
+      releaseAgentRun()
       setBatchRunning(false)
+    }
+  }
+
+  function copyPostingText(text: string): void {
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard
+        .writeText(text)
+        .then(() => toast('Posting text copied ✓', 'success'))
+        .catch(() => toast('Could not copy — select the text and press Ctrl+C', 'error'))
+    } else {
+      toast('Could not copy — select the text and press Ctrl+C', 'error')
     }
   }
 
@@ -178,9 +222,10 @@ export default function AgentPage(): React.JSX.Element {
             </button>
           )}
           <MicButton onText={(t) => setCommand((prev) => appendDictation(prev, t))} className="px-3 py-1" />
+          {interpreting && <BusyTimer label="Planning" />}
           <span className="text-[11px] text-ink-600">Ctrl+Enter to plan · 🎤 to speak</span>
           <span className="ml-auto text-[11px] text-ink-500">
-            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}
+            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}
           </span>
         </div>
 
@@ -242,8 +287,30 @@ export default function AgentPage(): React.JSX.Element {
               disabled={busy || !batchTopics.trim()}
               className="ml-auto rounded-md bg-gold-500 px-4 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400 disabled:opacity-40"
             >
-              {batchRunning ? 'Making videos…' : '▶ Make all'}
+              {batchRunning ? (overnight ? 'Running overnight plan…' : 'Making videos…') : overnight ? '🌙 Run overnight plan' : '▶ Make all'}
             </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-300 rounded-md border border-gold-500/30 bg-ink-950/60 px-2 py-1.5">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={overnight} onChange={(e) => setOvernight(e.target.checked)} className="accent-gold-500" />
+              <span className="text-gold-300">🌙 Overnight plan</span>
+            </label>
+            {overnight && (
+              <label className="flex items-center gap-1">
+                Shorts per video
+                <select
+                  value={shortsPerVideo}
+                  onChange={(e) => setShortsPerVideo(Number(e.target.value))}
+                  className="rounded bg-ink-800 border border-ink-700 px-2 py-1"
+                >
+                  {[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+            )}
+            <span className="text-ink-500">
+              Also cuts Shorts and writes posting text for each video — pick topics, walk away, come back to
+              publish-ready material.
+            </span>
           </div>
           <p className="text-[10px] text-ink-600">
             Writes a script and builds a video for each line (up to 25). Each is saved in Video Studio. One failure
@@ -255,6 +322,29 @@ export default function AgentPage(): React.JSX.Element {
                 <div key={i} className={`text-xs ${r.ok ? 'text-ink-200' : 'text-red-300'}`}>
                   {r.ok ? '✓' : '✗'} {r.topic}
                   {r.error ? ` — ${r.error}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+          {weeklyResults && (
+            <div className="space-y-2">
+              {weeklyResults.map((r, i) => (
+                <div key={i} className="rounded-md border border-ink-800 bg-ink-950/60 p-2">
+                  <div className={`text-xs ${r.ok ? 'text-ink-200' : 'text-red-300'}`}>
+                    {r.ok ? '✓' : '✗'} {r.topic}
+                    {r.ok ? ` — ${r.shorts} short(s) cut` : r.error ? ` — ${r.error}` : ''}
+                  </div>
+                  {r.postingText && (
+                    <div className="mt-1 flex items-start gap-2">
+                      <pre className="flex-1 whitespace-pre-wrap text-[11px] text-ink-400 font-sans">{r.postingText}</pre>
+                      <button
+                        onClick={() => copyPostingText(r.postingText as string)}
+                        className="shrink-0 text-[11px] text-gold-300 hover:text-gold-200"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

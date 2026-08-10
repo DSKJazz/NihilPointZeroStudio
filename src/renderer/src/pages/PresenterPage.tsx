@@ -3,6 +3,7 @@ import { VIDEO_STYLES, type GraftRegion, type VideoStyle } from '../../../shared
 import MicButton, { appendDictation } from '../components/MicButton'
 import { useAutosave } from '../hooks/useAutosave'
 import { toast } from '../components/Toast'
+import { fileUrl } from '../../../shared/mediaUrl'
 
 type Mode = 'video' | 'photo' | 'graft'
 
@@ -32,6 +33,9 @@ export default function PresenterPage(): React.JSX.Element {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [style, setStyle] = useState<VideoStyle>('cinematic')
+  // AI scene beats: classic animated stills, or REAL AI video (free cloud / local GPU).
+  // Your own footage/photo beats are never AI-generated; failures fall back to stills.
+  const [motion, setMotion] = useState<'stills' | 'ai-free-video' | 'ai-local'>('stills')
   const [presenterPath, setPresenterPath] = useState('')
   const [graftPhotoPath, setGraftPhotoPath] = useState('')
   const [region, setRegion] = useState<GraftRegion>(DEFAULT_REGION)
@@ -83,7 +87,7 @@ export default function PresenterPage(): React.JSX.Element {
     setPreviewBusy(true); setError(null)
     try {
       const res = await window.api.presenter.graftPreview({ photoPath: graftPhotoPath, videoPath: presenterPath, region })
-      if (res.ok && res.path) setGraftPreview(`file:///${res.path.replace(/\\/g, '/').replace(/^\/+/, '')}?t=${Date.now()}`)
+      if (res.ok && res.path) setGraftPreview(`${fileUrl(res.path)}?t=${Date.now()}`)
       else setError(res.error ?? 'Preview failed.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Preview failed.')
@@ -105,7 +109,8 @@ export default function PresenterPage(): React.JSX.Element {
         presenterPath,
         graftPhotoPath: mode === 'graft' ? graftPhotoPath : undefined,
         graftRegion: mode === 'graft' ? region : undefined,
-        style
+        style,
+        motionEngine: motion === 'stills' ? undefined : motion
       })
       if (res.ok) { setNote('Presenter video built ✓ — open Video Studio to preview, voice-check, export, or the Timeline to fine-tune.'); toast('Presenter video built ✓', 'success') }
       else setError(res.error ?? 'Build failed.')
@@ -121,14 +126,16 @@ export default function PresenterPage(): React.JSX.Element {
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-2xl font-serif text-gold-400">Presenter Studio
-        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+        <span className="ml-3 align-middle text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
       </h1>
       <p className="text-ink-400 text-sm mt-1">Put yourself in the video — real footage or your photo — and the AI cuts to theme b-roll + AI scenes on your voice.</p>
 
-      {/* Mode selector */}
+      {/* Mode selector. Switching between photo- and video-based modes clears the
+          attached file: a photo picked in Photo mode used to stay attached as "your
+          narration video" in the video modes (and vice versa), building the wrong thing. */}
       <div className="mt-4 inline-flex rounded-md border border-ink-700 overflow-hidden text-sm">
         {(['video', 'photo', 'graft'] as Mode[]).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 ${mode === m ? 'bg-gold-500 text-ink-950' : 'text-ink-300 hover:bg-ink-800'}`}>
+          <button key={m} onClick={() => { if ((m === 'photo') !== (mode === 'photo')) setPresenterPath(''); setMode(m) }} className={`px-3 py-1.5 ${mode === m ? 'bg-gold-500 text-ink-950' : 'text-ink-300 hover:bg-ink-800'}`}>
             {m === 'video' ? '🎥 Real Video' : m === 'photo' ? '🖼 Photo' : '✨ Living Picture'}
           </button>
         ))}
@@ -144,6 +151,16 @@ export default function PresenterPage(): React.JSX.Element {
         <label className="ml-auto text-xs text-ink-400">Look</label>
         <select value={style} onChange={(e) => setStyle(e.target.value as VideoStyle)} className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-200">
           {VIDEO_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select
+          value={motion}
+          onChange={(e) => setMotion(e.target.value as 'stills' | 'ai-free-video' | 'ai-local')}
+          className="rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-200"
+          title="Applies to the AI scene beats only — your own footage/photo stays untouched. Failures fall back to animated stills; the build never breaks."
+        >
+          <option value="stills">AI scenes: animated stills</option>
+          <option value="ai-free-video">AI scenes: REAL video — free cloud</option>
+          <option value="ai-local">AI scenes: REAL video — local GPU</option>
         </select>
       </div>
 

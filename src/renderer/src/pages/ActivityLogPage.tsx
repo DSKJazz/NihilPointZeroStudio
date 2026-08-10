@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
+import { confirmDialog } from '../components/Confirm'
 import type { ActivityLogEntry } from '../../../shared/types'
 
 export default function ActivityLogPage() {
   const [entries, setEntries] = useState<ActivityLogEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [confirmingClear, setConfirmingClear] = useState(false)
 
   useEffect(() => {
     window.api.activity.list().then((list) => {
@@ -14,14 +14,17 @@ export default function ActivityLogPage() {
   }, [])
 
   async function handleClear(): Promise<void> {
-    if (!confirmingClear) {
-      setConfirmingClear(true)
-      setTimeout(() => setConfirmingClear(false), 4000)
-      return
-    }
+    // A real modal, not the old two-click arm/fire button: a plain double-click
+    // used to wipe the entire log permanently with no dialog and no undo.
+    const ok = await confirmDialog({
+      title: 'Clear the whole Activity Log?',
+      message: `Permanently deletes all ${entries.length} entries. There is no undo.`,
+      confirmLabel: 'Clear permanently',
+      danger: true
+    })
+    if (!ok) return
     const updated = await window.api.activity.clear()
     setEntries(updated)
-    setConfirmingClear(false)
   }
 
   return (
@@ -36,13 +39,9 @@ export default function ActivityLogPage() {
         <button
           onClick={handleClear}
           disabled={entries.length === 0}
-          className={`rounded-md border text-sm px-4 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-            confirmingClear
-              ? 'border-red-500 text-red-300 bg-red-500/10'
-              : 'border-ink-600 hover:border-ink-400 text-ink-200'
-          }`}
+          className="rounded-md border border-ink-600 hover:border-ink-400 text-ink-200 text-sm px-4 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {confirmingClear ? 'Click again to confirm — clears permanently' : 'Clear Log'}
+          {'Clear Log'}
         </button>
       </div>
 

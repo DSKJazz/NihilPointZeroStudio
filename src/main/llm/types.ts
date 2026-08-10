@@ -14,4 +14,20 @@ export interface LLMProvider {
 }
 
 export class LLMConfigError extends Error {}
-export class LLMRequestError extends Error {}
+
+export class LLMRequestError extends Error {
+  /**
+   * True when retrying this same provider cannot possibly help — a rejected key,
+   * a removed model, a service demanding payment. Retrying those only makes the
+   * user wait twice as long for an identical failure, which is exactly what made
+   * the app look frozen. Transient trouble (busy, timeout, network) stays false.
+   */
+  readonly permanent: boolean
+  readonly status?: number
+
+  constructor(message: string, opts?: { permanent?: boolean; status?: number }) {
+    super(message)
+    this.permanent = opts?.permanent ?? false
+    this.status = opts?.status
+  }
+}

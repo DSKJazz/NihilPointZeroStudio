@@ -20,7 +20,12 @@ import { stripStageDirections, synthesizeSpeechToFile } from '../voiceover'
 import { isPiperInstalled, synthesizeWithPiper } from '../voice/piper'
 import { makeSlideshow, type Layout } from './render'
 import { beautifyImage, compositeImage, ffprobeDuration, renderTimeline } from '.'
-import { beginRenderSession, renderSessionSignal, throwIfCancelled } from './ffmpeg'
+import { detectLocal, generateLocalClip } from './aiLocal'
+import { generatePuterClip, puterSceneCap } from './puter'
+import { generatePollinationsClip } from './pollinationsVideo'
+import { getAiVideoConfig } from '../store'
+import { cleanupClipTemp, normalizeClip } from './videoEngine'
+import { beginRenderSession, endRenderSession, renderSessionSignal, throwIfCancelled } from './ffmpeg'
 import { compileStoryboardToTimeline, type ResolvedBeatAsset, type ResolvedBeatSound } from './storyboard'
 import { videosDir } from '../store'
 import type { Mood, SfxKind, StoryboardDoc, TimelineDoc } from '../../shared/types'
@@ -55,6 +60,12 @@ export interface StoryboardRenderOptions {
   beautifyStrength?: number
   /** Prefer the robotic Windows voice over natural Piper. */
   windowsVoice?: boolean
+  /**
+   * REAL generated motion for AI scene beats: 'ai-free-video' (free cloud via Puter)
+   * or 'ai-local' (your ComfyUI server). Unset = the classic animated stills. Every
+   * failure falls back to the still for that beat — a render never breaks over this.
+   */
+  motionEngine?: 'ai-free-video' | 'ai-local'
   onProgress?: (stage: string) => void
 }
 
@@ -78,6 +89,19 @@ export async function renderStoryboard(
   outPath: string,
   opts: StoryboardRenderOptions = {}
 ): Promise<{ timeline: TimelineDoc }> {
+  try {
+    return await renderStoryboardInner(projectId, doc, outPath, opts)
+  } finally {
+    endRenderSession() // a Stop must not outlive the render it stopped
+  }
+}
+
+async function renderStoryboardInner(
+  projectId: string,
+  doc: StoryboardDoc,
+  outPath: string,
+  opts: StoryboardRenderOptions = {}
+): Promise<{ timeline: TimelineDoc }> {
   if (!doc.beats.length) throw new Error('The storyboard has no beats to render.')
   beginRenderSession() // clear a Stop from a previous build; the per-beat loop polls below
   const { onProgress } = opts
@@ -89,8 +113,43 @@ export async function renderStoryboard(
   mkdirSync(assetDir, { recursive: true })
 
   const assets: Record<string, ResolvedBeatAsset> = {}
+  // THE HONESTY GATE'S LEDGER. Every beat that could not show its real picture is
+  // recorded here — the quiet dark-backdrop substitution stays (one bad beat must not
+  // abort an evening's render), but a video that is MOSTLY substitutions is not that
+  // video, and shipping it as though it were is how "8 or 9 empty black videos" ended
+  // up in the user's folder with nothing anywhere saying why.
+  const failedBeats: { tag: string; reason: string }[] = []
   // Effective per-beat duration (may grow to fit narration / match a user clip's real length).
   const effDur: Record<string, number> = {}
+
+  // REAL motion for AI scene beats (optional). Shares the engine seam's reliability
+  // contract: per-beat fallback to the still, stop trying after 2 consecutive hard
+  // failures, and the free-cloud tier respects the scene cap (protects the allowance).
+  let motionOn = !!opts.motionEngine
+  const motionCap = opts.motionEngine === 'ai-free-video' ? puterSceneCap() : Infinity
+  let motionUsed = 0
+  let motionFailures = 0
+  if (opts.motionEngine === 'ai-local' && !(await detectLocal())) {
+    motionOn = false
+    onProgress?.('⚠ Local AI video server not detected (Settings → AI Video) — beats use animated stills instead.')
+  }
+  const aiCfg = getAiVideoConfig()
+  const generateMotion = (prompt: string, seconds: number, seed: number): Promise<string> =>
+    opts.motionEngine === 'ai-free-video'
+      ? aiCfg.freeCloudProvider === 'pollinations'
+        ? generatePollinationsClip({
+            key: aiCfg.pollinationsKey ?? '',
+            model: aiCfg.pollinationsModel,
+            prompt,
+            seconds,
+            width: gen.width,
+            height: gen.height,
+            seed,
+            signal: renderSessionSignal(),
+            onStatus: onProgress
+          })
+        : generatePuterClip({ prompt, signal: renderSessionSignal(), onStatus: onProgress })
+      : generateLocalClip({ prompt, seconds, width: gen.width, height: gen.height, seed, signal: renderSessionSignal(), onStatus: onProgress })
 
   // Prepare the user's real subject ONCE (beautify + background cutout), reused across all
   // 'photo' beats. Cutout is best-effort; a null cutout falls back to a framed photo.
@@ -153,15 +212,49 @@ export async function renderStoryboard(
     }
     effDur[beat.id] = dur
 
-    // 3) The beat's video clip.
-    let clipPath: string
+    // 3) The beat's video clip. ('' can only survive to the asset record if a code path
+    // forgot to assign — the compile step drops beats with no real clip file.)
+    let clipPath = ''
+    let motionClip: string | undefined
     if (usingClip) {
       clipPath = beat.subject.src as string
     } else {
       const subjectNote = beat.subject.kind === 'ai-person' ? `, featuring ${beat.subject.description || 'a person'}` : ''
       let image: string | undefined
 
-      if (beat.subject.kind === 'photo' && opts.photoPath && existsSync(opts.photoPath)) {
+      // REAL generated motion first, when chosen — but never for 'photo' beats (those
+      // composite the user's actual face; a generated video cannot guarantee it's them).
+      if (motionOn && beat.subject.kind !== 'photo' && motionUsed < motionCap && motionFailures < 2) {
+        try {
+          onProgress?.(`${tag}: generating REAL AI video (${opts.motionEngine === 'ai-free-video' ? 'free cloud' : 'local GPU'})…`)
+          const raw = await generateMotion(sceneImagePrompt(doc.style, `${beat.visual}${subjectNote}`, doc.title), dur, i + 1)
+          const normalized = join(assetDir, `clip-${i}-motion.mp4`)
+          await normalizeClip(raw, layout, dur, normalized)
+          cleanupClipTemp(raw)
+          motionClip = normalized
+          motionUsed++
+          motionFailures = 0
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          if (msg === 'stopped') {
+            // A user Stop must surface as the friendly canonical cancel, not a failure.
+            throwIfCancelled()
+            throw err
+          }
+          motionFailures++
+          onProgress?.(
+            motionFailures >= 2
+              ? `Real AI video unavailable — ${msg}. Remaining beats use animated stills.`
+              : `${tag}: real video failed (${msg}) — using an animated still for this beat.`
+          )
+        }
+      } else if (motionOn && motionUsed >= motionCap && motionCap !== Infinity && beat.subject.kind !== 'photo') {
+        onProgress?.(`${tag}: motion cap reached (${motionCap} per build, adjustable in Settings → AI Video) — animated still.`)
+      }
+
+      if (motionClip) {
+        clipPath = motionClip
+      } else if (beat.subject.kind === 'photo' && opts.photoPath && existsSync(opts.photoPath)) {
         const subj = await prepareSubject()
         onProgress?.(`${tag}: generating your scene…`)
         const bg = join(assetDir, `beat-${i}-bg.jpg`)
@@ -204,6 +297,7 @@ export async function renderStoryboard(
           image = imgPath
         } catch (err) {
           onProgress?.(`${tag}: image generation failed (${err instanceof Error ? err.message : 'error'}) — using a plain scene.`)
+          failedBeats.push({ tag, reason: err instanceof Error ? err.message : 'image generation failed' })
           const slate = join(assetDir, `beat-${i}-slate.jpg`)
           await generateImage('a simple dark cinematic backdrop', slate, {
             width: gen.width,
@@ -215,26 +309,29 @@ export async function renderStoryboard(
         }
       }
 
-      clipPath = join(assetDir, `clip-${i}.mp4`)
-      onProgress?.(`${tag}: animating shot…`)
-      // Soft-fail: if animating the chosen image fails, fall back to a plain slate clip so
-      // one bad beat never aborts the whole render (the module's stated guarantee).
-      try {
-        await makeSlideshow([image as string], layout, dur, clipPath)
-      } catch (err) {
-        onProgress?.(`${tag}: shot render failed (${err instanceof Error ? err.message : 'error'}) — using a plain slate.`)
-        const slate = join(assetDir, `beat-${i}-slate.jpg`)
+      if (!motionClip) {
+        clipPath = join(assetDir, `clip-${i}.mp4`)
+        onProgress?.(`${tag}: animating shot…`)
+        // Soft-fail: if animating the chosen image fails, fall back to a plain slate clip so
+        // one bad beat never aborts the whole render (the module's stated guarantee).
         try {
-          await generateImage('a simple dark cinematic backdrop', slate, {
-            width: gen.width,
-            height: gen.height,
-            seed: i + 1,
-            signal: renderSessionSignal()
-          })
-          await makeSlideshow([slate], layout, dur, clipPath)
-        } catch {
-          // Even the slate failed — skip this beat (compile drops a beat with no clip).
-          continue
+          await makeSlideshow([image as string], layout, dur, clipPath)
+        } catch (err) {
+          onProgress?.(`${tag}: shot render failed (${err instanceof Error ? err.message : 'error'}) — using a plain slate.`)
+          const slate = join(assetDir, `beat-${i}-slate.jpg`)
+          try {
+            await generateImage('a simple dark cinematic backdrop', slate, {
+              width: gen.width,
+              height: gen.height,
+              seed: i + 1,
+              signal: renderSessionSignal()
+            })
+            await makeSlideshow([slate], layout, dur, clipPath)
+          } catch {
+            // Even the slate failed — skip this beat (compile drops a beat with no clip).
+            failedBeats.push({ tag, reason: 'shot could not be rendered at all' })
+            continue
+          }
         }
       }
     }
@@ -267,6 +364,25 @@ export async function renderStoryboard(
     assets[beat.id] = { clipPath, narrationPath, narrationDurationSec, sounds }
   }
 
+  /**
+   * THE HONESTY GATE. A video where more than half the scenes are dark substitute
+   * slates is not the video that was asked for — it is a black void with a filename.
+   * Building it anyway costs the machine an hour and tells the user nothing; refusing
+   * names every failed scene and the real reason (almost always: the free image service
+   * refusing everything that day). One or two failed beats still pass — that is the
+   * soft-fail promise this module has always made.
+   */
+  const totalBeats = doc.beats.length
+  if (totalBeats > 0 && failedBeats.length > totalBeats / 2) {
+    const listed = failedBeats.slice(0, 5).map((f) => `${f.tag}: ${f.reason}`).join('; ')
+    throw new Error(
+      `Refusing to build: ${failedBeats.length} of ${totalBeats} scenes could not get their real image, ` +
+        `so the result would be mostly empty dark frames. First failures — ${listed}` +
+        (failedBeats.length > 5 ? '; …' : '') +
+        '. Usually the free image service is refusing or unreachable right now: check Settings → Setup Health, then build again.'
+    )
+  }
+
   // Compile against the EFFECTIVE durations so beat starts / crossfades / captions all
   // line up with the shots we actually rendered.
   const effDoc: StoryboardDoc = {
@@ -274,6 +390,9 @@ export async function renderStoryboard(
     beats: doc.beats.map((b) => ({ ...b, durationSec: effDur[b.id] ?? b.durationSec }))
   }
   const timeline = compileStoryboardToTimeline(effDoc, assets)
+  // A Stop pressed after the last beat must stop HERE — renderTimeline opens a fresh
+  // session, which would otherwise erase the pending cancel and render anyway.
+  throwIfCancelled()
   onProgress?.('Assembling and rendering the final video…')
   await renderTimeline(timeline, outPath, (line) => onProgress?.(line))
   return { timeline }

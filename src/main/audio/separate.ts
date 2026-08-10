@@ -26,13 +26,33 @@ export interface SeparateProgress {
   message: string
 }
 
-/** Online separation via MVSEP's free queue. Returns a path to the vocals-only file. */
+/** Which side of the split to keep: the voice, or everything that isn't the voice. */
+export type SeparationTarget = 'vocals' | 'instrumental'
+
+/**
+ * Picks the right stem from MVSEP's result list. Robust on names like "no_vocals"
+ * (which the naive /vocal/i predicate would have mistaken for the VOICE stem).
+ * Pure + unit-tested.
+ */
+export function pickStem<T extends { url?: string; download?: string; type?: string }>(
+  files: T[],
+  target: SeparationTarget
+): T | undefined {
+  const tag = (f: T): string => `${f.type ?? ''} ${f.url ?? ''}`
+  const isInstrumental = (f: T): boolean => /instrum|accomp|no.?vocal|music/i.test(tag(f))
+  const isVocals = (f: T): boolean => /vocal/i.test(tag(f)) && !isInstrumental(f)
+  const hit = files.find(target === 'vocals' ? isVocals : isInstrumental)
+  return hit ?? (target === 'vocals' ? files[0] : undefined)
+}
+
+/** Online separation via MVSEP's free queue. Returns a path to the requested stem. */
 export async function separateOnline(
   inputAudioPath: string,
   token: string,
   outDir: string,
   onProgress?: (p: SeparateProgress) => void,
-  maxWaitMs = 15 * 60 * 1000
+  maxWaitMs = 15 * 60 * 1000,
+  target: SeparationTarget = 'vocals'
 ): Promise<string> {
   const key = token?.trim() || DEFAULT_MVSEP_TOKEN
   onProgress?.({ message: 'Uploading audio to the free separation queue…' })
@@ -71,12 +91,17 @@ export async function separateOnline(
     onProgress?.({ message: `Separating audio (${st.status ?? 'working'})…` })
     if (st.status === 'done') {
       const files = st.data?.files ?? []
-      const vocals =
-        files.find((f) => /vocal/i.test(`${f.type ?? ''} ${f.url ?? ''}`)) ?? files[0]
-      const url = vocals?.download || vocals?.url
-      if (!url) throw new Error('Separation finished but no vocals track was returned.')
+      const stem = pickStem(files, target)
+      const url = stem?.download || stem?.url
+      if (!url) {
+        throw new Error(
+          target === 'vocals'
+            ? 'Separation finished but no voice track was returned.'
+            : 'Separation finished but no music/instrumental track was returned.'
+        )
+      }
       const dl = await fetch(url, { signal: AbortSignal.timeout(300_000) })
-      const outPath = join(outDir, 'vocals-online.wav')
+      const outPath = join(outDir, target === 'vocals' ? 'vocals-online.wav' : 'instrumental-online.wav')
       writeFileSync(outPath, Buffer.from(await dl.arrayBuffer()))
       return outPath
     }
@@ -103,12 +128,13 @@ export function parseCommandLine(cmd: string): string[] {
   return out
 }
 
-/** Local separation via a Demucs CLI install. Returns a path to the vocals-only file. */
+/** Local separation via a Demucs CLI install. Returns a path to the requested stem. */
 export function separateLocal(
   inputAudioPath: string,
   demucsCmd: string,
   outDir: string,
-  onProgress?: (p: SeparateProgress) => void
+  onProgress?: (p: SeparateProgress) => void,
+  target: SeparationTarget = 'vocals'
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     if (!demucsCmd) {
@@ -134,8 +160,10 @@ export function separateLocal(
         reject(new Error(`Demucs exited with code ${code}. ${err.trim().slice(-300)}`))
         return
       }
-      const found = findFileRecursive(outDir, 'vocals.wav')
-      if (!found) reject(new Error('Demucs finished but no vocals.wav was found in its output.'))
+      // --two-stems=vocals writes BOTH vocals.wav and no_vocals.wav — pick the asked-for one.
+      const wanted = target === 'vocals' ? 'vocals.wav' : 'no_vocals.wav'
+      const found = findFileRecursive(outDir, wanted)
+      if (!found) reject(new Error(`Demucs finished but no ${wanted} was found in its output.`))
       else resolve(found)
     })
   })

@@ -1,0 +1,26 @@
+{
+  // The browser bridge (src/remote) plus the preload it re-uses. Separate from
+  // tsconfig.node.json because this code runs in a phone browser: it needs the DOM
+  // types (fetch, EventSource, window) and must NOT be allowed to reach for Node's.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "paths": {
+      // Typechecks against the real stand-in, exactly as the bundler resolves it —
+      // so a mismatch between the shim and what the preload uses fails here, not on
+      // the phone.
+      "electron": ["./src/remote/electron.ts"]
+    }
+  },
+  "include": ["src/remote/**/*", "src/preload/**/*", "src/shared/**/*"],
+  // Tests legitimately use Node (wire.test.ts checks base64 against Buffer). Leaving
+  // them out preserves the useful guarantee this config exists for: everything that
+  // actually SHIPS to the phone compiles with browser types only.
+  "exclude": ["src/**/*.test.ts"]
+}

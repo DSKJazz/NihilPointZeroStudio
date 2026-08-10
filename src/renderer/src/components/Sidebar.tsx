@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 // Visible build stamp — injected automatically at build time (electron.vite.config.ts:
@@ -6,7 +7,9 @@ import { NavLink } from 'react-router-dom'
 const BUILD_TAG = __BUILD_TAG__
 
 const links = [
-  { to: '/', label: 'Ideas & Trends', end: true },
+  { to: '/', label: '🏠 Today', end: true },
+  { to: '/ideas', label: 'Ideas & Trends', end: false },
+  { to: '/channel', label: '📊 Your Channel', end: false },
   { to: '/agent', label: '✦ AI Command', end: false },
   { to: '/scenes', label: '🎬 Scene Studio', end: false },
   { to: '/writer', label: 'Script Writer', end: false },
@@ -15,6 +18,7 @@ const links = [
   { to: '/storyboard', label: '🎞 Storyboard Director', end: false },
   { to: '/presenter', label: '🎥 Presenter Studio', end: false },
   { to: '/recorder', label: '⏺ Recorder', end: false },
+  { to: '/teleprompter', label: '🧾 Teleprompter', end: false },
   { to: '/timeline', label: '✂ Timeline Editor', end: false },
   { to: '/charts', label: 'Charts', end: false },
   { to: '/psx', label: '📈 Live PSX Data', end: false },
@@ -26,6 +30,19 @@ const links = [
 ]
 
 export default function Sidebar() {
+  // Red dot on Settings when the quiet weekly self-check found a real failure —
+  // problems announce themselves instead of waiting to be discovered.
+  const [healthFailed, setHealthFailed] = useState(0)
+  useEffect(() => {
+    try {
+      window.api.health
+        .last()
+        .then((h) => setHealthFailed(h.failed.length))
+        .catch(() => {})
+    } catch {
+      /* preload bridge missing (unit tests) — no badge, never a crash */
+    }
+  }, [])
   return (
     <aside className="w-56 shrink-0 border-r border-ink-800 bg-ink-900 flex flex-col">
       <div className="px-5 py-6">
@@ -50,6 +67,12 @@ export default function Sidebar() {
             }
           >
             {link.label}
+            {link.to === '/settings' && healthFailed > 0 && (
+              <span
+                title={`The weekly self-check found ${healthFailed} problem(s) — open Settings → Run full check`}
+                className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500 align-middle"
+              />
+            )}
           </NavLink>
         ))}
       </nav>

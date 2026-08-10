@@ -20,11 +20,18 @@ try {
 } catch {
   // git absent or not a repo — the tag still carries version + timestamp.
 }
-const BUILD_TAG = `v${pkg.version} · ${stamp}${gitHash ? ` · ${gitHash}` : ''}`
+// ship.ps1 passes NPZ_BUILD_TAG so the sidebar badge and the Build line it stamps into
+// MEGA-DIAGNOSTIC-REPORT.md are byte-identical; standalone builds still self-stamp.
+const BUILD_TAG = process.env.NPZ_BUILD_TAG || `v${pkg.version} · ${stamp}${gitHash ? ` · ${gitHash}` : ''}`
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    define: {
+      // Also injected into MAIN so the startup update-check can compare the running
+      // build's date against the newest GitHub release without asking the renderer.
+      __BUILD_TAG__: JSON.stringify(BUILD_TAG)
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()]

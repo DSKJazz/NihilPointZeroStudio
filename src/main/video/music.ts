@@ -53,3 +53,80 @@ export function buildSetMusicArgs(params: {
     ...tail
   ]
 }
+
+/**
+ * Lays a music bed over only PART of a video (startSec → endSec), keeping the video's
+ * own audio everywhere. Unlike buildSetMusicArgs this needs no separate narration track,
+ * so it works on any video — including ones recorded or imported by the user.
+ *
+ * The bed is looped, trimmed to the region, faded at both ends, delayed to its start
+ * position, then ducked under and mixed with the original audio. Pure arg builder.
+ */
+export function buildMusicRegionArgs(params: {
+  videoPath: string
+  musicPath: string
+  startSec: number
+  endSec: number
+  outPath: string
+  /** 0..1 bed level before ducking (default 0.35 — present but not competing). */
+  gain?: number
+  /**
+   * Whether the source video has an audio stream. When it does not (a silent screen
+   * recording, a downloaded clip), referencing [0:a] makes ffmpeg abort with
+   * "matches no streams", so the bed is laid down on its own instead.
+   */
+  hasAudio?: boolean
+}): string[] {
+  const { videoPath, musicPath, outPath } = params
+  const hasAudio = params.hasAudio ?? true
+  const start = Math.max(0, params.startSec)
+  const end = Math.max(start + 0.5, params.endSec)
+  const span = end - start
+  const gain = params.gain ?? 0.35
+  // Fades scale down for a short region so a 2-second bed isn't entirely fade.
+  const fade = Math.min(1.5, span / 4)
+
+  // The bed itself: loop → trim to the region → level → fade both ends → delay into place.
+  const bed =
+    `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,` +
+    `atrim=0:${span.toFixed(3)},asetpts=PTS-STARTPTS,volume=${gain},` +
+    `afade=t=in:st=0:d=${fade.toFixed(3)},afade=t=out:st=${(span - fade).toFixed(3)}:d=${fade.toFixed(3)},` +
+    `adelay=${Math.round(start * 1000)}|${Math.round(start * 1000)}`
+
+  const filter = hasAudio
+    ? `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,asplit=2[vkey][vmix];` +
+      `${bed}[bed];` +
+      `[bed][vkey]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=300[duck];` +
+      `[vmix][duck]amix=inputs=2:duration=first:normalize=0[amx];[amx]alimiter=limit=0.95:level=disabled[aout]`
+    : // Nothing to duck under or mix with — just place the bed and pad the rest with silence
+      // so the audio track spans the whole video rather than stopping at the region's end.
+      `${bed},apad[aout]`
+
+  return [
+    '-y',
+    '-i',
+    videoPath,
+    '-stream_loop',
+    '-1',
+    '-i',
+    musicPath,
+    '-filter_complex',
+    filter,
+    '-map',
+    '0:v:0',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    // Without a source audio track the padded bed is infinite, so the video length
+    // must be what ends the encode.
+    ...(hasAudio ? [] : ['-shortest']),
+    '-movflags',
+    '+faststart',
+    outPath
+  ]
+}

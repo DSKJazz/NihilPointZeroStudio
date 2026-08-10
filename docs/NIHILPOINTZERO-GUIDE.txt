@@ -10,13 +10,14 @@ CONTENTS
    3. The tabs (what each is for) + Ctrl-K + autosave
    4. Make a video — step by step
    5. The build choices: Look, Format (shape), Resolution
-   6. Voice — 3 ways (yours is best)
+   6. Voice — 4 ways (yours is best)
    7. Captions / subtitles
    8. Music & the DJ studio (make music, background, remove/replace, separate, waveform)
    9. Scene Studio (storyboard + put yourself in a scene + Beautify)
   9b. Storyboard Director (direct it shot by shot)
   9c. Timeline Editor (line clips up by hand)
   9d. Live PSX Data & NCCPL Analysis (real numbers → video)
+  9e. Presenter Studio (put YOU in the video) + the ⏺ Recorder
   10. Thumbnails · Logo/brand · Publish to YouTube · Batch
   11. Free vs Internet vs one-time Setup
   12. FAQ (the dumb questions)
@@ -24,6 +25,17 @@ CONTENTS
   14. What's already set up for you
   15. Pro tips — get the best results
   16. Everything this studio can do (quick index)
+  17. NEW: the AI outage, free music, the trim bar, and what this PC can't do
+  18. NEW: REAL AI video — free cloud today, local GPU when the hardware exists
+  19. NEW: NihilPointZero on your phone (the whole studio, and the offline app)
+  20. NEW: Teleprompter, and the Expert that works without AI
+  21. NEW: Recording that doesn't look like a phone
+  22. NEW: One version everywhere — and how to check, on either device
+  23. NEW: Your Channel — learning from what already worked (titles, timing,
+      your series, and the questions your comments keep asking)
+  24. NEW: Hear it read out at 2x, and rebuild the first fifteen seconds
+  25. NEW: Dead air, moving charts, and six fixes you'll never see
+  26. NEW: "What changed" — so an upgrade stops being invisible
 
 -------------------------------------------------------------------------------
 1. WHAT THIS IS / FIRST LAUNCH
@@ -75,11 +87,15 @@ Copy the folder to another PC and:
 3. THE TABS + CTRL-K + AUTOSAVE
 -------------------------------------------------------------------------------
   Ideas & Trends  - brainstorm ideas with AI.
+  📊 Your Channel  - what already worked HERE: which title shapes your audience
+                    rewarded, when they show up, your series and their links, and
+                    the questions your comments keep asking. See section 23.
   ✦ AI Command    - tell the studio what to do in plain words; it plans and does it.
                     Also holds BATCH (many videos at once).
   🎬 Scene Studio  - build a video scene-by-scene; watch each, pause, reorder, and
                     put YOUR photo into a scene.
-  Script Writer   - generate a full script.
+  Script Writer   - generate a full script. Also: hear it read back at 2x, five
+                    different openings, and a check that every figure has a source.
   Script Pad      - a blank page to write/paste any script.
   Video Studio    - the main workshop: turn a script into a video and, per video:
                     Captions, Logo, 🎙 Voice studio, Trim, Music, Publish, Download.
@@ -87,6 +103,11 @@ Copy the folder to another PC and:
   🎞 Storyboard Director - direct a video SHOT BY SHOT: each shot has its own length,
                     its own image prompt, optional narration/caption, camera motion,
                     a crossfade, and you can drop YOUR photo into a shot. (See §9b.)
+  🎥 Presenter Studio - put YOU in the video, three ways: Real Video (upload a video of
+                    yourself narrating), Photo (your photo presents), or ✨ Living
+                    Picture (your video's motion grafted onto your best picture). (§9e.)
+  ⏺ Recorder      - record your webcam OR your screen inside the app (up to 8K, noise
+                    suppression, OBS virtual camera). Saves into Video Studio. (§9e.)
   ✂ Timeline Editor - a simple non-linear editor: line up video clips on a track, set
                     crossfades, add text overlays and a separate audio track. (See §9c.)
   Charts          - candlestick + SMA/RSI charts. Load LIVE PSX prices by symbol, or
@@ -99,9 +120,10 @@ Copy the folder to another PC and:
   Advisor         - a chat that knows your work.
   Library         - everything you saved.
   Activity Log    - history of actions.
-  Settings        - AI choice, keys, natural-voice download, music separation, your
-                    YouTube channel, phone access, and a "Setup health" panel (green
-                    dots = ready).
+  Settings        - AI choice, keys, natural-voice download, music separation, AI Video
+                    (the real-motion video engines, §18), your YouTube channel, phone
+                    access, a "Setup health" panel (green dots = ready), and the
+                    "Known Issues" log (AI failures AND tab crashes, provable).
 
   CTRL-K: press it anywhere, type a tab name, Enter — instant navigation.
   AUTOSAVE: your work saves itself and comes back after you close/reopen. A
@@ -121,6 +143,114 @@ Copy the folder to another PC and:
      scripts, building videos, thumbnails, images, music, ideas, PSX analysis, scenes).
      It reads your current script/brief, and falls back to the free AI brain if your
      provider is down. It only performs that safe set of actions — it never deletes.
+     ASK IT HOW: the Producer also knows this whole studio — every tab, button and
+     workflow. On any screen ask "how do I put myself in a scene?", "where is the clip
+     tool?", "why did my video not appear?" and it answers with the exact steps for THIS
+     app (not generic advice). Two buttons at the top right of its panel set the answer
+     length: 📖 Detailed (full step-by-step) or ⚡ Brief (quick bullets).
+  🧭 EXPERT: a SECOND floating AI on every screen (the button at the BOTTOM-LEFT,
+     next to the sidebar), SEPARATE from the Producer. It's the app's dedicated expert — it does
+     nothing but know this software inside-out and help you use it:
+     - ASK ANYTHING, ANY WAY: "detailed bullet points", "step wise", "precise steps
+       naming every click", "explain fully", "keep it brief" — pick a format chip at
+       the top or just say the format in your question; it obeys exactly.
+     - ⚡ EXECUTE THESE STEPS: under each answer, one click turns the explanation into
+       a real, validated action plan (write scripts, build videos, scenes, images,
+       thumbnails, music, ideas, PSX analysis). NOTHING runs until you press "▶ Run it".
+     - EXECUTE MODE: or write the orders yourself ("make a 30-second script about gold
+       and build it vertical") and it plans + runs them the same way.
+     Steps that are pure UI clicks (open a tab, toggle a setting) it explains precisely
+     but cannot press for you — and like everything AI in this app, it can never delete.
+     - → TAKE ME THERE: when an answer mentions a tab, chips appear under it ("→ Open
+       Scene Studio") — one click jumps you straight to that tab.
+  ✓ AM I UP TO DATE? Settings → the Version box at the top of the page. It states it
+     outright: up to date, or a newer one exists, or "could not check just now" — and it
+     shows the build you are running next to the newest published one, so you can see the
+     answer rather than trust it. A "Check now" button re-reads the download page live.
+     It will NEVER say "up to date" when the check did not actually run. That distinction
+     matters: the app used to speak only when it was behind, so silence meant either
+     "you're current" or "the check is broken", and there was no way to tell which.
+  🔌 IT OPENS WITH WINDOWS, AND UPDATES ITSELF THEN: the studio is registered with
+     Windows to open when you sign in. That moment is deliberately chosen: nobody is
+     waiting for the app and nothing is running, so it is the only safe time to spend
+     a few minutes replacing itself. If it finds a newer version it downloads and
+     installs it there and then, and you sit down to the newest version having pressed
+     nothing.
+     Three rules it will not break:
+       - it never updates while a render or a queue is running — your work is never
+         interrupted, which is the one rule this app does not bend;
+       - if the download finishes and by then you HAVE started something, it holds the
+         installer back rather than closing on you, and the blue notice becomes instant
+         (there is nothing left to fetch);
+       - if YOU opened the app rather than Windows, it never hijacks you — you get the
+         notice and you choose.
+     Off switch: Settings → "Open the studio when Windows starts".
+  ⬆ THE APP UPDATES ITSELF: on startup it quietly checks whether a newer version was
+     published. If yes, a small blue notice appears at the bottom of the window. Press
+     "Get the update" and the app does the whole job — downloads the update (you see a
+     progress bar), checks it really is the file GitHub published, starts it, and closes
+     itself so the update can finish. Windows asks once whether to allow it; say yes,
+     and the app reopens updated.
+     You never open a web page, a Downloads folder or File Explorer. If the download is
+     interrupted, press the button again — it keeps the part it already has.
+     Behind that one button are three routes, best first: an instant restart when the
+     new code is already on disk, then the download-and-install above, and only if both
+     fail does it fall back to showing you the setup file and saying so in words.
+     Offline? The check silently skips; it never blocks or nags.
+  📌 THE FOLDER IS NOW PINNED: the app decides where your work lives ONCE, writes it
+     down, and reads that from then on. It used to re-decide on every launch, which is
+     how work could "disappear" — the app had quietly moved to a different folder.
+     If the recorded folder is ever unreachable (external drive unplugged, folder
+     renamed) the app tells you plainly, confirms nothing was deleted, and keeps
+     working from a safe fallback until the drive is back. A portable exe on a USB
+     stick still always uses the data beside it — that is intended.
+  📍 WHERE YOUR WORK IS KEPT (Settings, just above Backups): the app names the exact
+     folder holding your videos, scripts and settings — no more guessing. The app can
+     legitimately use one of three folders (next to the portable exe / the Desktop
+     studio folder / your private Windows folder), and work made while one was active
+     used to VANISH from view when another took over. Now the app looks for that and
+     tells you — in this card and in the Activity Log — with a one-click
+     "Bring them into the app" that COPIES those videos in. It never moves or deletes
+     anything; the other folder is left exactly as it was.
+  💾 BACKUPS (Settings → Backups — and automatic): your work is copied to
+     C:\Users\<you>\NihilPointZero-Backups (it moved there from Documents; the app moves
+     the old folder for you automatically). The app backs up by itself at most once every
+     7 days; "Back up now" in Settings does it on demand, and BACKUP-NOW.cmd in the
+     Desktop studio folder still works too. It only adds/updates, never deletes.
+     RESTORE (the part that matters in a disaster): Settings → Backups → "Restore missing
+     files" copies back anything that is in the backup but MISSING from the app. It never
+     overwrites anything you currently have — completely safe to press.
+     SECOND HOME: pick a folder on a USB stick or second disk and every weekly backup is
+     copied there too. A backup on the same disk cannot survive a disk failure — this one
+     can. If the drive is unplugged that week, it's skipped and noted, never an error.
+     DELETE-SYNC (on by default): when you permanently delete a video in the app, its
+     backup copy is deleted too — deleted means GONE FOR GOOD, no ghost copies left
+     behind. Turn it off in Settings → Backups if you'd rather backups keep everything.
+     "Clean deleted-items ghosts" removes backup copies of things you deleted BEFORE
+     delete-sync existed — it shows you the count and size first, and asks.
+     WHAT IS AND ISN'T COPIED: videos, thumbnails, scripts, library, drafts and logs —
+     with NO size limit, so your biggest finished videos are protected. Your API keys and
+     the app's browser data are deliberately EXCLUDED (the backup folder may be cloud-
+     synced, and in the portable copy saved keys can be read back — they must not travel).
+     If any file can't be copied, the Activity Log says INCOMPLETE and it retries next
+     time you open the app — it never claims success it didn't achieve.
+  🩺 "RUN FULL CHECK" (Settings, top-right of Setup health): the most useful button in the
+     app when something feels off. It really tests everything — internet, the free AI, the
+     free image service, Ollama (and whether your chosen model is installed), and whether
+     your saved Anthropic/OpenAI key is actually ACCEPTED. A wrong key turns RED with the
+     reason. Green = truly working, not just "saved".
+     AUTOMATIC TOO: the same check quietly runs by itself about once a week. If it finds
+     a real problem, a small RED DOT appears on "Settings" in the sidebar and a plain-
+     English line lands in the Activity Log — problems announce themselves instead of
+     waiting to be discovered mid-project.
+  🈳 DISK-SPACE GUARD: if your disk is almost full, video builds now say so up front
+     ("This disk is almost full…") instead of failing halfway with a confusing error —
+     and warn you early when space is merely getting low.
+  🏠 TODAY (first sidebar item): the app opens here — latest videos, recent activity, and
+     one-click cards to start the usual jobs. Ideas & Trends is now the item just below it.
+  🏷 POSTING TEXT (Video Studio, under each video): one click writes a title, description
+     and hashtags for that clip, each with its own Copy button — made for pasting straight
+     into YouTube/TikTok after cutting shorts.
 
 -------------------------------------------------------------------------------
 4. MAKE A VIDEO — STEP BY STEP
@@ -135,6 +265,29 @@ show progress; the finished video lands on the right with all its tools.
 -------------------------------------------------------------------------------
 5. THE BUILD CHOICES
 -------------------------------------------------------------------------------
+VIDEO LOOK (engine) — what makes the visuals. Five tiers:
+   Style presets              - free, offline. Styled text, backgrounds and your own
+                                images. Always works, no key.
+   Photo slideshow (AI images) - free, online, no key. A real AI image per scene,
+                                panned and zoomed. A moving photo slideshow — not
+                                filmed motion.
+   REAL AI video — free cloud - free, online. REAL moving video per scene — not a
+                                slideshow. Two free routes, chosen in Settings ->
+                                AI Video: a free Pollinations key (Quest Pollen,
+                                signup by GitHub/email — NO phone number) or a free
+                                Puter account (Google Veo, sign-in window; their
+                                phone verification rejects some countries' numbers,
+                                Pakistan included). Up to 5 scenes per build get
+                                real motion (adjustable) and the rest use AI stills;
+                                each real-motion scene takes minutes. If it can't
+                                run, scenes fall back to AI stills and the build
+                                log says why. (See §18.)
+   AI footage (cloud)         - paid; real AI footage from a provider you supply your
+                                own key for.
+   REAL AI video — local GPU (ComfyUI) - free per video and fully private, but needs a
+                                dedicated NVIDIA card. On this PC it is visible but
+                                greyed out: "Requires NVIDIA GPU — not detected on
+                                this system". (See §18.)
 LOOK (template):
    Clean     - plain and fast.
    News      - crisp colour + sliding "lower-third" bars showing the section label.
@@ -146,16 +299,23 @@ RESOLUTION: 1080p (fastest) · 1440p · 4K (sharp, slower) · 8K (very slow, hug
    4K is the sweet spot. For Shorts pick the 9:16 shape.
 
 -------------------------------------------------------------------------------
-6. VOICE — 3 WAYS (yours is best)
+6. VOICE — 4 WAYS (yours is best; two are free natural Urdu options)
 -------------------------------------------------------------------------------
   (A) YOUR OWN voice (recommended): build the video, then "🎙 Voice studio" under it:
         Record with ⏸ Pause / ▶ Resume; after Stop, drag the slider to review;
         "Redo from playhead" keeps the part before and re-records the rest;
         finish with "Replace the narration" OR "Keep existing audio + add my voice".
-  (B) NATURAL voice (Piper): a nice computer voice. Already installed on this PC —
-        pick "Narration voice -> Natural" when building. (On a new PC: Settings ->
-        "Download natural voice", ~80 MB, one-time.)
-  (C) WINDOWS voice: basic/robotic, always free, good for a quick draft.
+  (B) WINDOWS NATURAL voice (free, no download): pick "Narration voice -> Windows
+        natural voice". Windows itself ships free voices per installed language —
+        including real Urdu (Pakistan): Asad and Uzma. If you don't see them, click
+        "+ Add Urdu / more voices" (in the picker, or Settings) to install the free
+        Urdu language pack in Windows, then reopen this tab. "🔊 Hear this voice"
+        lets you preview before committing.
+  (C) NATURAL voice (Piper): a nice computer voice with NO Windows setup needed.
+        Pick and download a voice in Settings — includes two real Urdu neural
+        voices (male "Fasih", female "Aegis", ~60 MB each) alongside English ones.
+        Then pick "Narration voice -> Natural voice (Piper)" when building.
+  (D) WINDOWS voice: basic/robotic, always free, good for a quick draft.
 
 -------------------------------------------------------------------------------
 7. CAPTIONS / SUBTITLES
@@ -176,14 +336,33 @@ Video Studio -> "Sound Studio (DJ)":
    - "Apply mix -> new video": lay your sounds over a video's narration.
    - "📊 Show waveform": see the audio of the selected video (loud/quiet spots).
 
-Remove or swap the background music:
+Remove or swap the background music (and now the VOICE too):
    - Videos MADE IN THIS APP: the "🎵 Music" row -> Remove (keeps your voice) or
      Replace with a mood. Replace AUTO-DUCKS: the music dips whenever you speak.
-     Exact and instant, no internet.
+     Exact and instant, no internet. NEW: "Remove my voice (keep music)" does the
+     opposite — AI-separates the mixed audio and keeps only the music.
    - OUTSIDE videos (music already mixed in): "Remove music (AI separate)":
        Online = works out of the box (free, built in), needs internet.
        Local  = offline, best quality (Demucs, installed on this PC).
+     NEW: the same row also has "Keep music (online/local)" = remove the voice instead.
      Separation is an AI estimate — great for clear speech over music, not perfect.
+
+🎧 THE AI DJ (in the same "🎵 Music" row, one click):
+   - Leave the little box empty and press "Let the AI DJ pick & lay the music": the app
+     reads the video's OWN script (videos now remember their script), or listens to the
+     narration if there isn't one, judges the mood (English, Roman Urdu AND Urdu script),
+     composes a track sized to the video, and mixes it softly under your voice.
+   - Or type what you want ("lofi", "tense", "calm", "cinematic"…) and it obeys.
+   - Always a NEW copy — your original stays in the list.
+
+🧹 CLEAN COPY (the "🎛 Studio tools" row under each video):
+   - One click rebuilds the exact same video with NOTHING written on the picture —
+     no title, no section headings, no captions. Works for videos built from now on
+     (they remember their own recipe). Burned-caption copies never replaced your
+     original anyway — it is always still in the list.
+
+🎛 OPEN AUDIO IN DJ DECKS (same row): pulls the video's sound out and loads it onto
+   Deck A of the Dual decks (EQ, loops, hot cues, BPM, crossfader) in one click.
 
 -------------------------------------------------------------------------------
 9. SCENE STUDIO (storyboard + put yourself in a scene)
@@ -193,12 +372,24 @@ Remove or swap the background music:
    - "Generate all" makes an image per scene — watch them appear. ⏸ Pause / ▶ Resume.
    - STORYBOARD: reorder scenes (↑ ↓), remove (✕), or "＋ Add a scene". The order you
      see is the order the video is built in.
-   - Rewrite any scene's prompt and "↻ Regenerate this scene".
+   - Rewrite any scene's prompt and "↻ Regenerate this scene". If a regenerate fails,
+     the reason now shows in red ON the scene card (it used to hide behind the old image).
+   - ⏱ YOUR PACING (new): every scene card has "Stays … sec" (how long that image is on
+     screen) and "✨ Arrives by" (straight cut, fade, dissolve, slide from any side,
+     circle open). Leave them empty for automatic pacing. Set them and every image
+     shows exactly once, in your order, at your pace — the total is always stretched
+     to fit the narration, so speech never gets cut off.
+   - 🎬 VIDEO SETTINGS row (above the scenes): Style · Video look · Resolution ·
+     Format · Look — these decide the final built video.
    - "📎 Put me in (photo)": attach your picture and describe the scene ("me as an
      astronaut, spacesuit, on the moon"). Slider "Photo transform" — lower keeps more
      of your real look. Free; uses internet; the queue can be slow (shows its place).
      Exact face likeness isn't guaranteed on free AI.
    - "🎬 Build video" stitches the approved scenes with narration, your Look, etc.
+   - "VIDEO LOOK" selector: the final build can use your generated stills (classic,
+     default) or REAL AI motion per scene — free cloud (Pollinations key or Puter sign-in) or local
+     GPU (needs NVIDIA). Same rules and honest catches as Video Studio's engine
+     list (§5, §18).
    - BEAUTIFY: a slider retouches your uploaded photo (skin-smooth + brighten + sharpen)
      on your REAL pixels — no invented face. This is a light retouch, not AI makeup.
 
@@ -210,6 +401,11 @@ Remove or swap the background music:
      topic, mood, genre, style, and the whole shot breakdown.
    - GUIDED mode: you write the shots yourself, e.g. "0-15s I arrive in a Ferrari and
      say '…'; then 20s a helicopter over the hills, slow fade; then 90s of me speaking".
+   LENGTH GUARD: the "aim for … seconds" box is capped at 60 minutes, and before
+   rendering anything longer than 20 minutes — or anything with NO narration on any
+   shot — the app tells you what it is about to make (how many shots, how long,
+   whether it will be silent) and lets you cancel. One project once asked for 9,999
+   seconds and quietly produced 78 minutes of silence; that cannot happen now.
    Each SHOT has: a length in seconds, a SCENE description (what to show), optional
    narration and an on-screen caption, a camera MOTION, a crossfade INTO it, and its own
    SOUNDS (add a music bed, a sound effect, or your own audio file — each with gain,
@@ -226,8 +422,13 @@ Remove or swap the background music:
    speech is never cut off or overlapped), crossfades between shots, lays narration +
    captions + your sounds, and opens the finished film in the ✂ Timeline Editor so you can
    fine-tune anything.
-   HONEST LIMITS (free): AI scenes are STILLS with Ken-Burns motion, not real moving
-   footage. Your real face is kept by compositing your ACTUAL photo/clip — the app never
+   SCENES SELECTOR: by default AI scenes are animated stills, but the "Scenes:"
+   selector can switch them to REAL AI video — free cloud (Pollinations key or Puter sign-in, a few
+   scenes per build, minutes per scene) or local GPU (needs NVIDIA). See §18.
+   HONEST LIMITS (free): unless you pick a REAL-video engine above, AI scenes are
+   STILLS with Ken-Burns motion, not real moving footage — and even with the free
+   cloud engine, scenes past the per-build cap use AI stills.
+   Your real face is kept by compositing your ACTUAL photo/clip — the app never
    fabricates a fake video of your face. The background cutout uses a small free model that
    downloads once on first use; if it can't (offline), it falls back to your photo framed
    in the scene, so a render never breaks.
@@ -265,6 +466,35 @@ Charts tab also does live PSX now: type a symbol → a close-price line + SMA/RS
    script too.
 
 -------------------------------------------------------------------------------
+9e. PRESENTER STUDIO (put YOU in the video) + THE ⏺ RECORDER
+-------------------------------------------------------------------------------
+🎥 Presenter Studio makes YOU the presenter. Pick a mode, add your video (or photo)
+   and your script; the app intercuts you with theme b-roll and AI scenes, your voice
+   throughout. Three modes:
+   - REAL VIDEO (recommended): upload a video of yourself narrating. Your REAL voice
+     becomes the master track and your real face appears on the on-camera moments —
+     the rest cuts to theme b-roll + AI scenes timed to your voice. No fakery, real
+     sync.
+   - PHOTO: no video needed — your still photo appears (subtly moving, background-
+     removed into the scene) on the presenter beats; the natural voice narrates. Good
+     when you don't want to film yourself.
+   - ✨ LIVING PICTURE: add your narration VIDEO and a PICTURE where you look your
+     best. The moving part of the video (your mouth/face) is cut out, feather-edged
+     and composited onto the picture — so the picture speaks with your real voice
+     while keeping the look you chose. Position it with the sliders and check the
+     Preview. Free, offline, your own footage on your own picture — nothing invented,
+     no one else's face.
+   AI SCENES: a selector sets how the AI-scene beats move — animated stills (default),
+   REAL video — free cloud, or REAL video — local GPU (see §18). This only affects the
+   AI scenes; your own footage/photo is NEVER AI-generated.
+
+⏺ Recorder captures footage without leaving the app: your WEBCAM (with mic) or your
+   SCREEN, at 720p up to 8K, with noise suppression / echo cancellation / auto-gain
+   toggles. Using OBS? Start OBS's Virtual Camera and it appears in the camera picker
+   automatically. Recordings are transcoded to MP4 and saved into Video Studio, ready
+   to use anywhere — including as your Presenter Studio narration video.
+
+-------------------------------------------------------------------------------
 10. THUMBNAILS · LOGO/BRAND · PUBLISH · BATCH
 -------------------------------------------------------------------------------
 THUMBNAILS: Script Writer makes a 1280x720 thumbnail from a headline+style; in ✦ AI
@@ -274,9 +504,17 @@ LOGO: "🏷 Logo" row on a video -> pick a logo image, pick a corner, Apply (a
    join intro + video + outro.
 PUBLISH: "▶ Publish to YouTube" writes an AI title/description/tags to your clipboard,
    opens YOUR channel's upload page, and reveals the file — drag it in. Free, no
-   sign-in, no limits.
+   sign-in, no limits. It uses the same posting-text writer as "🏷 Posting text" below,
+   so Shorts automatically get Shorts-appropriate wording.
+POSTING TEXT: on any video or short, "🏷 Posting text -> YouTube / TikTok" writes a
+   ready-to-paste title, description and hashtags with a Copy button next to each —
+   uploading becomes copy-paste instead of writing from scratch.
 BATCH: ✦ AI Command -> "📦 Batch" -> paste topics (one per line) -> "Make all" builds
    a video for each (up to 25). One failure won't stop the rest.
+OVERNIGHT PLAN: same Batch box, but tick "🌙 Overnight plan" first (and pick how many
+   Shorts per video). Now it ALSO cuts Shorts and writes posting text for every video —
+   pick your topics, walk away, come back to publish-ready material instead of raw
+   builds. Every result shows its posting text with a Copy button.
 
 -------------------------------------------------------------------------------
 11. FREE vs INTERNET vs ONE-TIME SETUP
@@ -287,6 +525,9 @@ FREE + OFFLINE (anywhere, forever): building/looks/shapes, your voice + Natural 
 FREE + INTERNET (keys built in, nothing to sign up for): AI writing/ideas/advisor/
    AI Command, AI images/visuals, thumbnails-with-AI-background, put-me-in-a-scene,
    online music removal.
+FREE + INTERNET + ONE FREE SIGN-UP: REAL AI video — free cloud. Either a free
+   Pollinations key (Quest Pollen, no phone — best here) or a free Puter sign-in; allowances are small
+   and monthly. See §18.
 FREE + ONE-TIME SETUP (optional; both already done on this PC): Natural voice (Piper)
    download; offline Demucs music separation (Python).
 
@@ -328,6 +569,20 @@ Q: How do I use my own keys? A: Settings has fields (AI Horde for photos, MVSEP 
 - A build fails at a weird resolution: it auto-retries safely; if not, use 1080p/4K.
 - Writing stopped after changing provider: set it to "Free (online)" in Settings
   (needs no key), or make sure Ollama / your paid key is set up.
+- An amber warning appears: "Your ... AI failed — this answer came from the free AI
+  instead": your chosen paid/local AI could not answer, so the app used the basic free
+  AI (answers will be noticeably weaker). Most common cause: a wrong, expired, or
+  out-of-credit API key — open Settings and re-paste your key (an Anthropic key starts
+  with "sk-ant-api..." and is very long; copy ALL of it). If your provider is Ollama,
+  make sure Ollama is installed and running. The full technical reason is kept in the
+  Activity Log. If you see NO warning, your chosen AI answered normally.
+- A "real motion" scene came out as a still: the free cloud allowance ran out (it is
+  small and monthly), the per-build cap was reached, or the service couldn't be
+  reached — the build log says which. Falling back to AI stills is deliberate, so the
+  build never breaks.
+- A tab crashes / goes blank: the failure is contained to THAT tab — the rest of the
+  studio keeps working. You get a plain-English message and a "Try this tab again"
+  button, and the crash is written to Settings -> "Known Issues" so it's provable.
 - Multiple copies open / won't launch: close all "NIHILPOINTZERO-OS" in Task Manager,
   then open once.
 
@@ -377,8 +632,11 @@ Q: How do I use my own keys? A: Settings has fields (AI Horde for photos, MVSEP 
           🎞 Storyboard Director (shot-by-shot: length/scene/narration/caption/motion/crossfade +
           subject: AI scene / your photo composited / your clip / AI person + per-shot sounds)
   VISUALS:Looks (Clean/News/Cinematic/Bold) · animated titles + lower-thirds ·
-          Ken-Burns of your images · free AI per-scene images · Scene Studio storyboard
-          (reorder/add/remove, pause, regenerate) · put YOUR photo in a scene · photo Beautify
+          Ken-Burns of your images · free AI per-scene images · REAL AI video per scene
+          (free cloud, Pollinations/Puter — §18) · Scene Studio storyboard (reorder/add/remove,
+          pause, regenerate) · put YOUR photo in a scene · photo Beautify
+  PRESENT:🎥 Presenter Studio (Real Video / Photo / ✨ Living Picture — YOU present,
+          real footage only) · ⏺ Recorder (webcam or screen, up to 8K, OBS virtual camera)
   SHAPES: 16:9 · 9:16 (Shorts) · 1:1 · resolutions up to 8K
   VOICE:  your own recording (pause/redo/replace/add) · Natural (Piper) · Windows
   AUDIO:  generated music + SFX · free online music search · DJ timeline · create
@@ -397,3 +655,763 @@ Q: How do I use my own keys? A: Settings has fields (AI Horde for photos, MVSEP 
 Keep the .exe and the nihilpointzero-data folder together, be online for the AI
 parts, and copy the whole folder to go anywhere. Enjoy.
 ===============================================================================
+
+-------------------------------------------------------------------------------
+17. NEW (2026-07-30): THE AI OUTAGE, FREE MUSIC, THE TRIM BAR, AND LIMITS
+-------------------------------------------------------------------------------
+
+WHY THE AI "STOPPED RESPONDING" - AND WHAT WAS DONE
+The free online AI brain this app shipped with stopped being free. That was tested
+directly, over and over: it now answers "402 Payment Required", "404 Model not found
+- this is our legacy API", "429 Queue full", or returns an error page. Nothing on
+your PC is broken and your internet is fine. They changed their business.
+
+Why it FELT like a freeze rather than an error: the app used to ask that same dead
+service TWICE for every question, waiting up to two minutes each time, and it never
+wrote the failure down. So you waited a long time and got nothing.
+
+What is different now:
+  * Ollama - the free AI that runs on YOUR OWN PC - is now the automatic backup.
+    You already have it, with two models installed. When the online one refuses,
+    your answer quietly comes from your own machine instead. No key, no internet.
+  * A service that refuses permanently is set aside for 30 minutes instead of being
+    asked again before every single answer.
+  * Every failure is written to nihilpointzero-data\logs\ai-errors.log with the time,
+    the service, the error code, and the service's own words.
+  * Settings has a new "Known Issues" panel showing that list, so a problem is
+    provable instead of silently vanishing. It is read-only - nothing erases it.
+  * Settings -> "Run full check" now genuinely tests the AI. It used to check a
+    different web address than the one the app really uses, which is exactly why it
+    kept showing a green light all through the outage.
+
+If you want the most reliable free setup: keep Ollama installed and running.
+
+PICTURES THAT NEVER APPEARED
+Generated images were being made and saved correctly all along - the app's own
+security rules were stopping the window from showing files from your disk. Fixed;
+images, video previews and audio players across the whole app now appear.
+
+THE NEW TRIM BAR
+Open a finished video -> "Trim / cut". Instead of typing numbers:
+  * Tap anywhere on the bar to move the nearest marker there.
+  * Drag either marker to fine-tune. Arrow keys nudge; hold Shift for bigger steps.
+  * The selected stretch is shaded RED when you're cutting it out, GOLD when you're
+    keeping only it.
+  * "Jump to start"/"Jump to end" move the player so you can check your marks.
+  * Pressing Apply asks "Remove this section?" with Yes/Cancel BEFORE anything is cut.
+  * A new video is always created - your original is never touched.
+If you preferred typing exact times, that's still there under "Type exact times".
+
+FREE, COPYRIGHT-SAFE BACKGROUND MUSIC
+Under the trim bar is a green "Music track" lane:
+  * Tap it to drop music, or drag across it to choose exactly where music plays.
+  * Tapping opens a small picker right there - no separate screen.
+  * The AI reads your script and picks the mood for you (tense, uplifting, corporate,
+    and so on), then shows matching tracks. You can also search a mood yourself.
+  * Tap the round button to preview a track; tap "Use" to take it.
+  * Every track shows its licence in plain words: "no credit needed" (use it and
+    forget it) or "credit needed" (put the artist's name in your description).
+    Credit-free tracks are listed first on purpose.
+  * Music comes from Pixabay (add a free key in Settings) and Openverse (needs no key
+    at all, so this works out of the box). All safe for monetised YouTube.
+  * If neither service can be reached, you're told and the video is simply left
+    without music - it never fails the whole job.
+
+"NO VOICE / SILENT" NARRATION
+Video Studio -> Narration voice -> "No voice / silent". The video is built with NO
+narration at all, timed to how long your script would take to read aloud, so you can
+record your own voice over it afterwards in Voice studio.
+
+RECORDING YOURSELF - NOW IN THE RIGHT PLACE
+Voice studio (under any finished video) no longer records only sound:
+  * Choose "Voice only" or "Voice + camera".
+  * Tick "Play the video while I record" and the finished video rolls as you perform,
+    so you're genuinely recording over it rather than guessing. WEAR HEADPHONES - on
+    speakers your microphone will also pick up the video's own sound.
+  * A camera take can be saved straight into Video Studio (optionally cleaned up), or
+    you can keep just its sound as the video's narration.
+For a quick voice-over-video take you never have to leave Voice studio. (The separate
+⏺ Recorder tab still exists and is for bigger captures — webcam or full-screen
+recording up to 8K; see §9e.)
+
+CAPTIONS AND YOUTUBE CHAPTERS - ONE SWITCH, OFF BY DEFAULT
+There is now a single tick-box in Video Studio: "Also make subtitles + YouTube
+chapters". It is OFF unless you tick it, and when it's off neither is created.
+Being straight with you: captions were NEVER being forced on - they only ever ran
+when you clicked the Captions button yourself. Chapter markers didn't exist at all
+until now. Both are now behind one visible switch. Chapters come with a Copy button
+so you can paste the timestamps into your YouTube description.
+
+WHAT THIS PC CANNOT DO - THE HONEST ANSWER
+Real AI "motion video" (LTX-Video, Wan 2.2, CogVideoX) and "talking photo" tools
+(SadTalker, LivePortrait) CANNOT run on this laptop. Not slowly - not at all.
+
+Those models need a dedicated NVIDIA graphics card with its own video memory. This
+PC has Intel graphics built into the processor, which borrows ordinary system memory
+and has none of the special hardware those models require. The lightest one asks for
+6GB of dedicated video memory; there is none here. No setting changes that.
+
+So instead of pretending, the app now:
+  * Checks your graphics card when it starts and tells you plainly, in Settings and
+    before you start a build, what can and cannot run.
+  * Labels the slideshow honestly as "Photo slideshow (AI images)" - described as a
+    moving photo slideshow, NOT filmed motion.
+  * Offers 16 distinct looks instead of 5: five cinematic (modern film, film noir,
+    blockbuster, vintage 70s, documentary), four cartoon (bold flat, 3D animated,
+    comic book, watercolour storybook), four anime (modern key visual, retro 90s,
+    painterly pastoral, dark seinen), plus neon, minimal and infographic.
+If you ever run this on a PC with an NVIDIA card, the check notices and the motion
+video option becomes available on its own.
+
+UPDATE (2026-07-31): real AI motion video IS now possible here — through the free
+CLOUD tier, not this PC's hardware. The paragraphs above stay true for LOCAL models.
+See §18 for what's new and the honest catches.
+
+-------------------------------------------------------------------------------
+18. NEW (2026-07-31): REAL AI VIDEO — FREE CLOUD TODAY, LOCAL GPU WHEN THE
+    HARDWARE EXISTS
+-------------------------------------------------------------------------------
+
+REAL MOVING VIDEO, FREE — TWO ROUTES
+Video Studio's "Video look (engine)" list has a new tier: "REAL AI video — free
+cloud". It generates REAL moving video for each scene — not a photo slideshow.
+There are two free ways to power it; pick one in Settings -> AI Video:
+
+ROUTE 1 — POLLINATIONS (recommended on this PC; NO phone number):
+  * Sign up free at enter.pollinations.ai with GitHub or email, create a key, and
+    paste the SECRET key (sk_…) into Settings -> AI Video. (The pk_ "app" key is
+    often created with no models allowed — the sk_ key is the one that works.)
+  * Free Pollen is CLAIMED from that dashboard's QUESTS tab. Quests are
+    retroactive — if you already qualify, just claim: "Create your first API key"
+    alone pays 0.25 Pollen, and the default video model (wan-fast) costs about
+    0.05 Pollen for a 5-second scene, so that one claim is ~five real-motion scenes.
+  * The "Test key" button checks your key and shows your Pollen balance without
+    spending anything — and warns you plainly when the balance is 0.
+
+ROUTE 2 — PUTER (Google's Veo; no key at all):
+  * A sign-in window pops up during the first build; sign into a free Puter
+    account there (it may ask again after an app restart).
+  * Heads-up: Puter's verification rejects some countries' phone numbers —
+    Pakistani numbers included. If their sign-up won't finish, use Route 1.
+  * The free allowance is SMALL and MONTHLY.
+
+True for both routes:
+  * When an allowance runs out, scenes automatically fall back to AI still images
+    and the build log says why. Nothing breaks.
+  * By default only up to 5 scenes per build get real motion — this protects the
+    free allowance. The rest of the scenes use AI stills. Adjustable in Settings ->
+    AI Video ("Real-motion scenes per build").
+  * Each real-motion scene takes MINUTES to generate. Expect a slower build.
+
+Where it lives: Video Studio ("Video look (engine)") · Scene Studio ("Video look")
+· Storyboard Director ("Scenes:" selector) · Presenter Studio (the AI-scene
+selector — your own footage/photo is never AI-generated).
+
+THE LOCAL GPU TIER — REAL, BUILT, AND WAITING FOR HARDWARE
+"REAL AI video — local GPU (ComfyUI)" is now a real integration with ComfyUI, the
+standard local AI video server (default address http://127.0.0.1:8188).
+The hard truth has NOT changed: this PC (Intel graphics inside the processor, no
+NVIDIA card) cannot run it — not slowly, not at all.
+What HAS changed: instead of being hidden, the option is now VISIBLE but greyed
+out — "Requires NVIDIA GPU — not detected on this system" — and everything can be
+configured in Settings -> AI Video today, so it unlocks by itself the day this PC
+(or your next one) has an NVIDIA card. Settings also says which model fits which
+card:
+    8GB   -> AnimateDiff / Wan 2.1 (1.3B)
+    12GB  -> LTX-Video / LTX-2
+    16GB  -> LTX-2.3 (recommended)
+    24GB+ -> Wan 2.2 / HunyuanVideo 1.5
+Advanced: you can point it at your own ComfyUI workflow file — export it in ComfyUI
+via "Save (API format)" and put {{PROMPT}} where the prompt text goes.
+
+EVERY AI VIDEO ENGINE NOW FALLS BACK SAFELY
+If a real-video engine can't run — offline, allowance used up, no server — the build
+automatically continues as the photo slideshow and the status log states the reason.
+A build never breaks because of these engines.
+
+A CRASHED TAB CAN'T TAKE THE STUDIO DOWN — AND IT'S ON THE RECORD
+The "Known Issues" panel in Settings used to record only AI service failures. Now,
+if a tab crashes, the crash is contained to THAT tab: the rest of the studio keeps
+working, you get a plain-English message and a "Try this tab again" button, and the
+failure is written to the same Known Issues log — so it's provable, not a mystery.
+
+
+-------------------------------------------------------------------------------
+19. NEW (2026-08-01): NIHILPOINTZERO ON YOUR PHONE
+-------------------------------------------------------------------------------
+
+There are now TWO ways to use the studio from your phone. They are different
+things and it's worth knowing which one you want.
+
+FIRST, THE HONEST PART
+The studio itself is a Windows program. A Windows program cannot be installed on
+a phone — there is no Android version and there cannot be one. So there are two
+routes, and which you want depends on one thing: is your PC switched on?
+
+  PC ON  -> Route 2. You get the WHOLE studio. Read that one first.
+  PC OFF -> Route 1. The writing half, anywhere, on mobile data.
+
+ROUTE 1 — THE PHONE APP (works with your PC switched OFF)
+This is a real app icon on your home screen. It works anywhere — on mobile data,
+in another city, with your computer unplugged.
+
+  Open this once on your phone's browser:
+      https://dskjazz.github.io/nihilpointzero-phone/
+  Then tap the browser's menu and choose "Install app" (or "Add to Home screen").
+
+  A gold circle icon appears on your home screen. Tap it and you get:
+    Ideas    - generate video ideas with scores and competition levels
+    Writer   - full scripts (short / long / deep dive) + thumbnail briefs
+    Advisor  - the same candid strategy chat you have on the PC
+    Saved    - everything you made, kept on the phone
+    Settings - which AI brain to use
+
+  It is FREE and there is nothing to type in. It uses the same free AI brain the
+  desktop app uses by default. If you want higher quality you can paste your own
+  Claude or OpenAI key in Settings — that key is stored ONLY on your phone.
+
+  It writes using the EXACT same instructions your desktop studio uses, so the
+  style and quality of the scripts match what you already get on the PC.
+
+  To move something to your PC: tap "Send to PC" on any script and share it to
+  yourself by WhatsApp, email or Drive. Then paste it into the studio.
+
+  What it CANNOT do (by design, not by accident):
+    - make or render videos          - voice-over or subtitles
+    - charts or file analysis        - open your PC Library
+    - feature-length 90/180 min scripts (too long for a phone to finish)
+
+ROUTE 2 — THE WHOLE STUDIO, ON YOUR PHONE (your PC does the work)
+Settings -> "Phone access". Turn it on, open the link it shows on your phone, and
+you get the REAL studio. Not a smaller version, not a copy: the same tabs, the
+same buttons, the same screens you look at on the laptop, running on your phone.
+
+  How it works, in one sentence: the phone shows the app, and every button you
+  press is carried over your private link to the PC, which does the actual work
+  and sends the answer back.
+
+  That means everything is there — Video Studio, Scene Studio, Storyboard,
+  Timeline, Presenter, DJ Station, Charts, PSX, Library, the Agent, Settings.
+  Rendering, voice-over, subtitles and analysis all run on the PC's tools, the way
+  they always did. You watch the progress bar on the phone.
+
+  Finished videos play on the phone straight from the PC, and you can scrub
+  through a long one without downloading it first.
+
+  TWO THINGS STAY ON THE LAPTOP, and the app tells you so when you reach them:
+    - Anything that opens a "choose a file" window ON THE PC. From the phone that
+      would be an invisible box you cannot see or close, so it is refused with a
+      message rather than looking like a freeze. Do that step at the computer.
+    - Recording the PC's own screen. Your phone can record its own camera and
+      microphone here; the PC's screen has to be started at the PC.
+
+  WHAT YOU NEED
+  Your PC switched on with the studio running. On your home Wi-Fi that is all.
+  To use it OUT of the house on mobile data, install Tailscale on both the PC and
+  the phone (free) and use the link labelled "Private VPN" — the app sorts that
+  one to the top for you. While phone access is on, the PC is also stopped from
+  going to sleep, so it is still there when you reach for it.
+
+  The link contains a private key — don't share it. Turning phone access off makes
+  the old link stop working immediately, and a fresh key is made next time.
+
+NOTHING ON YOUR PHONE CAN DAMAGE YOUR WORK
+The phone app keeps its own notes on the phone and has no route to your
+nihilpointzero-data folder at all. Route 2 is as powerful as sitting at the
+laptop — and no more. Deleting still works exactly as it does on the desktop: you
+ask, it confirms, and nothing here skips that step. The AI still cannot delete
+anything, from either device.
+
+-------------------------------------------------------------------------------
+20. NEW (2026-08-01): TELEPROMPTER, AND THE EXPERT THAT WORKS WITHOUT AI
+-------------------------------------------------------------------------------
+
+THE TELEPROMPTER
+There is a new "Teleprompter" tab in the sidebar, and one in the phone app too.
+
+  Paste your script (or pick a saved one, or your phone plan) and press Start.
+  The words scroll past a gold "READ HERE" line - keep your eyes on that line and
+  you will look like you are talking to the camera, not reading a screen.
+
+  Speed is in WORDS PER MINUTE, not a meaningless 1-10 slider. Press "Finish in:
+  10 min" and it sets the speed so your whole script lands in exactly 10 minutes.
+
+  Your [PATTERN INTERRUPT] style notes are shown dimmed and are NEVER counted in
+  the timing - they are notes to you, not words you say out loud.
+
+  On the laptop: Space = start/pause, up/down arrows = speed, Home = back to top.
+  On the phone: just tap the text to pause or resume.
+  "Mirror" flips the text for a glass teleprompter rig.
+
+FIVE WAYS TO RECORD - PICK YOURS IN THE RECORDER TAB
+The Recorder asks how you are recording, because the answer decides where the
+teleprompter must sit so it does not end up in your video:
+
+  1. THIS LAPTOP'S WEBCAM FILMS ME - prompter on this screen under the webcam.
+     The webcam films YOU, not the screen, so it can never be recorded.
+  2. THIS LAPTOP RECORDS ITS SCREEN - open the prompter window, then pick a
+     DIFFERENT screen/window to capture. Tick the box and Windows is also asked to
+     hide the prompter from any recording completely.
+  3. MY PHONE'S CAMERA FILMS ME - prompter on the laptop, stood behind the phone.
+  4. I NARRATE, MY FACE IS NEVER SHOWN - no camera is opened at all. Put the
+     prompter wherever you like, full screen if you want; there is nothing it
+     could appear in.
+  5. MY PHONE RECORDS ITS OWN SCREEN - use Android's own screen recorder (swipe
+     down the quick settings). A web app is not allowed to record your phone's
+     screen and would stop the moment you switch apps. Prompter on the laptop.
+
+  COUNTDOWN: next to the Record button, choose None / 3 / 5 / 10 / 20 / 30
+  seconds. Press Record, get into position, and it starts itself when the number
+  reaches zero.
+
+-------------------------------------------------------------------------------
+21. NEW (2026-08-01): RECORDING THAT DOESN'T LOOK LIKE A PHONE
+-------------------------------------------------------------------------------
+
+THE THING NOBODY TELLS YOU: IT IS NOT THE RESOLUTION
+Everyone reaches for 4K, and 4K is not what gives a phone recording away. The
+bitrate is — how many bits per second are spent on the picture. Every browser,
+left alone, records at roughly 2.5 megabits per second WHATEVER size you asked
+for. That is about a third of what 1080p needs and a fifteenth of what 4K needs.
+Record 4K at the default and you get a file that is bigger than 1080p and looks
+worse: soft, and blocky whenever anything moves.
+
+The Recorder now sets it properly. The figures come straight from YouTube's own
+published guidance for uploads:
+
+      1080p at 30 fps ....  8 Mbps        1080p at 60 fps ....  12 Mbps
+      1440p at 30 fps ....  16 Mbps       1440p at 60 fps ....  24 Mbps
+      4K    at 30 fps ....  45 Mbps       4K    at 60 fps ....  68 Mbps
+
+You do not have to know any of that. The Recorder shows you the number it is
+using and roughly how many MB a minute will cost, before you press record.
+
+THE CONTROLS
+  Resolution     720p / 1080p / 1440p / 4K.
+  Frames/second  24 (cinematic) · 30 (normal talking head) · 60 (smooth — best
+                 for screens, movement, anything fast).
+  Quality        Balanced (smaller files) · YouTube quality (the right answer
+                 almost always) · Master (well above what YouTube needs, for
+                 footage you are going to cut and re-export).
+
+  It also tells you what your camera ACTUALLY gave. Ask for 4K on a camera that
+  tops out at 1080p and it says so, instead of leaving you wondering why the
+  footage looks soft.
+
+WITH YOUR FACE, OR WITHOUT
+  🎙 VOICE ONLY - NO FACE opens no camera at all. No permission prompt, no camera
+  light, nothing that could end up in the file. Your narration is saved as an
+  audio track, ready to put under scenes, charts, stock footage or your own clips.
+  Tick "Clean up my voice on save" and it gets the same de-noise, levelling and
+  broadcast loudness the video enhancer uses — so you sound identical whether or
+  not you were on camera.
+
+FILMING ON THE PHONE — USE THE PHONE'S OWN CAMERA APP
+  In the phone app's scene editor there are now two filming buttons:
+      🎥 Film it now (back camera)      🤳 Film me (front camera)
+  These open your phone's REAL camera app rather than recording inside the web
+  page. That matters more than any setting here: the camera app uses the actual
+  sensor pipeline, the hardware encoder, stabilisation and proper autofocus. A web
+  page cannot get close. The clip comes back and attaches to the scene exactly
+  like one picked from your gallery.
+
+  When you record inside the studio ON your phone (Route 2), a long take is saved
+  to the phone's own Downloads rather than squeezed over the link — a 4K take runs
+  to gigabytes. Short takes go straight to the PC. Either way the take is never
+  lost; the app tells you which happened.
+
+NOTHING IS THROWN AWAY WHEN IT SAVES
+  Recordings are usually captured as H.264 now, which is also what the studio
+  stores. When that is the case the file is copied into place rather than
+  re-encoded — instant, and not one bit of quality lost. When a conversion is
+  genuinely needed it is done at a quality setting where you cannot see the
+  difference from the original. (Ticking "Enhance on save" always re-encodes,
+  because that is what enhancing means.)
+
+THE EXPERT NOW WORKS WITH NO AI AT ALL
+The 🧭 Expert (bottom-left) has three buttons at the top: Instant, Ask AI,
+Execute.
+
+  INSTANT is now the default and needs NO internet and NO AI. It answers straight
+  out of the app manual, in a split second, and it never invents a button that
+  does not exist. Spelling does not matter - "how i add musick to my vedio" finds
+  the music section. You can use everyday words too: say "subtitles" and it finds
+  captions; say "merge" and it finds Stitch.
+
+  ASK AI is the old behaviour, for when you want a freer answer.
+
+  If the AI ever goes quiet, go to Settings -> Setup Health. It sends a real test
+  request and tells you exactly what is wrong ("no longer free", "busy", "cannot
+  reach it").
+
+-------------------------------------------------------------------------------
+22. NEW (2026-08-01): ONE VERSION EVERYWHERE — AND HOW TO CHECK
+-------------------------------------------------------------------------------
+
+THE RULE
+There is only ever ONE live version of this studio. When something is upgraded,
+the old copy is REPLACED — it is never left running quietly beside the new one.
+Five places, and they always match:
+
+  1. the workshop folder (where the code lives)
+  2. the Desktop studio folder
+  3. the installed Windows app
+  4. GitHub
+  5. YOUR PHONE — both the app you installed from the web, and the studio served
+     from this PC
+
+HOW TO CHECK, IN FIVE SECONDS
+  ON THE LAPTOP: the small gold badge in the sidebar, under "OS". It reads the
+  version, the build date and time, and a short code id like `a1b2c3d`. That code
+  id is the only honest proof of which build is running. If it has not changed
+  after an update, the update did not take.
+
+  ON THE PHONE: Settings, at the very bottom — "This app's version". Same idea,
+  same stamp. There is a "Check for a newer version" button next to it.
+
+WHY THE PHONE NEEDED ITS OWN FIX
+A phone app is stored ON the handset so it can open with no signal — that is the
+point of it. But it means publishing a new version does not remove the old one.
+The phone could go on showing last week's app for days, and nothing on the screen
+would tell you. That actually happened.
+
+Now: every build stamps its own identity into the phone app's storage, so the
+previous version's files are deleted rather than left behind; the app notices a
+new version has arrived and reloads itself once; and the version is printed in
+Settings so you can always read it off the screen.
+
+If the phone ever still looks old — press "Check for a newer version" in Settings,
+or just close the tab and open it again.
+
+ONE THING THAT CATCHES EVERYONE
+Running NIHILPOINTZERO-OS-setup.exe does NOT upgrade anything by itself. It
+installs whichever file is already sitting in the folder. A new file only appears
+after a build — either `npm run ship` on this PC, or the automatic build on
+GitHub. So if you install and the badge has not changed, nothing was wrong: there
+was simply no new file yet.
+
+-------------------------------------------------------------------------------
+23. NEW (2026-08-01): YOUR CHANNEL — LEARNING FROM WHAT ALREADY WORKED
+-------------------------------------------------------------------------------
+
+WHY THIS TAB IS DIFFERENT FROM EVERY OTHER ONE
+Every other tab in this studio helps you make the NEXT video. This one tells you
+what already worked on the LAST forty. It is the only tab that reads your own
+history back to you, and it is the only advice in here that is actually about
+your channel rather than about channels in general.
+
+"Use numbers in titles." "Post at 6pm." "Keep it under 60 characters." All of
+that is an average across millions of channels that are not yours, aimed at an
+audience that is not yours. A Pakistani finance channel spoken in Roman Urdu has
+an audience with its own habits, and the only data that describes those habits is
+already sitting in your own uploads. Nothing was reading it.
+
+YOUR AI BRAINS — THE SWITCHBOARD
+Settings has a switchboard: every AI brain the studio can use, each with a plain
+ON/OFF switch and a "Use this one" button. OFF genuinely means off — a switched-off
+brain is never contacted, not even as a backup. The old free online service (the one
+that started demanding payment in 2026) sits OFF; your local brain (Ollama) stays ON.
+
+GEMINI, FREE. Google gives Gemini away through a free key — no card, a daily
+allowance that renews itself. Settings -> "Connect Gemini" -> "Show me how": two
+minutes, a button for each step, and the key is tested against Google for real before
+it is saved. Saving it switches Gemini ON.
+
+CHATGPT AND GROK. Their websites are free but their machinery is not — there is no
+free key for an app to use, and the only way to fake one would be storing your
+passwords, which this studio will never do. They get open-in-browser buttons instead.
+
+WHAT YOU NEED FIRST
+Settings -> "Connect YouTube". It is free, it takes about three minutes, and
+Google never asks for a card.
+
+There used to be one sentence here telling you to go to the Google Cloud Console
+and create an API key. That was an accurate sentence and a useless one, so it is
+gone. Open Settings and press "Show me how" instead. You get five numbered steps,
+each with a button that opens the exact page — no hunting through menus — and
+then you paste the key and press Check.
+
+Check is the part that matters. The app makes one real request with your key and
+tells you in plain English what happened. If it does not work it names which of
+the five steps to go back to. The commonest problem by far is a perfectly good
+key on a project where the YouTube service was never switched on, and the app now
+says exactly that instead of leaving you to guess whether the key was mistyped.
+
+Then step 6 asks which channel is yours, and you type your @name — the same thing
+you see on your own channel page. The app finds the long "UC..." ID for you and
+shows you the channel name it found, so you can see it picked the right one. That
+ID is buried three menus deep inside YouTube's Advanced settings and nobody knows
+it by heart; you no longer need to.
+
+If any of this ever stops working, Settings -> Connect YouTube -> "Check the saved
+key" re-runs the same test on demand and tells you the answer.
+
+Reading a hundred of your own videos costs about four of the ten thousand requests
+Google gives you every day, so you can run this as often as you like.
+
+IF A PANEL COMES BACK EMPTY, IT NOW TELLS YOU WHY
+It used to say "no videos could be read, check your key and channel ID" whatever
+had happened — including when nothing was wrong at all. Seven different things
+can happen and they are now told apart:
+
+  - no key yet, with a button that takes you straight to the walkthrough
+  - there is a key but the app does not know which channel is yours
+  - Google refused the request, and it says which reason Google gave
+  - Google itself had a problem (amber) — this says nothing about your key and
+    nothing needs fixing; try again in a few minutes
+  - it could not reach YouTube at all (amber) — this is NOT the app claiming you
+    have no videos, it is the app saying it does not know
+  - only part of your channel could be read — what is shown is real, but the
+    numbers are a floor rather than a total, and it says so
+  - everything is set up correctly and the channel simply has no videos yet,
+    which is not a fault at all
+
+The colours mean something. Red is "this is wrong and here is the fix". Amber is
+"I could not tell" — never treat amber as a fault to chase. Gold with a button is
+"three minutes of setup and this works".
+WHAT YOU NEED FIRST
+Settings -> your YouTube key and your channel ID. Both are free. Reading a
+hundred of your own videos costs about four of the ten thousand requests Google
+gives you every day, so you can run this as often as you like.
+
+WORK IT OUT — WHAT THE THREE ANSWERS MEAN
+
+  WHICH TITLE SHAPES WORKED. It tries eight shapes against your history — has a
+  number, is a question, names an institution (SBP, PSX, IMF), mentions the rupee
+  or the dollar, written in Roman Urdu, short, has capitals, promises an
+  explanation — and reports which of them your audience actually rewarded.
+
+  It uses the MIDDLE video, not the average. One video that went viral drags an
+  average so far that every conclusion becomes "do what that one did", which is
+  usually luck you cannot repeat. The middle video is the one you are about to
+  make.
+
+  It refuses to answer more often than it answers, on purpose. Below eight videos
+  it says "not enough videos to tell yet". If nineteen of your titles have a
+  number and one does not, it also says that — one video is not a control group.
+  And a difference under 10% is called no real difference, because it is noise and
+  chasing it would waste a year. Every claim you DO get carries the number of
+  videos behind it, right in the sentence.
+
+  WHEN YOUR AUDIENCE SHOWS UP. Your videos grouped by day, and separately by
+  hour. Separately, because there are 168 day-and-hour combinations and you would
+  need thousands of videos before any single one of them meant anything. A single
+  freak result at 3am will never be recommended to you.
+
+  TRY A TITLE ON IT. Type a title you are considering and it scores it against
+  your own history — and tells you WHY, not just a number. "Missing a number,
+  which is worth about +130% for you" is something you can act on. A score of 73
+  is not. If there is not enough history to score honestly, it says so and tells
+  you that general advice is all anyone could offer, and that it is worth less
+  than your own data will be.
+
+YOUR SERIES — READ OUT OF YOUR OWN TITLES
+A standalone video ends and the viewer leaves. An episode ends and there is
+somewhere to go. This finds your series without you tagging anything, by reading
+the titles you already published: #4, Part 2, Episode 3, Ep 3, E03, "2 of 5", and
+Hissa 2 and Qist 3 in Roman Urdu.
+
+It is deliberately cautious about what counts as an episode number, because the
+output goes into a PUBLISHED description where a wrong guess stays wrong.
+"Budget 2026" is not episode 2026. "PSX crosses 78000" is not episode 78000.
+"Reserves at 11" is not episode 11. A number only counts when there is a real
+marker in front of it.
+
+What it gives you:
+  • which of your videos belong together, in EPISODE order — not upload order,
+    which is what puts episode 4 before episode 3 in a playlist when you publish
+    out of sequence
+  • a warning when a number is missing from the middle of a run, or when two
+    videos both claim the same number (this accumulates quietly and is a real mess)
+  • the next episode number to use
+  • three blocks ready to paste: the description links, the pinned comment (which
+    is where the next click actually happens), and the end-screen line
+
+It will never write "Next: episode 5" under episode 4 before episode 5 exists.
+
+READ MY COMMENTS — THE CHEAPEST IDEA SOURCE THERE IS
+Every other way of finding a video idea is a guess about what people want. Your
+comments are people telling you, in their own words, unprompted. And the same
+question asked forty times is a video with a guaranteed audience before you
+record a frame. It is also the one source no competitor can copy, because they
+are your commenters.
+
+Nobody reads two thousand comments. That is the only reason this is not already
+everybody's process.
+
+It reads the comments on your recent videos, pulls out the questions, groups the
+ones asking the same thing, and ranks them by how many DIFFERENT people asked.
+Two things worth knowing about how it works:
+
+  • Roman Urdu questions usually carry no question mark at all. Relying on "?"
+    would silently throw away half your comments, so it recognises question words
+    in both languages instead.
+  • Every question it shows you is quoted word for word from a real comment. No AI
+    summarises them. An AI summary of "what people are asking" reads beautifully
+    and may correspond to nothing anybody actually wrote — and there is no way to
+    tell from looking at it. You can check a quote.
+
+Likes are used only to break ties, and capped, so that two heavily-liked comments
+can never outrank five people independently asking the same thing. Likes on one
+comment are noisy — thread position, a joke that landed. Distinct people asking
+is not.
+
+-------------------------------------------------------------------------------
+24. NEW (2026-08-01): HEAR IT, AND FIX THE FIRST FIFTEEN SECONDS
+-------------------------------------------------------------------------------
+
+READ IT TO ME (Script Writer)
+A script is not read. It is SPOKEN. Reading it silently hides exactly the faults
+that ruin a take, and you find them at minute nine with the camera running:
+
+  • the sentence you cannot get through in one breath, so you either rush the end
+    or breathe in the middle of it — both audible
+  • the figure that cannot be read off the page ("11.2bn", "250000", "11-12%")
+  • the word written twice in a row, which your eye skips and your ear will not
+  • the line that switches between English and Roman Urdu mid-sentence, which is
+    fine if you meant it and a stumble if you did not
+
+Listening at normal speed takes as long as the video, so nobody does it twice. It
+reads to you at DOUBLE speed instead — a twelve-minute script checks in six
+minutes — and the pitch is held, so it still sounds like a person talking quickly
+rather than a cartoon. 1.25x to 3x are all there; 2x is the one to use.
+
+It is built to keep quiet unless something is genuinely wrong. A check that flags
+forty things in a finance script is a check you turn off after one use, and then
+it catches nothing for the rest of time. If it says nothing, it still tells you to
+listen anyway — your ear catches what a check cannot.
+
+SHOW 5 OPENINGS (Script Writer)
+The first fifteen seconds decide whether the other twelve minutes get watched,
+and they are the hardest part of the script to judge from the inside. This shows
+you the same material five ways:
+
+  • as a CONTRADICTION — what everyone believes, and why it is wrong
+  • as a NUMBER — the figure that makes someone stop
+  • as a QUESTION — the one they already have
+  • as WHAT IS AT STAKE — what it costs them
+  • DROPPED MID-SCENE — starting in the middle, no preamble
+
+Every one is built from a sentence already in your script, and the sentence it
+came from is printed underneath so you can check it rather than trust it. Nothing
+is invented. "Put it at the top" drops your choice into the draft.
+
+WHERE YOUR NUMBERS CAME FROM (Script Writer)
+Your channel lives on its numbers being right. One wrong figure in a video about
+the reserves is the comment that gets pinned, and a published video cannot be
+edited.
+
+The "Verified data" box has always been where you put the numbers you looked up.
+Nothing was reading it back. So a figure could be pasted in correctly and then
+mistyped into the narration, and nothing noticed.
+
+Write them one per line, however you naturally would:
+
+    Source: State Bank of Pakistan | https://sbp.org.pk/ecodata
+    Reserves, 2026-07-31: 11.2
+    Import cover: 2.1
+    Source: PSX
+    KSE-100 close: 78,412
+
+A "Source:" line applies to everything under it, so you do not repeat it. Lines
+with no number are ignored rather than treated as mistakes — it is your own
+notepad. Then it checks every figure in your script against them and flags the
+ones it cannot trace: those are the ones a comment will ask about. It also writes
+the sources block for your description, which is the cheapest credibility there
+is and something almost no finance channel bothers to publish.
+
+-------------------------------------------------------------------------------
+25. NEW (2026-08-01): DEAD AIR, MOVING CHARTS, AND SIX INVISIBLE FIXES
+-------------------------------------------------------------------------------
+
+DEAD AIR (Video Studio, per video)
+Two buttons, in this order, and the order is the point.
+
+"What would be cut?" reads the take and tells you: how much dead air, across how
+many cuts, and how long the result will be. It changes nothing. This is cheap —
+two reads and no re-encode — so it can afford to ask before it acts. A silence
+remover that just does it to a finished take is one you will never trust with the
+take that matters.
+
+"Cut it" then removes the long pauses. It keeps a quarter-second of breath at
+each one, so it still sounds like a person talking rather than a machine gun. It
+never touches the opening or the very end — a hard cut in the first moments looks
+like a broken file, and the sign-off should not be clipped. And it writes a NEW
+video. Your original stays in the list, always.
+
+Picture and sound are cut on exactly the same marks in one pass, which is the
+thing that goes wrong in cheap silence removers: the sound gets shorter than the
+picture and your lips stop matching your words.
+
+DRAW IT ON (Charts)
+A chart that appears all at once is a picture. A chart that draws itself while you
+talk over it is the explanation. Press "Draw it on" and the price line, the
+candlesticks, both moving averages and the RSI all grow together over four
+seconds, then hold. Record the screen while it plays and lay it over your
+narration.
+
+THE SIX YOU WILL NEVER SEE — ONLY NOTICE
+These need no button and cannot be switched on. They are simply how every render
+works now.
+
+  1. ONE ENCODE INSTEAD OF FOUR. Colour, captions, watermark and trimming used to
+     each be a separate pass, and every pass throws away a little picture quality
+     for good. They now happen together. The loss was measured, not guessed: four
+     passes scored 0.9508 against the original, one pass scores 0.9957.
+
+  2. AUDIO AT THE LEVEL YOUTUBE WANTS. YouTube turns every upload down to about
+     the same loudness. Delivering louder than that does not make you louder — it
+     makes YouTube turn you down, and what you lose is the quiet-to-loud range you
+     mixed, not the volume you were chasing. Your videos now arrive at its own
+     target.
+
+  3. MOVEMENT ON FOOTAGE. Photos already got a slow camera move. Video clips got
+     nothing, and a locked-off frame held for a whole minute is the single thing
+     that most makes a video look cheap. Each stretch now gets a slow push in or
+     pull out, alternating, so it never creeps in one direction and ends
+     uncomfortably tight.
+
+  4. SCENES TIGHTEN TOWARD THE END. The last third of a finance video is where
+     people leave, and an even split makes the end feel exactly as slow as the
+     beginning when it needs to feel faster. The total length is preserved to the
+     frame, so your narration still lines up.
+
+  5. B-ROLL LANDS ON THE WORD. When you say "reserves" or "mehngai", the matching
+     footage appears on that word rather than three sentences later. Before, the
+     footage changed on an even timer that had nothing to do with what you were
+     saying.
+
+  6. A ONE-SECOND CHECK BEFORE THE RENDER. It checks that ffmpeg will actually
+     RUN — antivirus quarantine leaves the file sitting exactly where it was and
+     simply refuses to execute it, so "the file is there" proves nothing — that
+     the folder can be written to, and that there is disk space. If something is
+     genuinely broken you find out in a second instead of twenty minutes in with
+     nothing to show. It only ever REFUSES for something that would have failed
+     anyway; a slow encoder is a warning, never a block, because this studio is
+     built to work on any machine.
+
+-------------------------------------------------------------------------------
+26. NEW (2026-08-01): "WHAT CHANGED" — SO AN UPGRADE STOPS BEING INVISIBLE
+-------------------------------------------------------------------------------
+
+Settings -> What changed.
+
+The gold badge in the sidebar proves WHICH build you are running. It cannot tell
+you what that build actually does differently, and so every upgrade until now has
+been invisible: the work landed, the app looked identical, and the only way to
+find out about a new feature was a chat message that scrolled away.
+
+This lists what is new in the build you are running. Two rules make it worth
+reading:
+
+  IT NEVER ADVERTISES SOMETHING THAT IS NOT THERE. This is the normal way a
+  release-notes list goes wrong — the note ships before the code, you go looking
+  for the button, and the button does not exist. Anything dated after the build
+  you are running is WITHHELD, and appears for the first time in the build that
+  really contains it.
+
+  IT REMEMBERS PER ITEM, NOT PER DATE. This studio sometimes gets two upgrades in
+  an afternoon. A list that remembers "the last version you looked at" loses
+  everything that shipped later the same day.
+
+"Mark all as read" clears the count. It deletes nothing — the list is still there.

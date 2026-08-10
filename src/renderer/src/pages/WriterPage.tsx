@@ -3,15 +3,19 @@ import { useLocation } from 'react-router-dom'
 import type { GeneratedScript, LanguageMix, ScriptLength, ScriptStyle, VideoIdea, VideoStyle } from '../../../shared/types'
 import { VIDEO_STYLES } from '../../../shared/types'
 import MicButton, { appendDictation } from '../components/MicButton'
+import BusyTimer from '../components/BusyTimer'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/Confirm'
 import { useStudio } from '../store/StudioContext'
 import { useProducerTarget } from '../store/ProducerContext'
 
-/** Turns an absolute path into a file:// URL usable in <img>. */
-function fileUrl(p: string): string {
-  return `file:///${p.replace(/\\/g, '/').replace(/^\/+/, '')}`
-}
+import { fileUrl } from '../../../shared/mediaUrl'
+import HookRebuildPanel from '../components/HookRebuildPanel'
+import SourcesPanel from '../components/SourcesPanel'
+import DualLanguagePanel from '../components/DualLanguagePanel'
+import ThumbnailTestPanel from '../components/ThumbnailTestPanel'
+import ReadAloudPanel from '../components/ReadAloudPanel'
+import RepurposePanel from '../components/RepurposePanel'
 
 const lengthOptions: { value: ScriptLength; label: string }[] = [
   { value: 'short', label: 'Short (6-8 min)' },
@@ -46,7 +50,7 @@ const styleOptions: { value: ScriptStyle; label: string }[] = [
 export default function WriterPage() {
   const location = useLocation()
   const incomingIdea = (location.state as { idea?: VideoIdea } | null)?.idea
-  const { writer, setWriter, clearWriter, saveStatus } = useStudio()
+  const { writer, setWriter, clearWriter, setScene, saveStatus } = useStudio()
 
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
   useProducerTarget({
@@ -64,9 +68,26 @@ export default function WriterPage() {
         ideaContext: `${incomingIdea.angle}\nHook: ${incomingIdea.hook}`,
         length: incomingIdea.suggestedLength
       })
+      setScene((prev) => ({
+        title: incomingIdea.title,
+        body: prev.body || ''
+      }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingIdea?.id])
+
+  useEffect(() => {
+    setScene((prev) => {
+      const shouldUpdateTitle =
+        prev.title === '' || prev.title === writer.topic || prev.title === writer.script?.title
+      const shouldUpdateBody = prev.body === '' || prev.body === writer.body
+      if (!shouldUpdateTitle && !shouldUpdateBody) return prev
+      return {
+        title: shouldUpdateTitle ? writer.script?.title || writer.topic : prev.title,
+        body: shouldUpdateBody ? writer.body : prev.body
+      }
+    })
+  }, [writer.body, writer.script?.title, writer.topic, setScene])
 
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
@@ -115,6 +136,7 @@ export default function WriterPage() {
         styles: writer.styles
       })
       setWriter({ script: result, body: result.body, thumbnailBrief: null })
+      setScene({ title: result.title || writer.topic, body: result.body })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script')
     } finally {
@@ -239,8 +261,13 @@ export default function WriterPage() {
   async function handleSaveThumbnail(): Promise<void> {
     if (!thumbImage) return
     const src = decodeURI(thumbImage.replace(/^file:\/\/\//, '').replace(/\?t=\d+$/, ''))
-    const res = await window.api.script.saveThumbnail(src)
-    if (res.saved) setThumbSaveNote(`Saved to ${res.path}`)
+    try {
+      const res = await window.api.script.saveThumbnail(src)
+      // Cancel and failure must not look identical to "the button did nothing".
+      setThumbSaveNote(res.saved ? `Saved to ${res.path}` : 'Save cancelled.')
+    } catch (err) {
+      setThumbSaveNote(err instanceof Error ? err.message : 'Could not save the thumbnail.')
+    }
   }
 
   async function handleGenerateVoiceover(): Promise<void> {
@@ -266,7 +293,7 @@ export default function WriterPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-serif text-ink-100">Script Writer</h1>
-            <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : ''}</span>
+            <span className="text-[11px] text-ink-500">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? '! not saved (disk error)' : ''}</span>
           </div>
           <p className="text-ink-400 text-sm mt-1">
             Institutional-grade scripts, multi-style. Your work auto-saves and survives restart.
@@ -295,7 +322,9 @@ export default function WriterPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-xs text-ink-400">Topic</label>
-                <MicButton onText={(t) => setWriter({ topic: appendDictation(writer.topic, t) })} />
+                {/* Functional form: the transcript arrives async, so a patch built from
+                    the render-time value overwrote anything typed while the mic ran. */}
+                <MicButton onText={(t) => setWriter((prev) => ({ topic: appendDictation(prev.topic, t) }))} />
               </div>
               <textarea
                 value={writer.topic}
@@ -308,7 +337,7 @@ export default function WriterPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-xs text-ink-400">Angle / context (optional)</label>
-                <MicButton onText={(t) => setWriter({ ideaContext: appendDictation(writer.ideaContext, t) })} />
+                <MicButton onText={(t) => setWriter((prev) => ({ ideaContext: appendDictation(prev.ideaContext, t) }))} />
               </div>
               <textarea
                 value={writer.ideaContext}
@@ -320,7 +349,7 @@ export default function WriterPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-xs text-ink-400">Audience note (optional)</label>
-                <MicButton onText={(t) => setWriter({ audienceNote: appendDictation(writer.audienceNote, t) })} />
+                <MicButton onText={(t) => setWriter((prev) => ({ audienceNote: appendDictation(prev.audienceNote, t) }))} />
               </div>
               <input
                 value={writer.audienceNote}
@@ -331,7 +360,7 @@ export default function WriterPage() {
             <div>
               <div className="flex items-center justify-between">
                 <label className="text-xs text-ink-400">Verified numbers / sources (optional)</label>
-                <MicButton onText={(t) => setWriter({ verifiedData: appendDictation(writer.verifiedData, t) })} />
+                <MicButton onText={(t) => setWriter((prev) => ({ verifiedData: appendDictation(prev.verifiedData, t) }))} />
               </div>
               <textarea
                 value={writer.verifiedData}
@@ -368,7 +397,10 @@ export default function WriterPage() {
                 Fetches exactly the one document you link to (psx.com.pk only) — for personal reference, per PSX's
                 own terms. Not a crawler; it won't browse the site on its own.
               </p>
-              {psxStatus && <p className="text-[11px] text-ink-500 mt-1">{psxStatus}</p>}
+              {/* break-all: this can contain a full absolute Windows path, which is one
+                  unbreakable token — without it the ~315px column forced the whole
+                  page to scroll horizontally. */}
+              {psxStatus && <p className="text-[11px] text-ink-500 mt-1 break-all">{psxStatus}</p>}
 
               <button
                 onClick={handleCorrelate}
@@ -454,6 +486,7 @@ export default function WriterPage() {
                 <span className="text-[11px] text-gold-300/90 leading-snug">{progress}</span>
               </div>
             )}
+            {loading && !progress && <BusyTimer label="Writing the script" />}
           </div>
           {error && (
             <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -477,7 +510,12 @@ export default function WriterPage() {
                 className="mt-3 flex-1 min-h-[420px] w-full rounded-md bg-ink-800 border border-ink-700 px-3 py-3 text-sm text-ink-100 leading-relaxed outline-none focus:border-gold-500 font-serif"
               />
               <div className="flex flex-wrap gap-2 mt-3 items-center">
-                <span className="text-xs text-emerald-400">Auto-saved to Library ✓</span>
+                {/* Honest label: only the ORIGINAL generated script is in the Library;
+                    edits made in this box live in this tab's autosave, not the Library.
+                    The old "Auto-saved to Library ✓" claimed edits were saved there too. */}
+                <span className="text-xs text-emerald-400" title="The original generated script is in the Library. Edits you make here are kept in this tab's autosave (they survive restart) but do not update the Library copy.">
+                  Original in Library ✓ · edits kept here
+                </span>
                 <button
                   onClick={handleExport}
                   className="rounded-md border border-ink-600 hover:border-ink-400 text-ink-200 text-sm px-4 py-1.5 transition-colors"
@@ -499,6 +537,49 @@ export default function WriterPage() {
                   {generatingThumbnail ? 'Designing…' : 'Thumbnail Brief'}
                 </button>
               </div>
+
+              {/* One wrong figure is the comment that gets pinned, and a published video
+                  cannot be edited. This reads the "Verified data" box back against the
+                  script — the field existed, nothing was checking against it. */}
+              <div className="mt-3">
+                <SourcesPanel script={writer.body} notes={writer.verifiedData ?? ''} />
+              </div>
+
+              {/* The first fifteen seconds decide whether the rest gets watched, and they
+                  are the hardest part to judge from inside the draft. */}
+              <div className="mt-3">
+                <HookRebuildPanel
+                  script={writer.body}
+                  onUse={(hook) => setWriter({ body: `${hook}\n\n${writer.body}` })}
+                />
+              </div>
+
+              {/* Proof it by ear before recording it. A script is spoken, not read, and
+                  silent reading hides exactly the faults that cost a retake. */}
+              <div className="mt-3">
+                <ReadAloudPanel script={writer.body} />
+              </div>
+
+              {/* Thumbnail variants, plus the arithmetic that tells a real difference from
+                  noise. An automated A/B test is not possible — YouTube exposes no
+                  per-thumbnail figure — and the panel says so rather than pretending. */}
+              <div className="mt-3">
+                <ThumbnailTestPanel
+                  title={writer.script?.title ?? ''}
+                  headline={thumbHeadline}
+                  script={writer.body}
+                />
+              </div>
+
+              {/* Both languages, with the codes right. Roman Urdu is ur-Latn, not en and
+                  not ur, and getting that wrong quietly costs reach. */}
+              <div className="mt-3">
+                <DualLanguagePanel title={writer.script?.title ?? ''} description={writer.body} />
+              </div>
+
+              {/* One script, everywhere it needs to go. Runs in the page — no AI, no
+                  internet, instant. See components/RepurposePanel.tsx. */}
+              <RepurposePanel title={writer.script.title} body={writer.body} />
               <p className="text-[11px] text-ink-500 mt-2">
                 Want a narrated video of this script? Head to the <span className="text-gold-400">Video Studio</span>{' '}
                 tab — this draft is available there.

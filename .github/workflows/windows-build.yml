@@ -1,0 +1,189 @@
+# Builds the Windows app on every push to main and refreshes the GitHub download.
+#
+# WHY THIS EXISTS
+# `npm run ship` can only run on the owner's Windows PC — it needs PowerShell and the
+# Desktop studio folder. That means every change made from anywhere else left the
+# GitHub download stale, with nothing but a reminder to fix it. This closes the half
+# of that problem a machine can close: after this, the download on GitHub always
+# matches main, with nobody touching a PC.
+#
+# WHAT IT STILL CANNOT DO
+# It cannot copy into the Desktop studio folder or update the installed app — only the
+# owner's PC can do that. `npm run ship` remains the way to update the actual laptop.
+# This guarantees GitHub is current; it does not replace ship.
+#
+# COST
+# Windows runners bill at 2x on private repositories, and a full electron build takes
+# roughly 10-15 minutes. It therefore runs ONLY on main (not on feature branches) plus
+# manual dispatch, so ordinary work-in-progress pushes cost nothing.
+name: Build the Windows app
+
+on:
+  push:
+    branches: [main]
+    # Documentation-only pushes do not change the exe, so don't spend a build on them.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'phone/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to replace the assets on the rolling release
+
+concurrency:
+  group: windows-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` (not install) so the build uses exactly the locked dependency tree.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the tests
+        run: npm run test
+
+      - name: Refresh the changelog
+        run: npm run changelog:update
+
+      - name: Lint
+        run: npm run lint
+
+      # The phone bridge and the phone app are built by SEPARATE tsconfigs that the
+      # Electron build never touches — so a break in either is invisible until someone
+      # opens it on a handset. Checked here instead.
+      - name: Typecheck the phone bridge and the phone app
+        run: |
+          npx tsc -p tsconfig.remote.json --noEmit
+          npm run typecheck:phone
+
+      # `dist:win` now also builds out/remote/bridge.js — the script that lets the
+      # studio's own screens run in a phone browser. electron-builder ships out/**,
+      # so it travels with the exe.
+      #
+      # It passes --publish never. electron-builder auto-detects CI and tries to
+      # publish the release ITSELF, which failed the first run with "GitHub Personal
+      # Access Token is not set" AFTER both exes had already built successfully. The
+      # release is handled explicitly further down, with a token, so its implicit
+      # attempt is pure downside.
+      # THE BUILD TAG IS DECIDED HERE, NOT LEFT TO CHANCE.
+      #
+      # Two things have to agree byte-for-byte: the gold badge baked into the exe, and the
+      # "Build ..." line written into the release notes below. The app's update check reads
+      # that line and compares it with its own badge, so if they differ by even a minute
+      # the app can update successfully and STILL believe it is behind — an update loop.
+      #
+      # Left to itself, electron.vite.config.ts self-stamps from the clock at the moment
+      # each process is bundled, which is not a value this job can quote afterwards.
+      # Computing it once here and exporting NPZ_BUILD_TAG (the same variable ship.ps1
+      # uses) makes the badge and the notes provably the same string.
+      - name: Decide the build tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="$(node -p "require('./package.json').version")"
+          STAMP="$(date -u '+%Y-%m-%d %H:%M')"
+          echo "NPZ_BUILD_TAG=v$VER · $STAMP · ${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Build the Windows exes
+        run: npm run dist:win
+
+      - name: Fail if the phone bridge is missing from the build
+        shell: bash
+        run: test -s out/remote/bridge.js
+
+      # The studio keeps ONE rolling release tagged 'latest' whose assets are replaced
+      # each time, so the README's /releases/latest/download/... links never change.
+      # This mirrors what ship.ps1 does, using the same tag.
+      - name: Refresh the GitHub download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=latest
+
+          # Create the rolling release the first time; afterwards just reuse it.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Download NIHILPOINTZERO-OS (always the newest version)" \
+              --notes "Built automatically from main." \
+              --latest
+          fi
+
+          # The exes AND every shipped document. Leaving any of them out means the
+          # download page serves a brand-new exe alongside instructions from days
+          # earlier — the worst combination, because the docs then describe features the
+          # user cannot find, or omit the ones that are there.
+          #
+          # Eight documents, not four (user's instruction, 2026-08-01): CHANGELOG.md,
+          # QA-REPORT.md, SETUP_GUIDE.md and UPDATE-MY-STUDIO.cmd are maintained on the
+          # same footing as the four core studio docs so they can never go stale next to
+          # the others.
+          gh release upload "$TAG" \
+            "release/NIHILPOINTZERO-OS-setup.exe" \
+            "release/NIHILPOINTZERO-OS-portable.exe" \
+            "docs/HOW-TO-USE.txt" \
+            "docs/NIHILPOINTZERO-GUIDE.txt" \
+            "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
+            "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "docs/QA-REPORT.md" \
+            "CHANGELOG.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
+            --clobber
+
+          # THE LAST LINE IS LOAD-BEARING, NOT DECORATION.
+          #
+          # main/updateCheck.ts finds the newest published version by matching
+          #   /Build (v[^\n*]+)/
+          # against these notes. This step used to write only "Built automatically from
+          # main on <stamp>" — no "Build v..." anywhere — so the check found nothing,
+          # concluded there was no update, and stayed silent. Every release published from
+          # a cloud session was invisible to every installed app. The user reported the
+          # update notice "never appearing"; this was why.
+          #
+          # Rules for anyone editing the line: it must contain "Build " followed by the
+          # exact build tag, the tag must carry "yyyy-mm-dd HH:MM" (tagDate parses that),
+          # and NOTHING containing an asterisk may follow the tag on that line, because the
+          # capture stops at the first '*'. Hence Build goes last.
+          gh release edit "$TAG" \
+            --title "Download NIHILPOINTZERO-OS (always the newest version)" \
+            --notes "Built automatically from main (commit ${GITHUB_SHA::7}).
+
+          - **NIHILPOINTZERO-OS-setup.exe** — installs the app (recommended).
+          - **NIHILPOINTZERO-OS-portable.exe** — single file, runs from anywhere.
+
+          Note: this refreshes the GitHub download only. To update the studio folder on
+          your own PC, run \`npm run ship\` there.
+
+          Build $NPZ_BUILD_TAG"
+
+      # SAFETY NET ONLY ON FAILURE. This used to run on every build (if: always,
+      # 14-day retention), which stored ~435 MB of exes per build against GitHub's
+      # 500 MB free Actions-storage allowance — one build nearly filled it, the second
+      # blew past it, and the owner got "95% full" and "100% full" emails an hour
+      # apart. The artifact's only purpose is to save the exes when the RELEASE upload
+      # fails, so that is now the only time it exists. Normal-case storage cost: zero.
+      - name: Keep a copy of the build (only if the release upload failed)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exes
+          path: |
+            release/NIHILPOINTZERO-OS-setup.exe
+            release/NIHILPOINTZERO-OS-portable.exe
+          if-no-files-found: warn
+          retention-days: 3

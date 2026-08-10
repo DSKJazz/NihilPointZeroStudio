@@ -24,6 +24,12 @@ export interface AiFootageRequest {
   durationSec: number
   style?: VideoStyle
   resolution?: VideoResolution
+  /**
+   * Where to write footage.mp4. When the caller passes its build-scratch dir the
+   * file is cleaned up with the build; without it, each run leaked a fresh
+   * %TEMP%\ai-cloud-* directory that nothing ever removed.
+   */
+  scratchDir?: string
 }
 
 /** True when both an API key and an endpoint are configured. */
@@ -82,7 +88,7 @@ export async function generateCloudFootage(req: AiFootageRequest): Promise<strin
   const dl = await fetch(videoUrl, { signal: AbortSignal.timeout(300_000) })
   if (!dl.ok) throw new Error(`Could not download the generated footage (HTTP ${dl.status}).`)
   const buf = Buffer.from(await dl.arrayBuffer())
-  const out = join(mkdtempSync(join(tmpdir(), 'ai-cloud-')), 'footage.mp4')
+  const out = join(req.scratchDir ?? mkdtempSync(join(tmpdir(), 'ai-cloud-')), 'footage.mp4')
   writeFileSync(out, buf)
   return out
 }

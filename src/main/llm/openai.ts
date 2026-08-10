@@ -3,12 +3,19 @@ import type { IdeaGenRequest, ScriptGenRequest, TrendTopic, VideoIdea, YouTubeSi
 import { buildIdeaPrompt, buildScriptPrompt, buildThumbnailPrompt, buildTrendPrompt } from '../prompts'
 import { LLMRequestError, type LLMProvider } from './types'
 import { extractJson, parseScriptResponse } from './parse'
+import { logAiError } from './errorLog'
+import { CHOSEN_TIMEOUT_MS, SDK_MAX_RETRIES } from './limits'
 
 export class OpenAIProvider implements LLMProvider {
   private client: OpenAI
 
-  constructor(apiKey: string, private model: string) {
-    this.client = new OpenAI({ apiKey })
+  /**
+   * `timeout` and `maxRetries` are not optional polish. Left to the SDK's defaults
+   * (10 minutes, 2 retries) a hung service held one request for half an hour in
+   * silence, which is exactly the "the panel never responds" fault. See llm/limits.ts.
+   */
+  constructor(apiKey: string, private model: string, timeoutMs = CHOSEN_TIMEOUT_MS) {
+    this.client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: SDK_MAX_RETRIES })
   }
 
   private async complete(prompt: string, maxTokens: number): Promise<string> {
@@ -22,8 +29,11 @@ export class OpenAIProvider implements LLMProvider {
       if (!text) throw new LLMRequestError('OpenAI returned no text content')
       return text
     } catch (err) {
+      const status = (err as { status?: number })?.status
+      const message = err instanceof Error ? err.message : 'OpenAI request failed'
+      logAiError({ at: new Date().toISOString(), provider: 'openai', feature: 'text', status, message })
       if (err instanceof LLMRequestError) throw err
-      throw new LLMRequestError(err instanceof Error ? err.message : 'OpenAI request failed')
+      throw new LLMRequestError(message, { status, permanent: status === 401 || status === 403 })
     }
   }
 

@@ -1,0 +1,33 @@
+{
+  // Standalone on purpose — deliberately NOT referenced from tsconfig.json, so the
+  // Electron app's own typecheck and build are completely unaffected by the phone
+  // app. Run it directly:
+  //
+  //   npx tsc -p tsconfig.phone.json --noEmit
+  //
+  // (`npm run typecheck:phone` does the same thing.)
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // The phone app runs in a browser, not Electron: DOM types, no node types.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  // The shared/parser files are pulled in through imports from phone/src; listing
+  // phone/src alone keeps the check focused on what actually ships.
+  //
+  // Tests are excluded because they legitimately use node APIs (they read the built
+  // bundle from disk to prove no prompt wording leaked into it). Keeping them out
+  // preserves the useful guarantee that SHIPPED phone code cannot touch node at all.
+  // They are typechecked by tsconfig.phone-test.json instead.
+  "include": ["phone/src/**/*"],
+  "exclude": ["phone/src/**/*.test.ts"]
+}

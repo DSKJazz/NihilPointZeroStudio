@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import IdeaCard from '../components/IdeaCard'
+import BusyTimer from '../components/BusyTimer'
 import MicButton, { appendDictation } from '../components/MicButton'
 import { confirmDialog } from '../components/Confirm'
 import { useStudio } from '../store/StudioContext'
@@ -57,7 +58,9 @@ export default function IdeasPage() {
         <div>
           <div className="flex items-center justify-between">
             <label className="text-xs text-ink-400">Focus area</label>
-            <MicButton onText={(t) => setIdeas({ focusArea: appendDictation(state.focusArea, t) })} />
+            {/* Functional form — a patch from the render-time value overwrote anything
+                typed while the transcription ran. */}
+            <MicButton onText={(t) => setIdeas((prev) => ({ focusArea: appendDictation(prev.focusArea, t) }))} />
           </div>
           <input
             value={state.focusArea}
@@ -69,7 +72,7 @@ export default function IdeasPage() {
         <div>
           <div className="flex items-center justify-between">
             <label className="text-xs text-ink-400">Audience note (optional)</label>
-            <MicButton onText={(t) => setIdeas({ audienceNote: appendDictation(state.audienceNote, t) })} />
+            <MicButton onText={(t) => setIdeas((prev) => ({ audienceNote: appendDictation(prev.audienceNote, t) }))} />
           </div>
           <input
             value={state.audienceNote}
@@ -100,6 +103,7 @@ export default function IdeasPage() {
           >
             {loading ? 'Generating…' : 'Generate Ideas'}
           </button>
+          {loading && <BusyTimer label="Generating ideas" />}
         </div>
       </div>
 

@@ -1,6 +1,19 @@
 ==============================  NIHILPOINTZERO — 1-PAGE CHEAT SHEET  ==============================
 (Full manual: NIHILPOINTZERO-GUIDE.txt · Start here: HOW-TO-USE.txt · What's real/free/online: MEGA-DIAGNOSTIC-REPORT.md)
 
+AM I CURRENT? ..... Settings -> Version box at the top. Says up to date / newer available /
+                    could not check, and shows both version stamps. "Check now" re-checks.
+UPDATES ........... nothing to do. The studio opens when Windows starts and installs
+                    anything new right then, before you sit down. Never during a render,
+                    and never when YOU opened the app yourself. Off switch: Settings ->
+                    "Open the studio when Windows starts".
+UPDATE BY HAND .... open the app. If a blue "A newer version exists" notice appears at the
+                    bottom, press "Get the update". Done - the app downloads it, starts it
+                    and reopens updated. Say yes to Windows once. No web page, no Downloads
+                    folder, no File Explorer.
+                    WHOLE WORKSHOP TOO? double-click UPDATE-MY-STUDIO.cmd in the code folder
+                    - that also refreshes the code folder, your Desktop folder and GitHub.
+                    5-10 min, walk away.
 RUN IT ............ EITHER double-click NIHILPOINTZERO-OS-portable.exe (portable; unpacks ~40-60s)
                     OR run NIHILPOINTZERO-OS-setup.exe ONCE to install -> opens in ~2s from then on,
                     taskbar pins are SAFE, and it uses the SAME data folder (same videos/settings).
@@ -12,17 +25,102 @@ BUILD BADGE ....... the sidebar (under "OS") shows e.g. "v0.1.1 · 2026-07-19 15
 DON'T PIN THE RUNNING PORTABLE EXE ... a taskbar/Start pin made while the PORTABLE app is open freezes
                     to a temporary copy and keeps launching OLD code forever. (The INSTALLED version
                     has no such trap — pin it freely.) This was the #1 cause of "my updates didn't show".
+MAKE SHORTS ....... Video Studio -> any video -> "📱 Cut into vertical shorts" -> it finds the best
+                    moments itself and makes 9:16 captioned clips for Shorts/TikTok (free, offline)
+STUCK? ASK IT .... click 🎬 Producer (bottom-right of EVERY tab) and ask "how do I ...?" — it knows every
+                    tab and button of this studio and gives you the exact steps. 📖 Detailed / ⚡ Brief
+                    buttons set how long the answer is.
 JUMP ANYWHERE ..... press Ctrl-K, type a tab (e.g. "scene"), Enter
 AUTOSAVE .......... work saves itself ("Saved ✓" near the title) and survives restart
-ONLY YOU DELETE ... every delete asks you to confirm; the AI can create/edit but NEVER deletes
+WHERE'S MY WORK ... the folder is PINNED (decided once, written down) so the app can never
+                    quietly move house. Settings -> "Where your work is kept" names it. If finished
+                    videos are ever found in a folder the app isn't using, it says so there and
+                    offers "Bring them into the app" (copies them in; deletes nothing).
+BACKUPS ........... automatic weekly copy to C:\Users\<you>\NihilPointZero-Backups. Lost something?
+                    Settings -> Backups -> "Restore missing files" (never overwrites current work).
+                    Optional second home (USB) + delete-sync (delete in app = gone from backup too).
+ONLY YOU DELETE ... every delete asks you to confirm; the AI can create/edit but NEVER deletes.
+                    Deleting a video also removes its backup copy (delete-sync, off-switch in Settings).
+RED DOT on Settings = the weekly self-check found a real problem -> open Settings -> Run full check
 IF A CHANGE DOESN'T SHOW ... check the BUILD BADGE. If it's old: you launched a stale taskbar/Start
                     pin — use the Desktop shortcut or the .exe directly, then fully close + reopen.
+
+------------------------------  NEW (2026-08-01)  ------------------------------------------------
+WHAT CHANGED ...... Settings -> "What changed" lists what is new in the build you are RUNNING.
+                    Only things really in it — nothing is advertised before the code ships.
+YOUR CHANNEL ...... a new tab. Reads YOUR OWN videos and tells you which title shapes actually
+                    worked here, which day and hour your audience shows up, and which of your
+                    videos form a series (with the description/pinned-comment/end-screen links
+                    written for you). Also reads your COMMENTS and ranks the questions people
+                    keep asking, quoted word for word. Needs the YouTube key + channel ID in
+                    Settings; costs about 4 of the 10,000 free daily requests.
+CARETAKER ......... Settings -> the studio checks itself: health, dead AI rescue, lost videos.
+                    Recommended every 6h + at app start (the why is on the card). You set the
+                    schedule, pause it, run it now, delete its record. Never runs during a render.
+AI SWITCHBOARD .... Settings -> every AI brain with a plain ON/OFF switch + "Use this one".
+                    OFF means never contacted, not even as a backup. The old free online AI
+                    (went paid) is OFF; your local brain stays ON; paid ones stay asleep.
+CONNECT GEMINI .... Settings -> "Connect Gemini" -> "Show me how". Google gives the key away
+                    FREE (no card): 2 minutes, buttons for each step, tested for real before
+                    saving. ChatGPT/Grok have no free machinery, so they get open-in-browser
+                    buttons — the studio never stores your passwords.
+CONNECT YOUTUBE ... Settings -> "Connect YouTube" -> "Show me how". Free, ~3 min, no card. Five
+                    steps, each with a button that opens the exact page. Paste the key, press
+                    Check: the app really tries it and says in plain English what is wrong and
+                    which step fixes it. Then type your @name and it finds your channel ID for
+                    you (YouTube hides it three menus deep) and shows the channel name back so
+                    you can see it got the right one. Empty result? It now says WHICH of the
+                    seven reasons — including "could not reach YouTube", which is not the same
+                    as "you have no videos". RED = wrong, here is the fix. AMBER = could not
+                    tell, nothing for you to do.
+READ IT TO ME ..... Script Writer -> hear your script spoken at 2x, with a list of what to listen
+                    for: sentences too long for one breath, a word said twice, a number you cannot
+                    read aloud, a line that switches language. A 12-min script proofs in 6 min.
+5 OPENINGS ........ Script Writer -> "Show 5 openings" -> five different first-15-seconds built
+                    only from sentences already in your script. Nothing invented.
+YOUR NUMBERS ...... Script Writer -> put the figures you looked up in "Verified data", one per
+                    line ("Reserves, 2026-07-31: 11.2"). It checks the script against them and
+                    flags any figure with no source, plus a sources block for the description.
+DEAD AIR .......... Video Studio -> any video -> "What would be cut?" then "Cut it". Removes long
+                    pauses, keeps a quarter-second of breath, makes a NEW video (original kept).
+DRAW THE CHART .... Charts -> "Draw it on" -> the chart draws itself over 4 seconds. Record the
+                    screen while it plays and lay it over your narration.
+YOUR CHANNEL+ ..... same tab: "Find the gaps" shows subjects other channels get views on
+                    that you have NEVER covered, with their real videos so you can check it
+CREDITS CHECK ..... Video Studio -> any video -> "Check before publishing". NOT a copyright
+                    detector (nothing on a PC can be one) — it checks whether a licence
+                    needs a credit and whether that credit is really in your description
+BOTH LANGUAGES .... Script Writer -> "Upload in both languages". Roman Urdu is ur-Latn, not
+                    en and not ur; the wrong code quietly costs you reach
+THUMBNAILS ........ Script Writer -> "Test two thumbnails properly". Different variants,
+                    plus the sum that says whether a difference is REAL or just chance
+UNDO IN SCENES ..... Scene Studio -> Ctrl+Z, like the Timeline and Storyboard already had
+CRASHES ........... if the app ever closes on its own it now says so and writes it into
+                    Settings -> Known Issues first, instead of vanishing silently
+RENDER FAILED? .... just press Build again. It reuses the narration it already recorded
+                    (the slow part) instead of speaking the whole script over. Only ever
+                    for the SAME words in the SAME voice - change a word and it starts fresh
+WATCH ONE SCENE ... Scene Studio -> any finished scene -> "Watch this scene". A few seconds,
+                    with the real camera move and look, instead of rendering the whole video
+BIG VIDEO LAGGY ... Timeline Editor -> "Scrub smoothly" on any clip over 1080p. Edits a small
+                    stand-in; your cuts land in exactly the same place; the finished video is
+                    still made from the full-quality original
+QUIETLY BETTER .... every render now: one encode instead of four (less quality lost), audio at
+                    YouTube's own -14 LUFS target (so it stops turning you down), slow camera
+                    movement on footage instead of a frozen frame, scene lengths that tighten
+                    toward the end, b-roll that lands on the word it belongs to, and a 1-second
+                    pre-flight check that fails fast instead of 20 minutes in.
 
 ------------------------------  MAKE A VIDEO (fastest)  ------------------------------------------
 ✦ AI Command -> type/🎤say "Write a 1-min script about X and build it in 1080p" -> Plan it -> Run it
 Hands-on: Video Studio -> pick/paste a script -> set Look/Voice/Format/Resolution -> 🎬 Build Video
 
 ------------------------------  KEY CHOICES WHEN BUILDING  ---------------------------------------
+ENGINE (Video look) Style presets (free, offline) · Photo slideshow (AI images) (free, online, no key) ·
+                    REAL AI video — free cloud (two free routes: Pollinations key = free Quest Pollen,
+                    no phone number — or Puter sign-in; up to 5 scenes/build get real motion, rest =
+                    AI stills; minutes per scene) · AI footage (cloud, paid, your key) · REAL AI
+                    video — local GPU (ComfyUI; needs NVIDIA — greyed out on this PC until the card exists)
 LOOK (template) .. Clean (plain) · News (lower-thirds) · Cinematic (graded+grain+bars) · Bold (punchy)
 FORMAT (shape) ... 16:9 YouTube · 9:16 Shorts/Reels/TikTok · 1:1 square
 VOICE ............ Your own (🎙 Voice studio = best) · Natural (Piper, installed) · Windows (basic)
@@ -32,19 +130,33 @@ RESOLUTION ....... 1080p (fast) · 1440p · 4K (sharp) · 8K (slow, huge)
 🎙 Voice studio . record your voice: Pause/Resume, scrub, "redo from playhead", replace OR add
 📝 Captions ..... "Get .srt" (upload to YouTube) or "Burn into video" (Shorts)
 🏷 Logo ......... stamp your logo in a corner
-🎵 Music ........ remove (keep voice) / replace (auto-ducks under your voice)
+🎵 Music ........ remove (keep voice) / replace (auto-ducks) / REMOVE MY VOICE (keep music)
+   🎧 AI DJ: one click -> reads the video's own script (or listens), picks the mood, lays a
+   fitting track under your voice. Type "lofi"/"tense"/etc. to steer it, or leave empty.
    For OUTSIDE videos: "Remove music (AI separate)" -> Online (built-in) or Local (Demucs, installed)
+🧹 Clean copy ... one click rebuilds the video with NO titles/headings/captions on it
+🎛 DJ decks ..... "Open audio in DJ decks" loads the video's sound onto Deck A instantly
 ▶ Publish ....... AI writes title+desc+tags to clipboard, opens YOUR YouTube upload page
 Download as ..... YouTube / MP4 / H.265 / MOV / WebM   ·   Trim = cut   ·   Save a copy = export
 
 ------------------------------  BIG FEATURES  ---------------------------------------------------
 🎬 Scene Studio . build scene-by-scene: watch each, Pause, reorder ↑↓/add/remove, "📎 Put me in (photo)", Beautify
+   NEW per scene: "⏱ Stays N sec" + "✨ Arrives by" (cut/fade/dissolve/slides) — empty = automatic;
+   the total always stretches to fit the narration. Style/look/resolution/format = the VIDEO SETTINGS row.
 🎞 Storyboard Director . direct SHOT BY SHOT: Auto (paste script, AI decides) OR Guided (write beats). Per shot:
    seconds + scene + narration + caption + motion + crossfade + SUBJECT (AI scene / your photo / your clip / AI person)
    + SOUNDS (music/SFX/your audio, each with gain+fades). Beautify slider for your photo. -> renders + opens in Timeline
+🎥 Presenter Studio . YOU present, 3 modes: Real Video (upload your narration video -> it cuts to theme
+   b-roll + AI scenes on your voice) · Photo (your photo presents) · ✨ Living Picture (grafts your video's
+   moving part onto your best picture). Its AI scenes can use REAL AI video (free cloud) — your own
+   footage/photo is never AI-generated.
+⏺ Recorder ...... record your webcam OR your screen in-app (up to 8K, noise suppression, OBS virtual
+   camera works) -> saved into Video Studio, ready as your Presenter narration video
 ✂ Timeline Editor . line up clips, crossfades, timed text, separate audio track w/ gain+fades, live waveform -> one MP4
 📦 Batch (AI Command) . paste many topics (1 per line) -> a video for each
 Sound Studio (DJ) . make music-only tracks, mix over video, auto-duck + peak limiter (no clipping), "📊 Show waveform"
+   NEW 🎛 Dual decks: load 2 tracks -> BPM, pitch, 3-band EQ, loop in/out, 4 hot cues each, crossfader.
+   All on this PC, free forever. (Cues: click sets, click jumps, right-click clears.)
 🎬 Producer (floating) . 3 modes: Advise · Edit my script (rewrite->Apply) · Do it (plans + RUNS real studio actions from ANY tab)
 
 ------------------------------  DATA / FINANCE (real numbers)  -----------------------------------
@@ -55,7 +167,9 @@ Charts .......... live PSX by symbol (line+SMA/RSI) OR import your OHLC file (ca
 
 ------------------------------  FREE / INTERNET / SETUP  -----------------------------------------
 FREE + OFFLINE ...... building, edits, YOUR voice + Natural voice, captions, music, trim, watermark, export
-FREE + INTERNET ..... AI writing/images/visuals, put-me-in-scene, online music removal (keys built in)
+FREE + INTERNET ..... AI writing/images/visuals, put-me-in-scene, online music removal (keys built in),
+                      REAL AI video — free cloud (free Pollinations key + claimable Quest Pollen — no
+                      phone — or a free Puter sign-in; both small allowances)
 ALREADY SET UP ...... Natural voice (Piper) + offline Demucs installed on THIS PC; keys baked in
 
 ------------------------------  IF STUCK  -------------------------------------------------------
@@ -66,7 +180,19 @@ Old look / no updates ... check the BUILD BADGE in the sidebar; if old you ran a
                           (or use the installed version, which never has this problem)
 Stop a build ............ the ⏹ Stop button halts EVERY stage INSTANTLY — even mid image-download
 PSX portal down ......... the app now shows your last SAVED data with an amber "not live" banner
-AI busy/failed .......... try again (auto-switches to a backup); needs internet
+AI stops answering ...... the old free online AI went PAID (their change). The app now falls back to
+                          Ollama on your own PC automatically. See Settings -> "Known Issues" for the
+                          exact error + time, or nihilpointzero-data\logs\ai-errors.log
+Want real AI motion ..... pick "REAL AI video — free cloud". Easiest here: Settings -> AI Video ->
+                          Pollinations route -> get a free key at enter.pollinations.ai (GitHub/email,
+                          NO phone) -> paste the SECRET key (sk_…) + "Test key". Free Pollen is CLAIMED
+                          from the Quests tab there (retroactive; first claim ≈ five 5s scenes).
+                          (Puter route also exists but its phone verification rejects Pakistani numbers.)
+                          Up to 5 scenes/build, minutes each; runs out -> AI stills, reason in the build
+                          log — nothing breaks. LOCAL AI video still needs an NVIDIA card this PC doesn't
+                          have — visible but greyed out; pre-configure it in Settings for a future PC.
+A tab crashes ........... contained to that tab — the rest keeps working. Click "Try this tab again".
+                          The crash is logged in Settings -> "Known Issues" so it's provable.
 Robotic voice ........... use 🎙 Voice studio or the Natural voice
 Work "gone" on new PC ... you copied only the .exe — copy the WHOLE folder
 
@@ -78,10 +204,57 @@ Voice reads exactly what you type -> keep sentences short and clean
 Best result = record your OWN voice; fix one line with "Redo from playhead"
 Shorts combo = 9:16 + Cinematic/Bold + Burn captions
 Music: use "Replace" (auto-ducks under your voice), not loud background
+Free music: open ✂ Trim on a video -> tap the green "Music track" lane -> AI picks the mood, tap to preview
+   Licence is shown per track: "no credit needed" (safe to ignore) vs "credit needed" (put the artist in your description)
+Trim: tap the bar to move the nearest marker or drag it; it asks "Remove this section?" before cutting
+Silent video: Narration voice -> "🔇 No voice / silent", then 🎙 Voice studio to record your own over it
+Record yourself: 🎙 Voice studio now has "🎥 Voice + camera" and plays the video while you record (wear headphones)
+Captions/chapters: one tick-box in Video Studio, OFF by default — neither is ever made unless you tick it
 Beautify slider: RIGHT = smoother skin/brighter/even tone · LEFT = grittier/sharper (Preview before rendering)
 Real face: the app uses YOUR photo/clip and builds the scene around you — it does NOT fake your face
 Storyboard length: narration decides each shot's length, so speech never gets cut off or overlaps
 Old videos: rebuild once so music-removal/captions work fully
+
+ON YOUR PHONE
+PC ON  (best):     Settings -> "Phone access" -> open the link. You get the WHOLE studio - same
+                   tabs, same buttons, the real app - with the PC doing the work. Not a smaller
+                   version. Works on home Wi-Fi; add Tailscale and it works on mobile data too.
+                   Only two things stay on the laptop: windows that ask the PC to choose a file,
+                   and recording the PC's screen. Don't share that link.
+PC OFF (anywhere): open https://dskjazz.github.io/nihilpointzero-phone/ once -> browser menu ->
+                   "Install app". Gold circle icon appears. Ideas · Writer · Scenes · Prompter ·
+                   Advisor · Saved. Free, nothing to type in, same writing style as the PC.
+Move a script to the PC: tap "Send to PC" -> WhatsApp/email/Drive to yourself -> paste into studio.
+
+ONE VERSION EVERYWHERE — HOW TO CHECK (new)
+Laptop:     sidebar, gold badge under "OS" -> version · date-time · code id. The code id is proof.
+Phone app:  Settings -> bottom -> "This app's version" (+ "Check for a newer version" button).
+The old copy is always REPLACED, never left running beside the new one. If the phone looks old,
+it reloads itself now; if not, press that button or close and reopen the tab.
+The installer alone upgrades NOTHING — it installs whichever file is already there. A new file
+only exists after a build.
+
+RECORDING QUALITY (new)
+Recorder -> Camera / Screen / 🎙 Voice only - no face. Resolution + frames-per-second + Quality.
+Bitrate is set to YouTube's own upload figures (1080p30 = 8 Mbps, 4K30 = 45) - browsers otherwise
+default to ~2.5 Mbps at any size, which is why phone video looks soft. The figure and the MB-per-
+minute are shown before you record, and it tells you what the camera actually gave.
+Voice only = no camera opened at all; saved as an audio track for scenes/stock footage.
+On the phone app: "🎥 Film it now" opens your phone's OWN camera app (real sensor, hardware
+encoding, stabilisation) - much better than filming inside a web page. 🤳 = front camera.
+
+TELEPROMPTER (new)
+Sidebar -> 🧾 Teleprompter (also a Prompter tab in the phone app). Paste script -> Start.
+Speed is in words-per-minute; "Finish in: 10 min" sets it exactly. Your [BRACKETED] notes show
+dimmed and are never counted in the timing. Space = pause · arrows = speed · phone: tap the text.
+Recorder asks HOW you record (laptop webcam / laptop screen / phone camera / phone screen / voice only)
+and tells you where to put the prompter so it stays out of the shot. Countdown: None/3/5/10/20/30s.
+Prompter opens in its own window and can ask Windows to hide it from screen recordings.
+
+EXPERT WITHOUT AI (new)
+🧭 Expert (bottom-left) -> "Instant" button = answers from the manual, no AI, no internet, instant.
+Typos and everyday words are fine ("musick", "subtitles", "merge"). "Ask AI" for freer answers.
+AI gone quiet? Settings -> Setup Health runs a real test and names the cause.
 
 Already set up here: free AI brain · photo key · music-removal token · your YouTube channel · Natural
 voice · offline Demucs. What's real / needs internet / needs setup -> MEGA-DIAGNOSTIC-REPORT.md. Enjoy.

@@ -65,15 +65,28 @@ export function encoderLabel(encoder: string): string {
  */
 export function buildVideoEncoderArgs(encoder: string): string[] {
   switch (encoder) {
+    // HARDWARE PATHS SPEND THEIR SPEED ON QUALITY.
+    // These were tuned for "speed/quality balance" back when the choice was against a
+    // slow CPU encode. But a graphics chip is already 5-10x faster than libx264 — the
+    // speed is not scarce here, and hardware encoders are weaker quality-per-bit than
+    // x264, so a middling setting on hardware looks worse than the CPU path it
+    // replaced. Better preset, tighter quality target: still far faster than the CPU,
+    // and no longer a downgrade in exchange.
     case 'h264_nvenc':
-      return ['-c:v', 'h264_nvenc', '-preset', 'p4', '-rc', 'vbr', '-cq', '23', '-b:v', '0', '-pix_fmt', 'yuv420p']
+      // p6 = slow preset, cq 19 = near-transparent. Was p4/cq23.
+      return ['-c:v', 'h264_nvenc', '-preset', 'p6', '-tune', 'hq', '-rc', 'vbr', '-cq', '19', '-b:v', '0', '-pix_fmt', 'yuv420p']
     case 'h264_qsv':
-      return ['-c:v', 'h264_qsv', '-global_quality', '23', '-pix_fmt', 'nv12']
+      return ['-c:v', 'h264_qsv', '-preset', 'veryslow', '-global_quality', '21', '-pix_fmt', 'nv12']
     case 'h264_amf':
-      return ['-c:v', 'h264_amf', '-rc', 'cqp', '-qp_i', '23', '-qp_p', '23', '-quality', 'balanced', '-pix_fmt', 'yuv420p']
+      return ['-c:v', 'h264_amf', '-rc', 'cqp', '-qp_i', '20', '-qp_p', '22', '-quality', 'quality', '-pix_fmt', 'yuv420p']
     case 'h264_mf':
       return ['-c:v', 'h264_mf', '-pix_fmt', 'yuv420p']
     default:
+      // The CPU path is DELIBERATELY left at veryfast. This is the fallback used when
+      // no graphics encoder works, so it is already the slow route — spending another
+      // 2-3x of the user's time here to chase a difference they would struggle to see
+      // is the wrong trade. Speed is scarce on this path; on the hardware paths above
+      // it is not. That asymmetry is the whole reasoning.
       return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
   }
 }

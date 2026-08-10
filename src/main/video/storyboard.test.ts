@@ -4,7 +4,8 @@ import {
   buildStoryboardPrompt,
   compileStoryboardToTimeline,
   sanitizeStoryboard,
-  storyboardDuration
+  storyboardDuration,
+  storyboardFromScript
 } from './storyboard'
 import type { ResolvedBeatAsset } from './storyboard'
 import type { StoryboardDoc } from '../../shared/types'
@@ -148,6 +149,72 @@ describe('compileStoryboardToTimeline', () => {
     // b starts at 13 (15 − 2 crossfade); the sound sits at 13 + 1.5 = 14.5
     const s = tl.audio.find((c) => c.src === 'boom.wav')!
     expect(s).toMatchObject({ atSec: 14.5, outSec: 2, gain: 0.8, fadeInSec: 0.2, fadeOutSec: 0.5 })
+  })
+})
+
+describe('storyboardFromScript (no-AI director fallback)', () => {
+  const from = (input: Parameters<typeof storyboardFromScript>[0]) =>
+    sanitizeStoryboard(storyboardFromScript(input), DEF)
+
+  it('parses forgiving timed pointer lines, including VO narration', () => {
+    const d = from({
+      title: 'My Day',
+      brief: [
+        '0-15s: I arrive in a Ferrari, VO: "The market opened red today"',
+        '0:15 to 0:40 helicopter over the hills',
+        '40 – 60 sec: UN council chamber'
+      ].join('\n')
+    })
+    expect(d.beats).toHaveLength(3)
+    expect(d.beats[0].durationSec).toBe(15)
+    expect(d.beats[0].visual).toContain('Ferrari')
+    expect(d.beats[0].narration).toContain('market opened red')
+    expect(d.beats[1].durationSec).toBe(25)
+    expect(d.beats[2].durationSec).toBe(20)
+  })
+
+  it('turns plain prose into ~2-sentence beats with speech-paced durations', () => {
+    const brief = Array.from(
+      { length: 6 },
+      (_, i) => `Sentence number ${i + 1} talks about the stock market and its many moving parts today.`
+    ).join(' ')
+    const d = from({ title: 'PSX', brief })
+    expect(d.beats).toHaveLength(3)
+    for (const b of d.beats) {
+      expect(b.narration).toBeTruthy()
+      expect(b.durationSec).toBeGreaterThanOrEqual(4)
+      expect(b.durationSec).toBeLessThanOrEqual(30)
+    }
+  })
+
+  it('uses bracketed visual directions when the script is a shot list', () => {
+    const d = from({
+      title: 'Karachi',
+      brief:
+        '[A slow aerial dolly over 1970s Karachi rooftops at dawn] ' +
+        '[Close-up of a trembling hand holding a rupee note] ' +
+        '[Wide shot of the stock exchange floor erupting in chaos]'
+    })
+    expect(d.beats).toHaveLength(3)
+    expect(d.beats[0].visual).toContain('aerial dolly')
+    expect(d.beats[2].visual).toContain('stock exchange floor')
+  })
+
+  it('scales beat durations to a requested total length', () => {
+    const brief = Array.from(
+      { length: 8 },
+      (_, i) => `Sentence ${i + 1} covers one more part of the market story in reasonable detail here.`
+    ).join(' ')
+    const d = from({ title: 'PSX', brief, totalSeconds: 80 })
+    const total = d.beats.reduce((a, b) => a + b.durationSec, 0)
+    expect(total).toBeGreaterThanOrEqual(64)
+    expect(total).toBeLessThanOrEqual(96)
+  })
+
+  it('never returns zero beats — even a bare title yields one editable shot', () => {
+    const d = from({ title: 'PSX Weekly', brief: '' })
+    expect(d.beats).toHaveLength(1)
+    expect(d.beats[0].visual).toContain('PSX Weekly')
   })
 })
 

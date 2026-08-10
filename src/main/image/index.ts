@@ -8,6 +8,8 @@
  * chosen resolution — generating at the full 8K would be slow/unreliable on a free tier.
  */
 import { writeFileSync } from 'fs'
+import { logAiError } from '../llm/errorLog'
+import { nextDelayMs, worthRetrying } from './retryPolicy'
 
 const BASE = 'https://image.pollinations.ai/prompt/'
 
@@ -28,6 +30,19 @@ export interface ImageGenOptions {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * Keeps the status AND the service's own Retry-After alive up to the retry loop. Both used
+ * to be flattened into a message and thrown away, which is why the loop could only guess.
+ */
+export class ImageHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly retryAfter: string | null
+  ) {
+    super(`Free image service returned ${status}. It can get busy — retrying.`)
+  }
+}
+
 /** One HTTP attempt with a hard timeout, so a hung request can't stall the whole build. */
 async function fetchImageOnce(
   prompt: string,
@@ -43,6 +58,8 @@ async function fetchImageOnce(
     width: String(width),
     height: String(height),
     nologo: 'true',
+    // Strict content filter — see sceneImageUrl in styles.ts, which must stay identical.
+    safe: 'true',
     model,
     referrer: 'nihilpointzero-studio'
   })
@@ -59,7 +76,12 @@ async function fetchImageOnce(
   }
   try {
     const res = await fetch(url, { signal: ctrl.signal })
-    if (!res.ok) throw new Error(`Free image service returned ${res.status}. It can get busy — retrying.`)
+    if (!res.ok) {
+      // The status and Retry-After used to be flattened into a message string and lost.
+      // The retry loop then had to guess when to come back while the service was telling
+      // it exactly — see image/retryPolicy.ts.
+      throw new ImageHttpError(res.status, res.headers.get('retry-after'))
+    }
     const buf = Buffer.from(await res.arrayBuffer())
     // Pollinations sometimes returns a tiny placeholder/error body instead of a real JPEG.
     if (buf.length < 2000) throw new Error('Free image service returned an empty image.')
@@ -83,7 +105,7 @@ async function fetchImageOnce(
 export async function generateImage(prompt: string, outPath: string, opts: ImageGenOptions = {}): Promise<string> {
   const width = opts.width ?? 1280
   const height = opts.height ?? 720
-  const attempts = Math.max(1, opts.attempts ?? 4)
+  const attempts = Math.max(1, opts.attempts ?? 5)
   const timeoutMs = opts.timeoutMs ?? 60_000
   // Try the requested model (default flux) for the first attempts, then drop to turbo,
   // which is markedly more reliable when the queue is busy.
@@ -98,33 +120,42 @@ export async function generateImage(prompt: string, outPath: string, opts: Image
     } catch (err) {
       lastErr = err
       if (opts.signal?.aborted) throw new Error('Render cancelled by user.', { cause: err })
-      // Exponential-ish backoff (1s, 2s, 4s) to let a busy free queue recover.
-      if (i < attempts - 1) await sleep(1000 * 2 ** i)
+      // Exponential backoff with ±40% jitter, capped at 12s. The jitter matters: several
+      // scenes generating in parallel used to retry in LOCKSTEP, hammering the busy free
+      // queue at the same instants — so whole batches failed together.
+      const http = err instanceof ImageHttpError ? err : null
+      // A 4xx that is not 408/429 says the same thing every time; five tries just makes
+      // the user wait five times longer for one identical error.
+      if (!worthRetrying(http?.status)) break
+      if (i < attempts - 1) {
+        await sleep(
+          nextDelayMs({
+            attempt: i,
+            status: http?.status,
+            retryAfter: http?.retryAfter,
+            nowMs: Date.now(),
+            random: Math.random()
+          })
+        )
+      }
     }
   }
+  const detail = lastErr instanceof Error ? lastErr.message : 'unknown error'
+  logAiError({
+    at: new Date().toISOString(),
+    provider: `free-image/${primary}`,
+    feature: 'image',
+    message: `gave up after ${attempts} tries: ${detail}`
+  })
   throw new Error(
-    `Free image service failed after ${attempts} tries (${
-      lastErr instanceof Error ? lastErr.message : 'unknown error'
-    }). It can get busy — the video will use the animated look for this scene.`
+    `Free image service failed after ${attempts} tries (${detail}). ` +
+      `It can get busy — the video will use the animated look for this scene.`
   )
 }
 
 /**
- * Builds a clean image prompt for a scene: the visual style + the scene text + the
- * video's topic, steering away from on-screen text (the renderer adds titles itself).
+ * Re-exported from ./styles, which has no imports and can therefore be bundled by the
+ * phone app. Keeping the name exported here means every existing caller
+ * (`import { sceneImagePrompt } from '../image'`) is completely unaffected.
  */
-export function sceneImagePrompt(style: string, scene: string, title: string): string {
-  // LEAD with the user's own visual concept so the image matches their bracketed direction
-  // (its subject, mood AND colours) instead of being overridden by a fixed dark "dramatic"
-  // style string — that override was why images looked mismatched and washed-out/dark.
-  const look: Record<string, string> = {
-    cinematic: 'cinematic photorealistic film still, 35mm, natural rich colour, sharp focus',
-    cartoon: 'vibrant cartoon illustration, bold clean colours',
-    anime: 'anime key visual, detailed, studio-quality, expressive',
-    neon: 'neon glow, futuristic, luminous colour',
-    minimal: 'minimalist, clean composition, soft palette'
-  }
-  const styleText = look[style] ?? look.cinematic
-  const subject = [scene, title].filter(Boolean).join('. ')
-  return `${subject}. Style: ${styleText}. Accurate rich colour, high detail, professional, no text, no watermark, no letters, no captions, no subtitles.`
-}
+export { sceneImagePrompt } from './styles'

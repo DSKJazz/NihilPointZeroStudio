@@ -6,7 +6,7 @@
  * - 'anthropic' — Claude, your key (paid, highest quality).
  * - 'openai'    — OpenAI, your key (paid).
  */
-export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama'
+export type LLMProviderId = 'free' | 'anthropic' | 'openai' | 'ollama' | 'gemini'
 
 export interface ProviderSettings {
   activeProvider: LLMProviderId
@@ -15,6 +15,14 @@ export interface ProviderSettings {
   openaiModel: string
   ollamaModel: string
   hasAnthropicKey: boolean
+  /** Gemini is FREE-keyed (AI Studio) — keyed like YouTube, not billed like Anthropic. */
+  hasGeminiKey: boolean
+  geminiModel: string
+  /**
+   * The switchboard: which brains the app is ALLOWED to contact. A brain switched off
+   * is never used, not even as a fallback — "off" that still answers is not off.
+   */
+  providerEnabled: Record<LLMProviderId, boolean>
   hasOpenAIKey: boolean
   hasYouTubeKey: boolean
   /** Optional free AI Horde key for faster photo-to-scene (img2img) generation. */
@@ -31,6 +39,10 @@ export interface ProviderSettings {
   faceAnimCmd: string
   /** The user's YouTube channel ID, used to deep-link the upload page. */
   youtubeChannelId: string
+  /** Which installable Piper voice narrates when narrationVoice is 'piper'. */
+  piperVoiceId: string
+  /** Open the studio when Windows starts (default on). */
+  startWithWindows: boolean
 }
 
 export interface YouTubeSignal {
@@ -105,11 +117,23 @@ export interface GeneratedScript {
   createdAt: string
 }
 
+/** A generated picture saved in the Library (scene images, thumbnails). */
+export interface SavedImage {
+  title: string
+  /** Absolute path of the image file on disk. */
+  path: string
+  /** Where it came from, e.g. "Scene Studio" or "Thumbnail". */
+  source: string
+}
+
 export interface LibraryEntry {
   id: string
-  kind: 'idea' | 'script'
-  data: VideoIdea | GeneratedScript
+  kind: 'idea' | 'script' | 'image'
+  data: VideoIdea | GeneratedScript | SavedImage
   savedAt: string
+  /** Set when the user moves the entry to the Trash Can. Only the user can empty the
+   *  Trash — nothing in the app deletes library items outright. */
+  trashedAt?: string
 }
 
 export interface TrendTopic {
@@ -194,37 +218,158 @@ export const VIDEO_ASPECTS: VideoAspect[] = ['16:9', '9:16', '1:1']
 export type VideoTemplate = 'clean' | 'news' | 'cinematic' | 'bold'
 export const VIDEO_TEMPLATES: VideoTemplate[] = ['clean', 'news', 'cinematic', 'bold']
 
-/** Visual style for the free preset renderer. */
-export type VideoStyle = 'cinematic' | 'cartoon' | 'anime' | 'neon' | 'minimal'
-export const VIDEO_STYLES: VideoStyle[] = ['cinematic', 'cartoon', 'anime', 'neon', 'minimal']
+/**
+ * Visual style for the free preset renderer and AI scene images. Several distinct looks
+ * per family — see main/image/styles.ts for what each one actually asks for.
+ */
+export type VideoStyle =
+  | 'cinematic'
+  | 'noir'
+  | 'blockbuster'
+  | 'vintage-film'
+  | 'documentary'
+  | 'cartoon'
+  | 'cartoon-3d'
+  | 'comic'
+  | 'watercolour'
+  | 'anime'
+  | 'anime-90s'
+  | 'anime-pastoral'
+  | 'anime-dark'
+  | 'neon'
+  | 'minimal'
+  | 'infographic'
+
+export const VIDEO_STYLES: VideoStyle[] = [
+  'cinematic',
+  'noir',
+  'blockbuster',
+  'vintage-film',
+  'documentary',
+  'cartoon',
+  'cartoon-3d',
+  'comic',
+  'watercolour',
+  'anime',
+  'anime-90s',
+  'anime-pastoral',
+  'anime-dark',
+  'neon',
+  'minimal',
+  'infographic'
+]
+
+/** Human-readable grouping for the style picker. */
+export const VIDEO_STYLE_GROUPS: { family: string; styles: { id: VideoStyle; label: string }[] }[] = [
+  {
+    family: 'Cinematic',
+    styles: [
+      { id: 'cinematic', label: 'Modern film' },
+      { id: 'noir', label: 'Film noir' },
+      { id: 'blockbuster', label: 'Blockbuster' },
+      { id: 'vintage-film', label: 'Vintage 70s' },
+      { id: 'documentary', label: 'Documentary' }
+    ]
+  },
+  {
+    family: 'Cartoon',
+    styles: [
+      { id: 'cartoon', label: 'Bold flat' },
+      { id: 'cartoon-3d', label: '3D animated film' },
+      { id: 'comic', label: 'Comic book' },
+      { id: 'watercolour', label: 'Watercolour storybook' }
+    ]
+  },
+  {
+    family: 'Anime',
+    styles: [
+      { id: 'anime', label: 'Modern key visual' },
+      { id: 'anime-90s', label: 'Retro 90s' },
+      { id: 'anime-pastoral', label: 'Painterly pastoral' },
+      { id: 'anime-dark', label: 'Dark seinen' }
+    ]
+  },
+  {
+    family: 'Other',
+    styles: [
+      { id: 'neon', label: 'Neon cyberpunk' },
+      { id: 'minimal', label: 'Minimal / clean' },
+      { id: 'infographic', label: 'Infographic / explainer' }
+    ]
+  }
+]
 
 /**
  * Which engine renders the video's look:
- * - 'presets'  — free, offline style renderer (default). Styles text/backgrounds and
+ * - 'presets'       — free, offline style renderer (default). Styles text/backgrounds and
  *   your own images; does NOT fabricate AI footage.
- * - 'ai-free'  — FREE online AI visuals: generates a unique AI image per scene (keyless,
- *   no install; needs internet) and animates them. Falls back to the animated look if
- *   offline / the service is busy.
- * - 'ai-cloud' — paid cloud AI video footage; you supply an API key.
- * - 'ai-local' — free local AI footage; needs a capable GPU + local model server.
+ * - 'ai-free'       — FREE online AI visuals: generates a unique AI image per scene (keyless,
+ *   no install; needs internet) and animates them — a photo slideshow, not filmed motion.
+ *   Falls back to the animated look if offline / the service is busy.
+ * - 'ai-free-video' — REAL generated motion per scene from the free cloud (Google Veo via
+ *   Puter — no API key; the user signs into a free Puter account once). Every failure
+ *   (offline, allowance used up, sign-in declined) falls back per scene to the slideshow,
+ *   with the reason reported — the build never breaks.
+ * - 'ai-cloud'      — paid cloud AI video footage; you supply an API key.
+ * - 'ai-local'      — REAL generated motion on your own NVIDIA GPU through a local ComfyUI
+ *   server (LTX and friends). Visible (greyed) even without the GPU so the option is ready
+ *   the day the hardware exists; falls back to the slideshow when the server isn't there.
  */
-export type LookEngine = 'presets' | 'ai-free' | 'ai-cloud' | 'ai-local'
+export type LookEngine = 'presets' | 'ai-free' | 'ai-free-video' | 'ai-cloud' | 'ai-local'
 
-/** Optional configuration for the two AI-footage engines (stored locally). */
+/** Optional configuration for the AI-footage engines (stored locally). */
 export interface AiVideoConfig {
-  /** Cloud engine: your provider API key. */
+  /** Cloud engine: your provider API key (decrypted, in memory only — see cloudApiKeyEnc). */
   cloudApiKey?: string
+  /** Cloud engine key at rest — encrypted like every other key (store.ts migrates old plain values). */
+  cloudApiKeyEnc?: string
   /** Cloud engine: REST endpoint that accepts {prompt, seconds} and returns a video URL. */
   cloudEndpoint?: string
   cloudModel?: string
-  /** Local engine: base URL of your local generation server (default http://127.0.0.1:7860). */
+  /** Local engine: base URL of your local generation server (default depends on localKind). */
   localEndpoint?: string
+  /** Local engine kind: a real ComfyUI server (default) or the legacy generic /generate shim. */
+  localKind?: 'comfyui' | 'generic'
+  /**
+   * Path to a ComfyUI workflow file (exported in API format) with {{PROMPT}} {{WIDTH}}
+   * {{HEIGHT}} {{FRAMES}} {{SEED}} placeholders. Blank = the built-in LTX starter template.
+   */
+  comfyWorkflowPath?: string
+  /**
+   * Which free-cloud route generates real motion:
+   * - 'puter' (default): Google Veo via Puter — no key, but needs a Puter account
+   *   sign-in (their phone verification rejects some countries' numbers).
+   * - 'pollinations': gen.pollinations.ai with a free developer key (GitHub/email,
+   *   NO phone) — a small daily Pollen grant renews every day.
+   */
+  freeCloudProvider?: 'puter' | 'pollinations'
+  /** Free-cloud engine: Puter model id (default 'google/veo-3.1-fast'). */
+  freeCloudModel?: string
+  /** Pollinations route: the pk_/sk_ key (decrypted, in memory only — see pollinationsKeyEnc). */
+  pollinationsKey?: string
+  /** Pollinations key at rest — encrypted like every other key. */
+  pollinationsKeyEnc?: string
+  /** Pollinations route: video model (default 'wan-fast' — the cheapest real-motion model). */
+  pollinationsModel?: string
+  /**
+   * Free-cloud engine: at most this many scenes get REAL generated motion per build
+   * (default 5) — protects the small free Puter allowance; the rest use AI stills.
+   */
+  freeCloudSceneCap?: number
 }
 
 /** Live status of the AI engines, for the UI badges. */
 export interface AiEngineStatus {
   cloudConfigured: boolean
   localDetected: boolean
+  /** True when the chosen free-cloud video route is usable right now. */
+  freeCloudAvailable: boolean
+  /** One-line plain-English detail for the free-cloud pill (why it is/isn't available). */
+  freeCloudDetail: string
+  /** Which free-cloud route the status describes. */
+  freeCloudProvider: 'puter' | 'pollinations'
+  /** Which local server kind the status was checked against. */
+  localKind: 'comfyui' | 'generic'
   cloudEndpoint?: string
   localEndpoint?: string
 }
@@ -238,8 +383,17 @@ export interface VideoBuildRequest {
   aspect?: VideoAspect
   /** Graphics v2 finishing template (clean/news/cinematic/bold). */
   template?: VideoTemplate
-  /** Computer narration voice: 'windows' (default) or 'piper' (natural, if installed). */
-  narrationVoice?: 'windows' | 'piper'
+  /**
+   * Computer narration voice:
+   *  - 'winnatural' — Windows NATURAL voice (best free quality; the only route to the
+   *    Urdu Asad/Uzma voices once the Windows Urdu speech pack is installed)
+   *  - 'piper'      — bundled offline natural voice
+   *  - 'windows'    — legacy robotic System.Speech voice
+   *  - 'silent'     — no narration at all, so the user can record their own over it
+   */
+  narrationVoice?: 'windows' | 'piper' | 'winnatural' | 'silent'
+  /** Which Windows natural voice to use (WinRT voice id) when narrationVoice is 'winnatural'. */
+  winVoiceId?: string
   /** Absolute path to a background music file (chosen via the pick-music dialog). */
   musicPath?: string
   /** Add a soft transition sound at each section change. */
@@ -250,8 +404,74 @@ export interface VideoBuildRequest {
   style?: VideoStyle
   /** Optional user images (absolute paths) shown as a Ken-Burns slideshow background. */
   images?: string[]
+  /**
+   * Per-image pacing and hand-offs (Scene Studio). When present it WINS over `images`:
+   * every shot is shown exactly once, in order, with the user's seconds (scaled to fit
+   * the narration length) and the chosen visual transition into each shot.
+   */
+  imageShots?: ImageShot[]
   /** Use real stock footage (online) matched to the script (needs a saved Pixabay key). */
   useStock?: boolean
+  /**
+   * Generate subtitles (.srt) and YouTube chapter timestamps after the build.
+   * OFF unless explicitly set — a video should never come back with captions or
+   * chapters the user did not ask for.
+   */
+  captionsAndChapters?: boolean
+  /**
+   * false = a CLEAN build: no title overlay, no section heading cards — nothing drawn
+   * over the picture ("clean copy" of an existing video). Default true.
+   */
+  textOverlays?: boolean
+}
+
+/**
+ * Finished videos the app cannot currently show — either sitting unlisted in the
+ * active work folder, or left behind in a data folder the app stopped using.
+ * See main/strandedData.ts.
+ */
+export interface StrandedReport {
+  /** The other data folder holding work, or null when there isn't one. */
+  dir: string | null
+  /** Videos already in the active folder that the app's list lost track of. */
+  inPlace: number
+  /** Videos sitting in that other folder. */
+  elsewhere: number
+  /** inPlace + elsewhere. */
+  videoCount: number
+  bytes: number
+  /** Human-readable size, e.g. "1.15 GB". */
+  size: string
+}
+
+/** Visual hand-off INTO a slideshow scene (ffmpeg xfade). 'cut' = instant switch. */
+export type SceneTransition =
+  | 'cut'
+  | 'fade'
+  | 'slideleft'
+  | 'slideright'
+  | 'slideup'
+  | 'slidedown'
+  | 'circleopen'
+  | 'dissolve'
+export const SCENE_TRANSITIONS: { value: SceneTransition; label: string }[] = [
+  { value: 'cut', label: 'Straight cut' },
+  { value: 'fade', label: 'Fade' },
+  { value: 'dissolve', label: 'Dissolve' },
+  { value: 'slideleft', label: 'Slide from right' },
+  { value: 'slideright', label: 'Slide from left' },
+  { value: 'slideup', label: 'Slide from below' },
+  { value: 'slidedown', label: 'Slide from above' },
+  { value: 'circleopen', label: 'Circle open' }
+]
+
+/** One slideshow scene with user pacing: the image, how long it stays, how it arrives. */
+export interface ImageShot {
+  path: string
+  /** Desired seconds on screen — treated as a weight, scaled so the total matches the narration. */
+  seconds?: number
+  /** Visual transition INTO this shot (ignored for the first shot). */
+  transition?: SceneTransition
 }
 
 export interface VideoJob {
@@ -263,6 +483,25 @@ export interface VideoJob {
   /** Saved narration-only audio, so background music can later be removed/replaced
    * exactly (no AI un-mixing). Present for videos built after this feature shipped. */
   narrationPath?: string
+  /**
+   * The video's own recipe, remembered at build time (videos built after this
+   * shipped). It powers per-video features that must know the CONTENT and settings:
+   * the AI DJ reads `body` to pick fitting music, and "clean copy" rebuilds the
+   * same video without captions/title cards. Older jobs simply lack these.
+   */
+  body?: string
+  resolution?: VideoResolution
+  aspect?: VideoAspect
+  template?: VideoTemplate
+  engine?: LookEngine
+  style?: VideoStyle
+  /**
+   * What went into the video that might need crediting — the music track the app fetched,
+   * stock footage, images. Recorded at build time so the pre-publish credit check has
+   * something to check: without it the app knew a track needed attribution and had no way
+   * to tell WHICH video it went into. Older jobs simply lack it.
+   */
+  credits?: import('./copyrightCheck').CreditedItem[]
 }
 
 /** How a cut is applied: keep only the selected range, or remove it (see main/video/trim.ts). */
@@ -601,7 +840,46 @@ export interface AgentRunResult {
   results: AgentStepResult[]
 }
 
+/** Ready-to-paste posting text for a finished clip (YouTube/TikTok/Reels). */
+export interface PostMetadata {
+  title: string
+  description: string
+  hashtags: string[]
+}
+
+export type HealthStatus = 'ok' | 'warn' | 'fail'
+export interface HealthCheck {
+  name: string
+  status: HealthStatus
+  /** Plain-English verdict — never contains key material. */
+  detail: string
+}
+export interface HealthReport {
+  checkedAt: string
+  checks: HealthCheck[]
+  failCount: number
+  warnCount: number
+}
+
 export type ActivityActor = 'ai' | 'user'
+
+/** One way in to the phone web-view server: a network this PC is on, and its link. */
+export interface WebServerAddress {
+  /** Plain-English label, e.g. "Home Wi-Fi" or "Private VPN". */
+  label: string
+  address: string
+  url: string
+  /** True for a private-VPN address — the one that keeps working on mobile data. */
+  remote: boolean
+}
+
+export interface WebServerStatus {
+  running: boolean
+  /** The best single link, kept for existing callers. */
+  url: string | null
+  /** Every network this PC can be reached on, so the user picks the right one. */
+  addresses: WebServerAddress[]
+}
 
 export interface ActivityLogEntry {
   id: string
@@ -609,4 +887,85 @@ export interface ActivityLogEntry {
   actor: ActivityActor
   action: string
   details?: string
+}
+
+/** A free, copyright-safe music track (Pixabay or an open Creative-Commons index). */
+export interface MusicTrack {
+  id: string
+  title: string
+  tags: string
+  durationSec: number
+  url: string
+  pageUrl?: string
+  source: 'pixabay' | 'openverse'
+  /** e.g. 'Pixabay', 'CC0', 'BY', 'BY-SA'. Shown so the licence is never a surprise. */
+  license: string
+  /**
+   * True when the licence obliges the user to credit the artist. Monetised YouTube is
+   * fine either way, but "no credit needed" vs "must credit" is the difference between
+   * pasting a line in the description or getting a claim, so it is never hidden.
+   */
+  needsAttribution: boolean
+}
+
+/** What the music picker gets back: the moods the AI chose plus matching tracks. */
+export interface MusicSuggestion {
+  moods: string[]
+  tracks: MusicTrack[]
+  /** Set when no music could be found, so the UI can say why instead of showing nothing. */
+  note?: string
+  /** Direct category pages on the FREE libraries matching these moods (opened externally). */
+  libraryLinks?: { name: string; url: string }[]
+  /** The built-in synthesizer mood that best fits the subject (drives "make music"). */
+  synthMood?: Mood
+}
+
+/** What this PC can actually run — see main/hardware/gpu.ts. */
+export interface HardwareReport {
+  gpu: {
+    name: string
+    vramGB: number
+    hasCuda: boolean
+    integrated: boolean
+    totalRamGB: number
+  }
+  summary: string
+  models: {
+    id: string
+    label: string
+    minVramGB: number
+    note: string
+    verdict: { canRun: boolean; message: string; suggestion?: string }
+  }[]
+}
+
+/** One recorded AI failure, shown in Settings → Known Issues. */
+export interface AiErrorEntry {
+  at: string
+  provider: string
+  feature: string
+  status?: number
+  ms?: number
+  message: string
+  body?: string
+}
+
+/** One video waiting to be built. See shared/renderQueue.ts for the rules around it. */
+export type { QueueItem, QueueState, QueueSummary } from './renderQueue'
+
+/** A stretch of the recording to KEEP. See main/video/silence.ts — spans to keep are
+ * planned rather than spans to remove, which makes an overlap or a backwards span
+ * structurally impossible. */
+export interface KeepSpan {
+  startSec: number
+  endSec: number
+}
+
+/** What the dead-air cut did, for the user. */
+export interface SilenceSummary {
+  removedSec: number
+  keptSec: number
+  cuts: number
+  /** One line for the user. */
+  headline: string
 }

@@ -9,7 +9,7 @@
  * but exact face likeness isn't guaranteed on free models — lower "photo strength" to
  * keep more of you, raise it to transform more.
  */
-import { readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { runFfmpeg } from '../video/ffmpeg'
 import { thumbnailsDir } from '../store'
@@ -47,7 +47,34 @@ export async function generateFromPhoto(opts: {
   const denoise = Math.min(0.95, Math.max(0.2, opts.strength ?? 0.5))
   const maxWaitMs = opts.maxWaitMs ?? 12 * 60 * 1000
 
-  const b64 = readFileSync(sourceImagePath).toString('base64')
+  // A moved/renamed/deleted photo must say so plainly — not surface a raw system error.
+  if (!existsSync(sourceImagePath)) {
+    throw new Error('The attached photo can’t be found anymore (was it moved, renamed or deleted?). Click "Change photo" and attach it again.')
+  }
+  // Phone photos are often 6–12MB; base64 of that blows past the free service's request
+  // limit. Downscale to ~1280px first (the model works at 512 anyway) — best-effort:
+  // if ffmpeg can't read it, fall back to the original bytes.
+  let uploadPath = sourceImagePath
+  let scaled: string | null = null
+  try {
+    if (statSync(sourceImagePath).size > 1_500_000) {
+      onProgress?.({ message: 'Shrinking your photo for upload…' })
+      scaled = join(thumbnailsDir(), `photo-upload-${Date.now().toString(36)}.jpg`)
+      await runFfmpeg(['-y', '-i', sourceImagePath, '-vf', "scale='min(1280,iw)':-2", '-frames:v', '1', '-q:v', '3', scaled])
+      if (existsSync(scaled) && statSync(scaled).size > 0) uploadPath = scaled
+    }
+  } catch {
+    uploadPath = sourceImagePath // odd format ffmpeg couldn't read — try the original as-is
+  }
+  const b64 = readFileSync(uploadPath).toString('base64')
+  if (scaled && uploadPath === scaled) {
+    // The temp upload copy is no longer needed once encoded.
+    try {
+      rmSync(scaled, { force: true })
+    } catch {
+      /* best-effort */
+    }
+  }
   onProgress?.({ message: 'Submitting your photo to the free image queue…' })
 
   const submit = await fetch(`${API}/generate/async`, {
