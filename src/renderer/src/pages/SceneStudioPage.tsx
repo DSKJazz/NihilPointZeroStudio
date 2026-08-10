@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useHistory } from '../hooks/useHistory'
 import { useNavigate } from 'react-router-dom'
 import type { SceneTransition, VideoAspect, VideoJob, VideoResolution, VideoStyle, VideoTemplate } from '../../../shared/types'
@@ -212,7 +212,6 @@ export default function SceneStudioPage(): React.JSX.Element {
           return
         }
         attempt += 1
-        const retryMsg = err instanceof Error ? err.message : String(err)
         patchScene(index, {
           status: 'generating',
           msg: `Rate-limited; retrying in ${Math.round(2 * Math.pow(2, attempt) + 0.5)}s…`
