@@ -142,14 +142,34 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const value: StudioContextValue = {
     ideas,
-    setIdeas: (patch) => setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
+    setIdeas: (patch) => {
+      try { console.log('[STUDIO] setIdeas deferred at', Date.now()) } catch (_) {}
+      // Defer to the next animation frame to avoid synchronous re-entrancy during navigation/autosave tight windows
+      try { window.requestAnimationFrame(() => {
+        try {
+          setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }))
+        } catch (_) {}
+      }) } catch (_) { queueMicrotask(() => {
+        try { setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {}
+      }) }
+    },
+
     clearIdeas: () => setIdeasState(DEFAULT_IDEAS),
     writer,
     setWriter: (patch) => {
       try { console.log('[STUDIO] setWriter called — patch type:', typeof patch === 'function' ? 'fn' : 'object') } catch (_) {}
       // Defer the state update to avoid synchronous re-entrancy that can interfere with
       // routing in tight E2E sequences (diagnostic/backwards-compatible safety).
-      setTimeout(() => {
+      try { window.requestAnimationFrame(() => {
+        try {
+          try { console.log('[STUDIO] setWriter deferred at', Date.now()) } catch (_) {}
+          setWriterState((prev) => {
+            const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
+            try { console.log('[STUDIO] setWriter result snapshot: topic=', String(next.topic).slice(0,80)) } catch (_) {}
+            return next
+          })
+        } catch (_) {}
+      }) } catch (_) { queueMicrotask(() => {
         try {
           setWriterState((prev) => {
             const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
@@ -157,13 +177,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             return next
           })
         } catch (_) {}
-      }, 0)
+      }) }
     },
+
 
     clearWriter: () => setWriterState(DEFAULT_WRITER),
     // scene is intentionally always present to avoid consumer crashes
     scene,
-    setScene: (patch) => setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
+    setScene: (patch) => {
+      try { console.log('[STUDIO] setScene deferred at', Date.now()) } catch (_) {}
+      // Defer to the next animation frame to avoid synchronous re-entrancy during navigation/autosave tight windows
+      try { window.requestAnimationFrame(() => {
+        try { setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {}
+      }) } catch (_) { queueMicrotask(() => { try { setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {} }) }
+    },
     saveStatus
   }
 

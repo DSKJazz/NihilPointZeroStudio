@@ -86,7 +86,7 @@ export default function AssistantWidget(): React.JSX.Element {
   // Track which field (if any) is currently editable so we can ground + apply.
   useEffect(() => subscribeProducerTarget(() => {
     try {
-      console.log('[PRODUCER-LISTENER] invoked at', Date.now(), 'currentTarget=', getProducerTarget() && { label: getProducerTarget()?.label, kind: getProducerTarget()?.kind })
+    console.log('[PRODUCER-LISTENER] invoked at', Date.now(), 'currentTarget=', getProducerTarget() && { label: getProducerTarget()?.label, kind: getProducerTarget()?.kind })
     } catch (_) {}
     setTarget(getProducerTarget())
   }), [])

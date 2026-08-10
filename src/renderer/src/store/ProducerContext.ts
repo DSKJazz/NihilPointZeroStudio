@@ -31,11 +31,12 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
   try {
     // Invoke listeners asynchronously to avoid re-entrancy during routing/hashchange handling in E2E scenarios.
     console.log('[PRODUCER] scheduling listeners, count=', listeners.length)
-    setTimeout(() => {
+    try { window.requestAnimationFrame(() => {
       try {
         console.log('[PRODUCER] invoking listeners (async), count=', listeners.length)
         listeners.forEach((l, i) => {
           try {
+            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) {}
             l()
           } catch (err) {
             try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
@@ -44,7 +45,21 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
       } catch (err) {
         try { console.log('[PRODUCER] failed invoking listeners (async)', err && err.message ? err.message : String(err)) } catch (_) {}
       }
-    }, 0)
+    }) } catch (_) { queueMicrotask(() => {
+      try {
+        console.log('[PRODUCER] invoking listeners (async-fallback), count=', listeners.length)
+        listeners.forEach((l, i) => {
+          try {
+            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) {}
+            l()
+          } catch (err) {
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+          }
+        })
+      } catch (err) {
+        try { console.log('[PRODUCER] failed invoking listeners (async-fallback)', err && err.message ? err.message : String(err)) } catch (_) {}
+      }
+    }) }
   } catch (err) {
     try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) {}
   }
