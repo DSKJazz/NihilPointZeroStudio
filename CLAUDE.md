@@ -302,6 +302,36 @@ stale instruction:
 
 Write all of them in the same plain, non-technical voice.
 
+## Commit & Merge Integrity
+
+The following rules are mandatory and must be followed from now on.
+
+1. VERIFY BEFORE CLAIMING. Don't tell me something "works," "is done," "should be fine," or "is fixed" unless you've actually run it (build, lint, test, or a live reproduction) and seen the result yourself. If you haven't verified it, mark it "untested" — never imply it works.
+
+2. BUILD + TEST BEFORE EVERY COMMIT. Run build, lint, and test locally before every commit that touches app logic. Never push unverified code to any branch, including main.
+
+3. SYNC BEFORE MERGE. Before merging a branch that's behind main: pull main into it locally, resolve conflicts, rebuild, retest, then push. Never let a stale branch be merged through the GitHub UI without the above steps.
+
+4. WAIT FOR GREEN. Never declare a PR ready to merge while CI is pending or failing. If a check fails, fix it before calling the PR ready — do not stop at reporting failures.
+
+5. REPORT PLAINLY AT MERGE TIME. When a merge happens, report: what changed, whether checks passed, whether the branch was behind and what was pulled in, and anything still needing manual verification.
+
+6. DEFAULT MERGE METHOD stays "Create a merge commit" unless an explicit alternative is requested for a specific PR.
+
+7. ENFORCE ON GITHUB, NOT JUST IN MEMORY. If GitHub CLI access is available, set branch protection on main requiring CI to pass before merge. If not, give explicit manual steps to enable protection in GitHub Settings → Branches.
+
+8. DON'T DEFAULT TO "THE TEST IS WRONG." Treat "app is broken" and "test is broken" as equally likely until direct evidence proves otherwise. Before loosening, skipping, or rewriting any assertion, first reproduce the failure under the same conditions and demonstrate the underlying functionality actually works.
+
+9. SEPARATE CONFIRMED FROM HYPOTHESIS. In every diagnostic report, explicitly label what you've directly confirmed with evidence versus what's still a hypothesis. Never phrase a guess as fact.
+
+10. FOUND A REAL APP BUG? SAY SO AND STOP PATCHING TESTS. If evidence shows the application code is defective, state that plainly, stop proposing test-only workarounds as if they were fixes, and await approval before changing application source code.
+
+11. CLEAN UP AFTER YOURSELF. Delete throwaway diagnostic/debug scripts at the end of a debugging session unless explicitly asked to keep them. If any are kept, state which ones and why.
+
+12. CONFIRM YOUR OWN MEMORY MECHANISM. State which mechanism you use to load these rules automatically (file path, config, or other). Confirm whether it reloads every session without re-pasting. If you cannot guarantee automatic reload, state that explicitly.
+
+
+
 **Why `UPDATE-MY-STUDIO.cmd` exists and must keep working.** Everything about
 updating was already automatic except the last step, which was "open a terminal and
 type `npm run ship`". That is not a step for somebody who does not code, and asking
