@@ -52,13 +52,29 @@ export default function WriterPage() {
   const incomingIdea = (location.state as { idea?: VideoIdea } | null)?.idea
   const { writer, setWriter, clearWriter, setScene, saveStatus } = useStudio()
 
+  // Mount/unmount trace for E2E diagnostics: logs when WriterPage mounts or
+  // unmounts and the current pathname/hash so the harness can correlate
+  // router changes with React component lifecycle.
+  useEffect(() => {
+    console.log('[E2E-TRACE] WriterPage mounted — pathname=', location.pathname, 'hash=', window.location.hash)
+    return () => console.log('[E2E-TRACE] WriterPage unmounted — pathname=', location.pathname, 'hash=', window.location.hash)
+  }, [location.pathname])
+
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
-  useProducerTarget({
-    label: 'Script Writer',
-    kind: 'script',
-    text: writer.body,
-    apply: (next) => setWriter({ body: next })
-  })
+  // Register producer target unconditionally; pass null when diagnostics opt-out flag is set
+  try {
+    const prodTarget = typeof window !== 'undefined' && (window as any).__npz_diag_disable_producer
+      ? null
+      : {
+          label: 'Script Writer',
+          kind: 'script',
+          text: writer.body,
+          apply: (next: string) => setWriter({ body: next })
+        }
+    useProducerTarget(prodTarget)
+  } catch (e) {
+    // swallow any diagnostic-time errors
+  }
 
   // When arriving via an idea's "Write Script" button, seed the writer fields from it.
   useEffect(() => {
@@ -68,19 +84,22 @@ export default function WriterPage() {
         ideaContext: `${incomingIdea.angle}\nHook: ${incomingIdea.hook}`,
         length: incomingIdea.suggestedLength
       })
-      setScene((prev) => ({
-        title: incomingIdea.title,
-        body: prev.body || ''
-      }))
+      if (typeof setScene === 'function') {
+        setScene((prev) => ({
+          title: incomingIdea.title,
+          body: (prev && prev.body) || ''
+        }))
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingIdea?.id])
 
   useEffect(() => {
+    if (typeof setScene !== 'function') return
     setScene((prev) => {
       const shouldUpdateTitle =
-        prev.title === '' || prev.title === writer.topic || prev.title === writer.script?.title
-      const shouldUpdateBody = prev.body === '' || prev.body === writer.body
+        (prev && prev.title === '') || prev.title === writer.topic || prev.title === writer.script?.title
+      const shouldUpdateBody = (prev && prev.body === '') || prev.body === writer.body
       if (!shouldUpdateTitle && !shouldUpdateBody) return prev
       return {
         title: shouldUpdateTitle ? writer.script?.title || writer.topic : prev.title,
@@ -107,6 +126,8 @@ export default function WriterPage() {
   const [fetchingPsx, setFetchingPsx] = useState(false)
   const [correlateStatus, setCorrelateStatus] = useState<string | null>(null)
   const [correlating, setCorrelating] = useState(false)
+
+  if (location.pathname !== '/writer') return null
 
   function toggleStyle(style: ScriptStyle): void {
     const has = writer.styles.includes(style)
@@ -136,7 +157,9 @@ export default function WriterPage() {
         styles: writer.styles
       })
       setWriter({ script: result, body: result.body, thumbnailBrief: null })
-      setScene({ title: result.title || writer.topic, body: result.body })
+      if (typeof setScene === 'function') {
+        setScene({ title: result.title || writer.topic, body: result.body })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script')
     } finally {
