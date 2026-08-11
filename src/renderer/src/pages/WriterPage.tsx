@@ -60,10 +60,6 @@ export default function WriterPage() {
     return () => console.log('[E2E-TRACE] WriterPage unmounted — pathname=', location.pathname, 'hash=', window.location.hash)
   }, [location.pathname])
 
-  // If the app has navigated away, do not render the writer UI. Keep hooks
-  // called above to respect React rules (hooks must run unconditionally).
-  if (location.pathname !== '/writer') return null
-
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
   // Register producer target unconditionally; pass null when diagnostics opt-out flag is set
   try {
@@ -130,6 +126,8 @@ export default function WriterPage() {
   const [fetchingPsx, setFetchingPsx] = useState(false)
   const [correlateStatus, setCorrelateStatus] = useState<string | null>(null)
   const [correlating, setCorrelating] = useState(false)
+
+  if (location.pathname !== '/writer') return null
 
   function toggleStyle(style: ScriptStyle): void {
     const has = writer.styles.includes(style)
