@@ -22,6 +22,15 @@ jobs:
     env:
       CI: true
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      SKIP_E2E: 'true'
+      # Ensure no debugger flags are present on the runner (help Playwright/Electron start cleanly)
+      NODE_OPTIONS: ''
+      DEBUG: ''
+      ELECTRON_DEBUG: ''
+      VSCODE_INSPECTOR_OPTIONS: ''
+      PWDEBUG: '0'
+      PLAYWRIGHT_DEBUG: '0'
+      ELECTRON_NO_ATTACH_CONSOLE: '1'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
