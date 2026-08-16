@@ -27,62 +27,43 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
     if (t && typeof t.label === 'string') console.log('[PRODUCER] registerProducerTarget:', t.label, t.kind)
     else if (t === null) console.log('[PRODUCER] registerProducerTarget: null (cleared)')
   } catch (_) { void 0 }
-  target = t
-  try {
-    // Invoke listeners asynchronously to avoid re-entrancy during routing/hashchange handling in E2E scenarios.
-    console.log('[PRODUCER] scheduling listeners, count=', listeners.length)
-    try { window.requestAnimationFrame(() => {
-      try {
-        console.log('[PRODUCER] invoking listeners (async), count=', listeners.length)
-        listeners.forEach((l, i) => {
-          try {
-            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) { void 0 }
-            l()
-          } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
-          }
-        })
-      } catch (err) {
-        try { console.log('[PRODUCER] failed invoking listeners (async)', err && err.message ? err.message : String(err)) } catch (_) {}
-      }
-    }) } catch (_) { queueMicrotask(() => {
-      try {
-        console.log('[PRODUCER] invoking listeners (async-fallback), count=', listeners.length)
-        listeners.forEach((l, i) => {
-          try {
-            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) { void 0 }
-            l()
-          } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
-          }
-        })
-    if (t) console.log('[PRODUCER] target=', t.label, t.kind)
-    else console.log('[PRODUCER] target cleared')
-  } catch (e) { /* ignore */ }
 
+  // Update the current target immediately
   target = t
 
+  // Notify helper that calls all listeners safely
   const notify = (): void => {
-    listeners.forEach((listener, index) => {
-      try {
-        listener()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        try { console.log('[PRODUCER] listener', index, 'failed:', msg) } catch (e) { /* ignore */ }
+    try {
+      console.log('[PRODUCER] invoking listeners, count=', listeners.length)
+      for (let i = 0; i < listeners.length; i++) {
+        try {
+          try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) { void 0 }
+          listeners[i]()
+        } catch (err) {
+          try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
+        }
       }
-    }) }
-  } catch (err) {
-    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
-    })
+    } catch (err) {
+      try { console.log('[PRODUCER] failed invoking listeners', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
+    }
   }
 
+  // Schedule the notify asynchronously (try RAF, fallback to microtask)
   try {
+    console.log('[PRODUCER] scheduling listeners, count=', listeners.length)
     if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(notify)
-      return
+      try {
+        window.requestAnimationFrame(() => notify())
+        return
+      } catch (e) {
+        // fall through to microtask
+      }
     }
-  } catch (e) { /* ignore */ }
-  queueMicrotask(notify)
+  } catch (e) {
+    // ignore
+  }
+
+  queueMicrotask(() => notify())
 }
 
 export function getProducerTarget(): ProducerTarget | null {
