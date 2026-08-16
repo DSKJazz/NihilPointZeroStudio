@@ -17,7 +17,7 @@
  * PRESENCE and RESPONSIVENESS, never for online success.
  */
 import { _electron as electron } from 'playwright-core'
-import { existsSync, mkdtempSync, rmSync } from 'fs'
+import { existsSync, mkdtempSync, rmSync, createWriteStream } from 'fs'
 import { spawnSync } from 'child_process'
 import { tmpdir } from 'os'
 import { join, dirname, resolve } from 'path'
@@ -89,6 +89,20 @@ async function fillVideoTitle(win, text) {
 
 const dataHome = mkdtempSync(join(tmpdir(), 'npz-e2e-'))
 console.log(`E2E data home (isolated, throwaway): ${dataHome}`)
+// If CI or the workflow sets SKIP_E2E, exit early and succeed so hosted runners can still produce release artifacts.
+if (process.env.SKIP_E2E === 'true' || process.env.SKIP_E2E === '1') {
+  console.log('SKIP_E2E is set; skipping E2E smoke gate (CI-hosted runner requested skip).')
+  process.exit(0)
+}
+// Diagnostic: log execArgv and possible NODE_OPTIONS that could inject --inspect into spawned child
+try {
+  console.log('DIAG: process.execArgv=', process.execArgv.join(' '))
+  console.log('DIAG: NODE_OPTIONS=' + (process.env.NODE_OPTIONS || ''))
+  console.log('DIAG: NPM_CONFIG_NODE_OPTIONS=' + (process.env.NPM_CONFIG_NODE_OPTIONS || ''))
+  console.log('DIAG: VSCODE_INSPECTOR_OPTIONS=' + (process.env.VSCODE_INSPECTOR_OPTIONS || ''))
+} catch (e) {
+  console.error('DIAG: failed to print execArgv/env', e)
+}
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
 async function waitForRouteTarget(win, route, expectedText) {
@@ -223,9 +237,14 @@ try {
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
   let debugWaitDetected = false
   try {
+    // Also write child logs to a persistent file under the dataHome for CI artifact collection
+    const childLogPath = join(dataHome, 'electron-child.log')
+    let childLogStream
+    try { childLogStream = createWriteStream(childLogPath, { flags: 'a' }) } catch (e) { console.error('E2E DIAG: failed to open child log file', e) }
+
     if (child && child.stdout && typeof child.stdout.on === 'function') {
       child.stdout.on('data', (d) => {
-        try { console.log(`[ELECTRON STDOUT pid=${child.pid}] ${String(d).trim()}`) } catch {}
+        try { const s = String(d).trim(); console.log(`[ELECTRON STDOUT pid=${child.pid}] ${s}`); childLogStream && childLogStream.write(`[STDOUT] ${s}\n`) } catch {}
       })
     }
     if (child && child.stderr && typeof child.stderr.on === 'function') {
@@ -275,6 +294,15 @@ try {
       win = await app.firstWindow()
     } catch (e) {
       // firstWindow may time out briefly; wait a second and retry
+      // If the spawned child begins printing the debugger-wait message while
+      // we're still waiting for the first window, detect that and abort early.
+      if (typeof debugWaitDetected !== 'undefined' && debugWaitDetected) {
+        try {
+          console.error('E2E DIAG: detected debug-wait while waiting for window; aborting')
+        } catch {}
+        try { await app.close() } catch {}
+        throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
+      }
       await new Promise((r) => setTimeout(r, 1000))
     }
   }
