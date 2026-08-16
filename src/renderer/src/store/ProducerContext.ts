@@ -103,6 +103,6 @@ export function useProducerTarget(t: ProducerTarget | null): void {
       apply: (next: string) => ref.current?.apply(next)
     } as ProducerTarget)
     return () => registerProducerTarget(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [label, kind])
 }
