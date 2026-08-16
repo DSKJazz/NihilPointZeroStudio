@@ -289,6 +289,15 @@ try {
       win = await app.firstWindow()
     } catch (e) {
       // firstWindow may time out briefly; wait a second and retry
+      // If the spawned child begins printing the debugger-wait message while
+      // we're still waiting for the first window, detect that and abort early.
+      if (typeof debugWaitDetected !== 'undefined' && debugWaitDetected) {
+        try {
+          console.error('E2E DIAG: detected debug-wait while waiting for window; aborting')
+        } catch {}
+        try { await app.close() } catch {}
+        throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
+      }
       await new Promise((r) => setTimeout(r, 1000))
     }
   }
