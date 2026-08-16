@@ -213,6 +213,43 @@ async function findSpokenNarrationLocator(win) {
 }
 
 
+// Pre-launch probe: attempt to spawn the Electron binary directly for 2s to capture any immediate stderr output
+try {
+  const { spawn } = await import('child_process')
+  const { createRequire } = await import('module')
+  const req = createRequire(import.meta.url)
+  let electronExe
+  try {
+    electronExe = req('electron')
+    console.log('DIAG: electron module resolved to', electronExe)
+  } catch (e) {
+    console.error('DIAG: require("electron") failed', e)
+  }
+  if (electronExe) {
+    try {
+      const probe = spawn(electronExe, [join(repo, 'out', 'main', 'index.js')], {
+        env: { ...process.env, NPZ_E2E_USERDATA: dataHome, NODE_ENV: 'production' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+      let probeTimedOut = false
+      probe.stdout.on('data', (d) => { try { console.log('[PROBE STDOUT] ' + String(d).trim()) } catch {} })
+      probe.stderr.on('data', (d) => { try { console.error('[PROBE STDERR] ' + String(d).trim()) } catch {} })
+      // kill probe after 2000ms — this is only to capture early logs
+      setTimeout(() => {
+        probeTimedOut = true
+        try { probe.kill() } catch {}
+      }, 2000)
+      // await probe exit or timeout
+      await new Promise((res) => probe.on('exit', () => res()).once('error', () => res()))
+      if (probeTimedOut) console.log('DIAG: probe killed after timeout')
+    } catch (e) {
+      console.error('DIAG: probe spawn failed', e)
+    }
+  }
+} catch (e) {
+  console.error('DIAG: pre-launch probe failed', e)
+}
+
 const app = await electron.launch({
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
@@ -234,6 +271,14 @@ try {
   try {
     const child = app.process && app.process()
     if (child && child.pid) console.log('Launched electron child PID:', child.pid)
+    // Log child spawn details to help diagnose unexpected debug flags
+    try {
+      if (child) {
+        console.log('E2E DIAG: child.spawnfile=' + (child.spawnfile || ''))
+        console.log('E2E DIAG: child.spawnargs=' + (Array.isArray(child.spawnargs) ? child.spawnargs.join(' ') : String(child.spawnargs)))
+      }
+    } catch (e) { console.error('E2E DIAG: failed to read child.spawnargs', e) }
+
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
   let debugWaitDetected = false
   try {
