@@ -62,19 +62,15 @@ export default function WriterPage() {
 
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
   // Register producer target unconditionally; pass null when diagnostics opt-out flag is set
-  try {
-    const prodTarget = typeof window !== 'undefined' && (window as any).__npz_diag_disable_producer
-      ? null
-      : {
-          label: 'Script Writer',
-          kind: 'script',
-          text: writer.body,
-          apply: (next: string) => setWriter({ body: next })
-        }
-    useProducerTarget(prodTarget)
-  } catch (e) {
-    // swallow any diagnostic-time errors
-  }
+  const prodTarget = typeof window !== 'undefined' && (window as any).__npz_diag_disable_producer
+    ? null
+    : {
+        label: 'Script Writer',
+        kind: 'script',
+        text: writer.body,
+        apply: (next: string) => setWriter({ body: next })
+      }
+  useProducerTarget(prodTarget)
 
   // When arriving via an idea's "Write Script" button, seed the writer fields from it.
   useEffect(() => {
@@ -126,8 +122,6 @@ export default function WriterPage() {
   const [fetchingPsx, setFetchingPsx] = useState(false)
   const [correlateStatus, setCorrelateStatus] = useState<string | null>(null)
   const [correlating, setCorrelating] = useState(false)
-
-  if (location.pathname !== '/writer') return null
 
   function toggleStyle(style: ScriptStyle): void {
     const has = writer.styles.includes(style)
@@ -309,6 +303,8 @@ export default function WriterPage() {
   }
 
   const liveWordCount = writer.body.trim() ? writer.body.trim().split(/\s+/).length : 0
+
+  if (location.pathname !== '/writer') return null
 
   return (
     <div className="max-w-6xl mx-auto p-8">
