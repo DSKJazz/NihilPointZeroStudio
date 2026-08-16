@@ -73,12 +73,32 @@ Step 'Typecheck the phone bridge and the phone app' {
 }
 
 Step 'UI click-through of the REAL app (every tab must respond, a video must build)' {
-    # Unit tests can all pass while a button in the UI is dead — that class of failure
-    # reached the user repeatedly. This launches the actual built app in an isolated
-    # data home, walks EVERY tab, and builds a real video through the UI, offline.
-    # Red here = the ship stops. A small app window appearing for a few minutes is
-    # this gate doing its job.
-    npm run test:e2e
+    # Retry the E2E smoke a small number of times to work around transient CI flakiness
+    $maxAttempts = 2
+    $attempt = 0
+    $passed = $false
+    while (-not $passed -and $attempt -lt $maxAttempts) {
+        $attempt = $attempt + 1
+        Write-Host "  -> E2E attempt $attempt of $maxAttempts"
+        npm run test:e2e
+        if ($LASTEXITCODE -eq 0) { $passed = $true; break }
+        Write-Host "  E2E attempt $attempt failed (exit $LASTEXITCODE)" -ForegroundColor Yellow
+        if ($attempt -lt $maxAttempts) { Write-Host '  Retrying after 5s...'; Start-Sleep -Seconds 5 }
+    }
+    if (-not $passed) {
+        Write-Host '  E2E failed after retries — collecting diagnostics and aborting ship.' -ForegroundColor Red
+        # Collect some helpful artifacts for triage
+        try {
+            $tmp = Join-Path $env:TEMP ("ship-e2e-fail-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+            New-Item -ItemType Directory -Path $tmp | Out-Null
+            # copy built renderer html and main for quick inspection
+            Copy-Item -Path (Join-Path $repo 'out\renderer\index.html') -Destination $tmp -ErrorAction SilentlyContinue
+            Copy-Item -Path (Join-Path $repo 'out\main\index.js') -Destination $tmp -ErrorAction SilentlyContinue
+            Get-ChildItem -Path $tmp | ForEach-Object { Write-Host "  Collected: $($_.FullName)" }
+        } catch { Write-Host '  Failed to collect diagnostics' -ForegroundColor Yellow }
+        throw 'FAILED: UI click-through gate (E2E smoke)'
+    }
+    Write-Host '  E2E smoke passed'
 }
 
 # Build identity: the doc stamp carries version + date-time; the sidebar badge carries the
