@@ -202,10 +202,26 @@ async function findSpokenNarrationLocator(win) {
 const app = await electron.launch({
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
-  env: { ...process.env, NPZ_E2E_USERDATA: dataHome }
+  env: {
+    ...process.env,
+    NPZ_E2E_USERDATA: dataHome,
+    // Request Electron runtime logging/stderr to help diagnose headless/desktop attach issues
+    ELECTRON_ENABLE_LOGGING: '1',
+    ELECTRON_ENABLE_STACK_DUMPING: '1',
+    // Force visible devtools logs (helpful when stdout is silent)
+    DEBUG: '*'
+  }
 })
 
 try {
+  // Print the spawned electron pid (when available) so stdout/stderr can be inspected
+  try {
+    const child = app.process && app.process()
+    if (child && child.pid) console.log('Launched electron child PID:', child.pid)
+  } catch (e) {
+    console.log('Could not get electron child PID:', e?.message ?? e)
+  }
+
   // Wait for the first window, but tolerate slow startups by retrying for up to 2 minutes.
   let win = null
   const startTs = Date.now()
