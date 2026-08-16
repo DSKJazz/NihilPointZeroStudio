@@ -1035,8 +1035,6 @@ export function registerIpcHandlers(): void {
     // empty answer used to mean five different things and named none of them.
     const { videos, problem } = await readMyChannel()
     logRead('Your channel', problem)
-  ipcMain.handle(IPC.channelLearn, async () => {
-    const videos = await fetchMyChannelVideos()
     const past = videos.map((v) => ({
       title: v.title,
       publishedAt: v.publishedAt,
@@ -1048,8 +1046,8 @@ export function registerIpcHandlers(): void {
       problem,
       videoCount: past.length,
       titleFindings: learnTitlePatterns(past),
-      timing: publishTimingReport(past),
-      series: seriesReport(videos.map((v) => ({ id: v.id, title: v.title, publishedAt: v.publishedAt, url: `https://youtu.be/${v.id}` })))
+      timingReport: publishTimingReport(past),
+      series: seriesReport(past)
     }
   })
 
@@ -1080,7 +1078,6 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.channelComments, async (_e, videoLimit?: number) => {
     const { videos, problem } = await readMyChannel()
     logRead('Comment questions', problem)
-    const videos = await fetchMyChannelVideos()
     // Newest first, and only the recent ones: a question from three years ago has usually
     // been answered, and each video costs a quota unit.
     const recent = [...videos]
