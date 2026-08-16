@@ -3,8 +3,8 @@ name: Ship (Windows)
 # Runs the full ship pipeline on a Windows runner
 # Triggers: manual dispatch, pull requests to main, and when merged/pushed to main
 on:
-  workflow_dispatch:
-  pull_request
+  workflow_dispatch: {}
+  pull_request:
     branches: [ main ]
   push:
     branches: [ main ]
