@@ -110,7 +110,7 @@ process.on('exit', () => {
 })
 process.on('SIGINT', () => process.exit(1))
 process.on('uncaughtException', (err) => { try { console.error('UNCAUGHT EX', err) } catch {} ; process.exit(1) })
-}
+
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
 async function waitForRouteTarget(win, route, expectedText) {
