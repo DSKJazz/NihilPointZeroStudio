@@ -4,7 +4,7 @@ name: Ship (Windows)
 # Triggers: manual dispatch, pull requests to main, and when merged/pushed to main
 on:
   workflow_dispatch:
-  pull_request:
+  pull_request
     branches: [ main ]
   push:
     branches: [ main ]
@@ -45,6 +45,12 @@ jobs:
           npm run lint --if-present
           npm run build --if-present
           npm test --if-present
+
+      - name: Ensure Desktop studio folder exists
+        shell: pwsh
+        run: |
+          Write-Host "Creating Desktop studio folder for runner: C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio"
+          New-Item -ItemType Directory -Path "C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio" -Force | Out-Null
 
       - name: Run ship (E2E + packaging + release)
         shell: pwsh
