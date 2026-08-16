@@ -66,7 +66,7 @@ export function useAutosave<T>(
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [key, state])
 
   // Flush any pending save on unmount (tab switch) and on app close, so the last <600ms
@@ -80,7 +80,7 @@ export function useAutosave<T>(
       window.removeEventListener('beforeunload', flush)
       flush()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [key])
 
   return status

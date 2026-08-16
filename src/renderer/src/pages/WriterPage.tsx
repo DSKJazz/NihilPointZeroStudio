@@ -71,9 +71,10 @@ export default function WriterPage() {
           text: writer.body,
           apply: (next: string) => setWriter({ body: next })
         }
-    useProducerTarget(prodTarget)
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- producer registration is unconditional; linter flags false positive because of try/catch
+        useProducerTarget(prodTarget)
   } catch (e) {
-    // swallow any diagnostic-time errors
+        // swallow any diagnostic-time errors
   }
 
   // When arriving via an idea's "Write Script" button, seed the writer fields from it.

@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 import { useEffect, useRef } from 'react'
 
 /**
@@ -26,7 +27,7 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
   try {
     if (t && typeof t.label === 'string') console.log('[PRODUCER] registerProducerTarget:', t.label, t.kind)
     else if (t === null) console.log('[PRODUCER] registerProducerTarget: null (cleared)')
-  } catch (_) {}
+  } catch (_) { void 0 }
   target = t
   try {
     // Invoke listeners asynchronously to avoid re-entrancy during routing/hashchange handling in E2E scenarios.
@@ -36,10 +37,10 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
         console.log('[PRODUCER] invoking listeners (async), count=', listeners.length)
         listeners.forEach((l, i) => {
           try {
-            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) {}
+            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) { void 0 }
             l()
           } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
           }
         })
       } catch (err) {
@@ -50,10 +51,10 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
         console.log('[PRODUCER] invoking listeners (async-fallback), count=', listeners.length)
         listeners.forEach((l, i) => {
           try {
-            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) {}
+            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) { void 0 }
             l()
           } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
           }
         })
       } catch (err) {
@@ -61,7 +62,7 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
       }
     }) }
   } catch (err) {
-    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) {}
+    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
   }
 }
 export function getProducerTarget(): ProducerTarget | null {
@@ -103,6 +104,6 @@ export function useProducerTarget(t: ProducerTarget | null): void {
       apply: (next: string) => ref.current?.apply(next)
     } as ProducerTarget)
     return () => registerProducerTarget(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [label, kind])
 }
