@@ -280,6 +280,40 @@ if (!gotLock) {
         })()
       }, 8000)
 
+      // Periodic background check for updates: every 4 hours. Quiet on failures.
+      // Uses the existing, tested runSelfUpdate path so the installer is downloaded,
+      // verified and launched only when safe. For a running portable exe this simply
+      // downloads the installer and leaves it on disk (the UI tells the user how to
+      // apply it) — the app never overwrites a running exe.
+      const FOUR_HOURS_MS = 4 * 60 * 60 * 1000
+      setInterval(() => {
+        void (async () => {
+          try {
+            await checkForUpdate()
+            if (!getAvailableUpdate()) return
+            // If busy, leave the verified installer on disk and log that it is deferred
+            if (isBusy()) {
+              try {
+                logActivity('ai', 'Update available but deferred because work is in progress')
+              } catch {
+                /* ignore logging errors */
+              }
+              return
+            }
+            const res = await runSelfUpdate({ ...selfUpdateEnv(), stillSafeToQuit: () => !isBusy() })
+            if (!res.ok) {
+              try {
+                logActivity('ai', res.deferred ? 'The periodic update is downloaded and waiting' : 'Periodic update failed', res.error)
+              } catch {
+                /* ignore logging errors */
+              }
+            }
+          } catch {
+            /* silent by design */
+          }
+        })()
+      }, FOUR_HOURS_MS)
+
       /**
        * ONE DISK IS NOT A BACKUP. His work exists in one place and his own restore log
        * already reads "8 missing file(s) brought back". Settings has said "not set -
