@@ -17,7 +17,7 @@
  * PRESENCE and RESPONSIVENESS, never for online success.
  */
 import { _electron as electron } from 'playwright-core'
-import { existsSync, mkdtempSync, rmSync } from 'fs'
+import { existsSync, mkdtempSync, rmSync, createWriteStream } from 'fs'
 import { spawnSync } from 'child_process'
 import { tmpdir } from 'os'
 import { join, dirname, resolve } from 'path'
@@ -237,9 +237,14 @@ try {
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
   let debugWaitDetected = false
   try {
+    // Also write child logs to a persistent file under the dataHome for CI artifact collection
+    const childLogPath = join(dataHome, 'electron-child.log')
+    let childLogStream
+    try { childLogStream = createWriteStream(childLogPath, { flags: 'a' }) } catch (e) { console.error('E2E DIAG: failed to open child log file', e) }
+
     if (child && child.stdout && typeof child.stdout.on === 'function') {
       child.stdout.on('data', (d) => {
-        try { console.log(`[ELECTRON STDOUT pid=${child.pid}] ${String(d).trim()}`) } catch {}
+        try { const s = String(d).trim(); console.log(`[ELECTRON STDOUT pid=${child.pid}] ${s}`); childLogStream && childLogStream.write(`[STDOUT] ${s}\n`) } catch {}
       })
     }
     if (child && child.stderr && typeof child.stderr.on === 'function') {
