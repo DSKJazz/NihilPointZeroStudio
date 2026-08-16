@@ -206,7 +206,19 @@ const app = await electron.launch({
 })
 
 try {
-  const win = await app.firstWindow()
+  // Wait for the first window, but tolerate slow startups by retrying for up to 2 minutes.
+  let win = null
+  const startTs = Date.now()
+  const MAX_WAIT = 120_000
+  while (!win && Date.now() - startTs < MAX_WAIT) {
+    try {
+      win = await app.firstWindow()
+    } catch (e) {
+      // firstWindow may time out briefly; wait a second and retry
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+  }
+  if (!win) throw new Error(`electronApplication.firstWindow: Timeout ${MAX_WAIT}ms exceeded while waiting for event "window"`)
   const pageErrors = []
   win.on('pageerror', (err) => pageErrors.push(String(err?.message ?? err)))
   await win.waitForLoadState('domcontentloaded')
