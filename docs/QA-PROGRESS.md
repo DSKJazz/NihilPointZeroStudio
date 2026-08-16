@@ -1,7 +1,8 @@
 # QA Progress — resumable checklist
 
 - [FIXED] Recovery: restore clean working copy from GitHub and fix merge-corruption parse errors (branch: ci/fix-main-parse-errors). Tests and build verified locally.
-- [IN PROGRESS] Create UPDATE-NOW.cmd to automate pulling, installing, building, and summarizing artifacts. (This file added in current commit.)
+- [PASSED] Create UPDATE-NOW.cmd to automate pulling, installing, building, and summarizing artifacts. (This file was added.)
+- [PASSED] Background update scheduler: periodic silent update check added (every 4 hours) that downloads and defers install when work is in progress.
 - [NOT STARTED] Integrate electron-updater for silent installed updates (Part 0C).
 - [NOT STARTED] Update electron-builder publish block to use per-release version tags and auto-generate metadata (latest.yml).
 - [NOT STARTED] Implement portable update flow (download new exe, prompt user to replace) and logging for update checks.
