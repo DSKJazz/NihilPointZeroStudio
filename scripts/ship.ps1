@@ -46,15 +46,27 @@ Step 'Refuse to build from a tree that is behind main' {
     $missing = (git rev-list --count HEAD..origin/main)
     if ($LASTEXITCODE) { return }
     if ([int]$missing -gt 0) {
-        Write-Host ''
-        Write-Host "  STOPPED: $missing commit(s) are on GitHub but not in this folder." -ForegroundColor Red
-        Write-Host '  Building now would produce an app MISSING finished work - which has' -ForegroundColor Red
-        Write-Host '  happened before (the teleprompter shipped missing this way).' -ForegroundColor Red
-        Write-Host ''
-        Write-Host '  Fix it with:  git pull origin main' -ForegroundColor Yellow
-        Write-Host '  Then run this again. Your own work is untouched either way.' -ForegroundColor Yellow
-        Write-Host ''
-        throw 'Behind origin/main - refusing to ship an incomplete build.'
+        if ($env:CI -and $env:GITHUB_ACTOR) {
+            Write-Host "  CI runner: origin/main is ahead by $missing commit(s). Attempting to fast-forward from origin/main..." -ForegroundColor Yellow
+            git pull --rebase origin main
+            if ($LASTEXITCODE) {
+                Write-Host ''
+                Write-Host "  STOPPED: $missing commit(s) are on GitHub but git pull --rebase failed in CI." -ForegroundColor Red
+                Write-Host '  Fix it manually and re-run the ship workflow.' -ForegroundColor Yellow
+                throw 'Behind origin/main - attempted to pull in CI and failed.'
+            }
+            Write-Host '   Successfully updated to origin/main in CI' -ForegroundColor DarkGray
+        } else {
+            Write-Host ''
+            Write-Host "  STOPPED: $missing commit(s) are on GitHub but not in this folder." -ForegroundColor Red
+            Write-Host '  Building now would produce an app MISSING finished work - which has' -ForegroundColor Red
+            Write-Host '  happened before (the teleprompter shipped missing this way).' -ForegroundColor Red
+            Write-Host ''
+            Write-Host '  Fix it with:  git pull origin main' -ForegroundColor Yellow
+            Write-Host '  Then run this again. Your own work is untouched either way.' -ForegroundColor Yellow
+            Write-Host ''
+            throw 'Behind origin/main - refusing to ship an incomplete build.'
+        }
     }
     Write-Host '   up to date with origin/main' -ForegroundColor DarkGray
 }
