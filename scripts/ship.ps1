@@ -143,6 +143,11 @@ Step 'Commit source (so the badge hash names the code actually built)' {
     # Committing BEFORE the build lets the badge carry THIS commit's hash. Previously the
     # hash was read before the ship commit existed, so the badge always named the PREVIOUS
     # ship's commit (one behind) - which misled anyone comparing it against git log.
+    # When running under CI, ensure git has a user identity so commits succeed (GITHUB_ACTOR is available).
+    if ($env:CI -and $env:GITHUB_ACTOR) {
+        git config user.email ("$($env:GITHUB_ACTOR)@users.noreply.github.com")
+        git config user.name $env:GITHUB_ACTOR
+    }
     git add -A
     if ($LASTEXITCODE) { throw 'git add failed - fix the reported git error and re-ship' }
     if (git status --porcelain) {
