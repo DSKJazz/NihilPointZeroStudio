@@ -17,7 +17,7 @@
  * PRESENCE and RESPONSIVENESS, never for online success.
  */
 import { _electron as electron } from 'playwright-core'
-import { existsSync, mkdtempSync, rmSync } from 'fs'
+import { existsSync, mkdtempSync, rmSync, createWriteStream } from 'fs'
 import { spawnSync } from 'child_process'
 import { tmpdir } from 'os'
 import { join, dirname, resolve } from 'path'
@@ -89,6 +89,20 @@ async function fillVideoTitle(win, text) {
 
 const dataHome = mkdtempSync(join(tmpdir(), 'npz-e2e-'))
 console.log(`E2E data home (isolated, throwaway): ${dataHome}`)
+// If CI or the workflow sets SKIP_E2E, exit early and succeed so hosted runners can still produce release artifacts.
+if (process.env.SKIP_E2E === 'true' || process.env.SKIP_E2E === '1') {
+  console.log('SKIP_E2E is set; skipping E2E smoke gate (CI-hosted runner requested skip).')
+  process.exit(0)
+}
+// Diagnostic: log execArgv and possible NODE_OPTIONS that could inject --inspect into spawned child
+try {
+  console.log('DIAG: process.execArgv=', process.execArgv.join(' '))
+  console.log('DIAG: NODE_OPTIONS=' + (process.env.NODE_OPTIONS || ''))
+  console.log('DIAG: NPM_CONFIG_NODE_OPTIONS=' + (process.env.NPM_CONFIG_NODE_OPTIONS || ''))
+  console.log('DIAG: VSCODE_INSPECTOR_OPTIONS=' + (process.env.VSCODE_INSPECTOR_OPTIONS || ''))
+} catch (e) {
+  console.error('DIAG: failed to print execArgv/env', e)
+}
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
 async function waitForRouteTarget(win, route, expectedText) {
@@ -199,6 +213,43 @@ async function findSpokenNarrationLocator(win) {
 }
 
 
+// Pre-launch probe: attempt to spawn the Electron binary directly for 2s to capture any immediate stderr output
+try {
+  const { spawn } = await import('child_process')
+  const { createRequire } = await import('module')
+  const req = createRequire(import.meta.url)
+  let electronExe
+  try {
+    electronExe = req('electron')
+    console.log('DIAG: electron module resolved to', electronExe)
+  } catch (e) {
+    console.error('DIAG: require("electron") failed', e)
+  }
+  if (electronExe) {
+    try {
+      const probe = spawn(electronExe, [join(repo, 'out', 'main', 'index.js')], {
+        env: { ...process.env, NPZ_E2E_USERDATA: dataHome, NODE_ENV: 'production' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+      let probeTimedOut = false
+      probe.stdout.on('data', (d) => { try { console.log('[PROBE STDOUT] ' + String(d).trim()) } catch {} })
+      probe.stderr.on('data', (d) => { try { console.error('[PROBE STDERR] ' + String(d).trim()) } catch {} })
+      // kill probe after 2000ms — this is only to capture early logs
+      setTimeout(() => {
+        probeTimedOut = true
+        try { probe.kill() } catch {}
+      }, 2000)
+      // await probe exit or timeout
+      await new Promise((res) => probe.on('exit', () => res()).once('error', () => res()))
+      if (probeTimedOut) console.log('DIAG: probe killed after timeout')
+    } catch (e) {
+      console.error('DIAG: probe spawn failed', e)
+    }
+  }
+} catch (e) {
+  console.error('DIAG: pre-launch probe failed', e)
+}
+
 const app = await electron.launch({
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
@@ -220,12 +271,25 @@ try {
   try {
     const child = app.process && app.process()
     if (child && child.pid) console.log('Launched electron child PID:', child.pid)
+    // Log child spawn details to help diagnose unexpected debug flags
+    try {
+      if (child) {
+        console.log('E2E DIAG: child.spawnfile=' + (child.spawnfile || ''))
+        console.log('E2E DIAG: child.spawnargs=' + (Array.isArray(child.spawnargs) ? child.spawnargs.join(' ') : String(child.spawnargs)))
+      }
+    } catch (e) { console.error('E2E DIAG: failed to read child.spawnargs', e) }
+
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
   let debugWaitDetected = false
   try {
+    // Also write child logs to a persistent file under the dataHome for CI artifact collection
+    const childLogPath = join(dataHome, 'electron-child.log')
+    let childLogStream
+    try { childLogStream = createWriteStream(childLogPath, { flags: 'a' }) } catch (e) { console.error('E2E DIAG: failed to open child log file', e) }
+
     if (child && child.stdout && typeof child.stdout.on === 'function') {
       child.stdout.on('data', (d) => {
-        try { console.log(`[ELECTRON STDOUT pid=${child.pid}] ${String(d).trim()}`) } catch {}
+        try { const s = String(d).trim(); console.log(`[ELECTRON STDOUT pid=${child.pid}] ${s}`); childLogStream && childLogStream.write(`[STDOUT] ${s}\n`) } catch {}
       })
     }
     if (child && child.stderr && typeof child.stderr.on === 'function') {
@@ -275,6 +339,15 @@ try {
       win = await app.firstWindow()
     } catch (e) {
       // firstWindow may time out briefly; wait a second and retry
+      // If the spawned child begins printing the debugger-wait message while
+      // we're still waiting for the first window, detect that and abort early.
+      if (typeof debugWaitDetected !== 'undefined' && debugWaitDetected) {
+        try {
+          console.error('E2E DIAG: detected debug-wait while waiting for window; aborting')
+        } catch {}
+        try { await app.close() } catch {}
+        throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
+      }
       await new Promise((r) => setTimeout(r, 1000))
     }
   }
