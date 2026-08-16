@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 import { useEffect, useRef } from 'react'
 
 /**
@@ -22,11 +23,10 @@ let target: ProducerTarget | null = null
 let listeners: (() => void)[] = []
 
 export function registerProducerTarget(t: ProducerTarget | null): void {
-  // Diagnostic logging for E2E investigation: which page registers as the Producer target
   try {
     if (t && typeof t.label === 'string') console.log('[PRODUCER] registerProducerTarget:', t.label, t.kind)
     else if (t === null) console.log('[PRODUCER] registerProducerTarget: null (cleared)')
-  } catch (_) {}
+  } catch (_) { void 0 }
   target = t
   try {
     // Invoke listeners asynchronously to avoid re-entrancy during routing/hashchange handling in E2E scenarios.
@@ -36,10 +36,10 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
         console.log('[PRODUCER] invoking listeners (async), count=', listeners.length)
         listeners.forEach((l, i) => {
           try {
-            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) {}
+            try { console.log('[PRODUCER] invoking listener', i, 'at', Date.now()) } catch (_) { void 0 }
             l()
           } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
           }
         })
       } catch (err) {
@@ -50,23 +50,45 @@ export function registerProducerTarget(t: ProducerTarget | null): void {
         console.log('[PRODUCER] invoking listeners (async-fallback), count=', listeners.length)
         listeners.forEach((l, i) => {
           try {
-            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) {}
+            try { console.log('[PRODUCER] invoking listener (fallback)', i, 'at', Date.now()) } catch (_) { void 0 }
             l()
           } catch (err) {
-            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) {}
+            try { console.log('[PRODUCER] listener', i, 'threw', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
           }
         })
+    if (t) console.log('[PRODUCER] target=', t.label, t.kind)
+    else console.log('[PRODUCER] target cleared')
+  } catch (e) { /* ignore */ }
+
+  target = t
+
+  const notify = (): void => {
+    listeners.forEach((listener, index) => {
+      try {
+        listener()
       } catch (err) {
-        try { console.log('[PRODUCER] failed invoking listeners (async-fallback)', err && err.message ? err.message : String(err)) } catch (_) {}
+        const msg = err instanceof Error ? err.message : String(err)
+        try { console.log('[PRODUCER] listener', index, 'failed:', msg) } catch (e) { /* ignore */ }
       }
     }) }
   } catch (err) {
-    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) {}
+    try { console.log('[PRODUCER] failed scheduling listeners', err && err.message ? err.message : String(err)) } catch (_) { void 0 }
+    })
   }
+
+  try {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(notify)
+      return
+    }
+  } catch (e) { /* ignore */ }
+  queueMicrotask(notify)
 }
+
 export function getProducerTarget(): ProducerTarget | null {
   return target
 }
+
 export function subscribeProducerTarget(cb: () => void): () => void {
   listeners.push(cb)
   return () => {
@@ -81,15 +103,21 @@ export function subscribeProducerTarget(cb: () => void): () => void {
  * re-render the Producer panel on every keystroke. Clears on unmount. Pass null to opt out.
  */
 export function useProducerTarget(t: ProducerTarget | null): void {
-  const ref = useRef(t)
-  ref.current = t
+  const ref = useRef<ProducerTarget | null>(null)
+
+  useEffect(() => {
+    ref.current = t
+  }, [t])
+
   const label = t?.label
   const kind = t?.kind
+
   useEffect(() => {
     if (!ref.current) {
       registerProducerTarget(null)
       return
     }
+
     registerProducerTarget({
       get label() {
         return ref.current?.label ?? ''
@@ -102,7 +130,8 @@ export function useProducerTarget(t: ProducerTarget | null): void {
       },
       apply: (next: string) => ref.current?.apply(next)
     } as ProducerTarget)
+
     return () => registerProducerTarget(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [label, kind])
 }

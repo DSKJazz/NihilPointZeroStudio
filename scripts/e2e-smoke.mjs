@@ -202,11 +202,103 @@ async function findSpokenNarrationLocator(win) {
 const app = await electron.launch({
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
-  env: { ...process.env, NPZ_E2E_USERDATA: dataHome }
+  env: (() => {
+    // Minimal sanitized environment: keep PATH and temp vars to allow child to run
+    const env = {
+      PATH: process.env.PATH || process.env.Path,
+      TEMP: process.env.TEMP || process.env.TMP,
+      TMP: process.env.TMP || process.env.TEMP,
+      NPZ_E2E_USERDATA: dataHome,
+      NODE_ENV: 'production'
+    }
+    return env
+  })()
 })
 
 try {
-  const win = await app.firstWindow()
+  // Print the spawned electron pid (when available) so stdout/stderr can be inspected
+  try {
+    const child = app.process && app.process()
+    if (child && child.pid) console.log('Launched electron child PID:', child.pid)
+    // Attach stdout/stderr listeners when available so CI logs include main-process traces
+  let debugWaitDetected = false
+  try {
+    if (child && child.stdout && typeof child.stdout.on === 'function') {
+      child.stdout.on('data', (d) => {
+        try { console.log(`[ELECTRON STDOUT pid=${child.pid}] ${String(d).trim()}`) } catch {}
+      })
+    }
+    if (child && child.stderr && typeof child.stderr.on === 'function') {
+      child.stderr.on('data', (d) => {
+        try {
+          const s = String(d).trim()
+          console.error(`[ELECTRON STDERR pid=${child.pid}] ${s}`)
+          if (/Waiting for the debugger to disconnect/i.test(s)) {
+            debugWaitDetected = true
+          }
+        } catch (err) {}
+      })
+    }
+  } catch (attachErr) {
+    console.error('E2E DIAG: failed to attach stdout/stderr listeners', attachErr)
+  }
+
+  // If the child prints a debugger-wait message, bail quickly with actionable guidance
+  if (debugWaitDetected) {
+    try {
+      console.error('E2E DIAG: electron is waiting for a debugger to disconnect — likely an environment debugger flag (NODE_OPTIONS or --inspect) is set. Failing early.')
+    } catch {}
+    try { await app.close() } catch {}
+    throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
+  }
+  } catch (e) {
+  // ignore
+  }
+
+  // Wait for the first window, but tolerate slow startups by retrying.
+  // Be defensive: if the spawned electron child exits, bail early with diagnostics.
+  let win = null
+  const startTs = Date.now()
+  const MAX_WAIT = 600_000 // 10 minutes — long but useful on slow CI runners
+  const child = app.process && app.process()
+  while (!win && Date.now() - startTs < MAX_WAIT) {
+    try {
+      // If the child process exited, gather its exit code and abort with useful info
+      try {
+        if (child && typeof child.exitCode !== 'undefined' && child.exitCode !== null) {
+          throw new Error(`electron child exited early with code=${child.exitCode}`)
+        }
+      } catch (procErr) {
+        // accessing exitCode may throw in some environments — ignore and continue
+      }
+
+      win = await app.firstWindow()
+    } catch (e) {
+      // firstWindow may time out briefly; wait a second and retry
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+  }
+  if (!win) {
+    // Provide richer diagnostics to help CI debugging without making code changes.
+    try {
+      const p = app.process && app.process()
+      console.error('E2E DIAG: electron child info:', {
+        pid: p && p.pid,
+        killed: p && p.killed,
+        exitCode: p && p.exitCode
+      })
+    } catch (diagErr) {
+      console.error('E2E DIAG: failed to read child process info', diagErr)
+    }
+    // List the data home briefly (names only)
+    try {
+      const names = await win?.evaluate(() => [])
+      console.error('E2E DIAG: no window opened; dataHome:', dataHome)
+    } catch (e) {
+      console.error('E2E DIAG: no window and failed to read dataHome contents')
+    }
+    throw new Error(`electronApplication.firstWindow: Timeout ${MAX_WAIT}ms exceeded while waiting for event "window"`)
+  }
   const pageErrors = []
   win.on('pageerror', (err) => pageErrors.push(String(err?.message ?? err)))
   await win.waitForLoadState('domcontentloaded')
