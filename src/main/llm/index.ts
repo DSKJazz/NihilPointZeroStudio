@@ -19,7 +19,6 @@ import { getDecryptedKey, getModel, getProviderEnabled, getSettings, logActivity
  * wait is exactly the "the app froze" complaint this module exists to fix.
  */
 import { broadcastAiFallback } from '../notify'
-import { broadcastAiFallback } from '../notify'
 
 /** Builds the raw provider for the chosen id (throws for a paid provider with no key). */
 function buildProvider(id: string, model: string, timeoutMs = CHOSEN_TIMEOUT_MS): LLMProvider {

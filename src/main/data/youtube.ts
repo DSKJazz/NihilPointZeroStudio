@@ -60,22 +60,56 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
   const channelId = getYouTubeChannelId()
   if (!apiKey) return { videos: [], problem: { kind: 'no-key' } }
   if (!channelId) return { videos: [], problem: { kind: 'no-channel' } }
+
+  const keyHeader = { 'X-Goog-Api-Key': apiKey }
+
+  // 1) Read the uploads playlist for the channel
+  let uploads: string | undefined
   try {
-    const keyHeader = { 'X-Goog-Api-Key': apiKey }
     const chRes = await fetch(`${BASE_URL}/channels?part=contentDetails&id=${channelId}`, {
       headers: keyHeader,
       signal: AbortSignal.timeout(20_000)
     })
-    if (!chRes.ok) return { videos: [], problem: { kind: 'google-error', detail: 'channel read failed' } }
+
+    if (!chRes.ok) {
+      // 403 with a reason means Google refused the key (quota/invalid)
+      if (chRes.status === 403) {
+        try {
+          const body = await chRes.json()
+          const reason = (body?.error?.errors?.[0]?.reason as string) || 'refused'
+          return { videos: [], problem: { kind: 'refused', detail: `Google refused access: ${reason}. Check API key allowance.` } }
+        } catch (e) {
+          return { videos: [], problem: { kind: 'refused', detail: 'Google refused access to channel resource.' } }
+        }
+      }
+      return { videos: [], problem: { kind: 'google-error', detail: 'channel read failed' } }
+    }
+
     const chData = await chRes.json()
-    const uploads: string | undefined = chData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
+    uploads = chData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
     if (!uploads) return { videos: [], problem: { kind: 'no-channel' } }
-    const found: MyVideo[] = []
-    let pageToken = ''
-    for (let page = 0; page < 10 && found.length < maxVideos; page++) {
-      const url = `${BASE_URL}/playlistItems?part=snippet&maxResults=50&playlistId=${uploads}` + (pageToken ? `&pageToken=${pageToken}` : '')
+  } catch (e) {
+    return { videos: [], problem: { kind: 'unreachable' } }
+  }
+
+  // 2) Page through the uploads playlist, collecting video ids and basic metadata
+  const found: MyVideo[] = []
+  let pageToken = ''
+  let partialProblem: ChannelReadProblem | null = null
+
+  for (let page = 0; page < 10 && found.length < maxVideos; page++) {
+    const url = `${BASE_URL}/playlistItems?part=snippet&maxResults=50&playlistId=${uploads}` + (pageToken ? `&pageToken=${pageToken}` : '')
+    try {
       const res = await fetch(url, { headers: keyHeader, signal: AbortSignal.timeout(20_000) })
-      if (!res.ok) break
+      if (!res.ok) {
+        // If nothing was found yet, treat this as an error; otherwise mark partial and stop
+        if (found.length === 0) {
+          if (res.status === 403) return { videos: [], problem: { kind: 'refused', detail: 'Google refused access to playlist.' } }
+          return { videos: [], problem: { kind: 'google-error', detail: 'Could not read playlist' } }
+        }
+        partialProblem = { kind: 'partial', detail: 'Stopped partway through reading uploads.' }
+        break
+      }
       const data = await res.json()
       for (const it of (data.items ?? []) as any[]) {
         const id = it.snippet?.resourceId?.videoId
@@ -85,10 +119,42 @@ export async function readMyChannel(maxVideos = 200): Promise<{ videos: MyVideo[
       }
       pageToken = data.nextPageToken ?? ''
       if (!pageToken) break
+    } catch (e) {
+      if (found.length === 0) return { videos: [], problem: { kind: 'unreachable' } }
+      partialProblem = { kind: 'partial', detail: 'Stopped partway through reading uploads (network error).' }
+      break
     }
-    return { videos: found.slice(0, maxVideos), problem: null }
-  } catch {
-    return { videos: [], problem: { kind: 'unreachable' } }
+  }
+
+  if (found.length === 0) return { videos: [], problem: { kind: 'empty-channel' } }
+
+  // 3) Fetch statistics for the collected videos (batched)
+  const ids = found.map((v) => v.id)
+  try {
+    const statsUrl = `${BASE_URL}/videos?part=statistics&id=${ids.join(',')}`
+    const statsRes = await fetch(statsUrl, { headers: keyHeader, signal: AbortSignal.timeout(20_000) })
+    if (!statsRes.ok) {
+      // For failures here prefer 'partial' so callers know some data exists
+      return { videos: found.slice(0, maxVideos), problem: { kind: 'partial', detail: 'Failed to read view counts' } }
+    }
+    const statsData = await statsRes.json()
+    const byId = new Map<string, any>()
+    for (const it of (statsData.items ?? []) as any[]) byId.set(it.id, it.statistics ?? {})
+
+    // Attach statistics — if any item is missing stats, mark partial
+    let missing = false
+    for (const v of found) {
+      const s = byId.get(v.id) ?? {}
+      if (s.viewCount === undefined) missing = true
+      v.views = Number(s.viewCount ?? 0)
+      if (s.likeCount !== undefined) v.likes = Number(s.likeCount)
+      if (s.commentCount !== undefined) v.comments = Number(s.commentCount)
+    }
+    if (missing) return { videos: found.slice(0, maxVideos), problem: { kind: 'partial', detail: 'Some view counts missing or unreadable' } }
+
+    return { videos: found.slice(0, maxVideos), problem: partialProblem }
+  } catch (e) {
+    return { videos: found.slice(0, maxVideos), problem: { kind: 'partial', detail: 'Failed to read view counts' } }
   }
 }
 
