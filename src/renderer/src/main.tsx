@@ -34,13 +34,16 @@ try {
     window.__npz_listeners_hooked = true
   }
 } catch (err) {
-  /* ignore */
+  void err
+  // Ignore the diagnostic wrapper when the browser globals are unavailable.
 }
 
 // Create a hash history and log history events for debugging router internals.
 const history = createHashHistory()
 history.listen((loc, action) => {
-  try { console.log('[HISTORY-LISTEN]', action, JSON.stringify(loc), Date.now(), (new Error().stack || '').split('\n').slice(2,8).join(' | ')) } catch (_) {}
+  try {
+    console.log('[HISTORY-LISTEN]', action, JSON.stringify(loc), Date.now(), (new Error().stack || '').split('\n').slice(2, 8).join(' | '))
+  } catch (e) { /* ignore */ }
 })
 
 

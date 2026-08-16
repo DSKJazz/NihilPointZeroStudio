@@ -80,3 +80,14 @@ nsis:
   oneClick: true
   perMachine: false
   deleteAppDataOnUninstall: false
+
+# Publish settings for electron-updater / electron-builder so each build produces
+# the release metadata (latest.yml) electron-updater expects. This keeps the
+# existing release workflow but ensures electron-builder writes update metadata
+# into the release assets. The release itself must be a normal GitHub Release with
+# a versioned tag (e.g. v0.1.2). The ship pipeline should create that tag.
+publish:
+  provider: github
+  owner: DSKJazz
+  repo: NihilPointZeroStudio
+  releaseType: release
