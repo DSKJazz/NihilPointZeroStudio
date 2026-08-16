@@ -1,0 +1,114 @@
+name: Ship (Windows)
+
+# Runs the full ship pipeline on a Windows runner
+# Triggers: manual dispatch, pull requests to main, and when merged/pushed to main
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+
+jobs:
+  ship:
+    name: Run npm run ship on Windows
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      CI: true
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      SKIP_E2E: 'true'
+      # Ensure no debugger flags are present on the runner (help Playwright/Electron start cleanly)
+      NODE_OPTIONS: ''
+      DEBUG: ''
+      ELECTRON_DEBUG: ''
+      VSCODE_INSPECTOR_OPTIONS: ''
+      PWDEBUG: '0'
+      PLAYWRIGHT_DEBUG: '0'
+      ELECTRON_NO_ATTACH_CONSOLE: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          npm ci
+
+      - name: Build, lint and test
+        shell: pwsh
+        run: |
+          npm run lint --if-present
+          npm run build --if-present
+          npm test --if-present
+
+      - name: Ensure Desktop studio folder exists
+        shell: pwsh
+        run: |
+          Write-Host "Creating Desktop studio folder for runner: C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio"
+          New-Item -ItemType Directory -Path "C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio" -Force | Out-Null
+
+      - name: Sanitize runner environment
+        shell: pwsh
+        run: |
+          Write-Host "Sanitizing runner env: removing debug-related env vars"
+          Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
+          Remove-Item Env:DEBUG -ErrorAction SilentlyContinue
+          Remove-Item Env:ELECTRON_DEBUG -ErrorAction SilentlyContinue
+          Remove-Item Env:VSCODE_INSPECTOR_OPTIONS -ErrorAction SilentlyContinue
+          $env:NODE_ENV = 'production'
+          Write-Host "Env sanitized"
+
+      - name: Run ship (E2E + packaging + release)
+        shell: pwsh
+        run: |
+          # The ship script performs the E2E smoke gate and will publish release assets.
+          # Ensure GH_TOKEN (repo write permissions) is provided in repository secrets.
+          npm run ship
+
+      - name: Collect ship diagnostics (on failure)
+        if: failure()
+        shell: pwsh
+        run: |
+          $outdir = Join-Path $PWD 'out\ship-diagnostics'
+          Remove-Item $outdir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $outdir | Out-Null
+          # Copy release artifacts if present
+          Copy-Item -Path 'release\*' -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          # Copy any ship-e2e-fail* dirs from TEMP
+          Get-ChildItem -Path $env:TEMP -Filter 'ship-e2e-fail-*' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          }
+          # Copy any npz-e2e* dirs (e2e data)
+          Get-ChildItem -Path $env:TEMP -Filter 'npz-e2e-*' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          }
+          # Copy any out/*.log or logs/*
+          Copy-Item -Path 'out\*.log' -Destination $outdir -ErrorAction SilentlyContinue
+          Copy-Item -Path 'logs\*' -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          Get-ChildItem $outdir -Recurse | ForEach-Object { Write-Host "Collected: $($_.FullName)" }
+
+      - name: Upload ship diagnostics (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ship-diagnostics
+          path: out/ship-diagnostics/**
+
+      - name: Success note
+        if: success()
+        run: echo "Ship workflow completed successfully. Check GitHub Releases and release assets."
+        shell: pwsh

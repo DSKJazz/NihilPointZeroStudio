@@ -8,7 +8,7 @@ work, not afterwards: before starting anything long, and again when it lands. It
 the repo because the container, the assistant's memory and the harness task list all die
 with the session — only what is pushed to GitHub survives.
 
-Last updated: **2026-08-07** (after PR #37, the lockfile-test merge).
+Last updated: **2026-08-16** (after auto-updater integration and QA progress).
 
 ## The 2026-08-07 round — his screen recording, and what it exposed
 
@@ -129,8 +129,11 @@ blocks. They pass on the Windows CI runner. Do not "fix" them.
 
 ## In progress right now
 
-**Nothing.** Everything asked for is built, merged, verified and published.
+- Implemented periodic background update scheduler (every 4 hours) and integrated the existing selfUpdate path for portable users.
+- Added electron-updater integration for packaged NSIS installs (auto-download, auto-install-on-quit) and configured electron-builder publish settings to generate update metadata. Committed on branch ci/fix-main-parse-errors and merged to main.
+- Began the full ship pipeline: most steps completed locally, however the UI click-through E2E smoke test times out in this environment (Playwright could not observe the app window). Ship is blocked until the E2E smoke test passes on an interactive Windows desktop. See the `ship-finalize` todo in the session DB.
 
+To resume locally on the developer's PC (one sentence): run `npm run ship` from the repo root on an interactive Windows desktop (the ship script will run tests, typechecks, the E2E click-through, build exes, copy them to the Desktop studio folder, and upload release assets).
 PR #13's build (`0c4da26`) was verified end to end: every step green, and the release notes
 read back to confirm they now carry
 
