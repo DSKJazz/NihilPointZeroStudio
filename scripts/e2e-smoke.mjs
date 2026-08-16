@@ -251,6 +251,8 @@ try {
 }
 
 const app = await electron.launch({
+  // prevent Playwright from injecting its default --inspect / remote-debugging flags
+  ignoreDefaultArgs: ['--inspect=0', '--remote-debugging-port=0'],
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
   env: (() => {
