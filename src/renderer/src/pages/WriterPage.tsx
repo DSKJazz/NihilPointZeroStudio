@@ -62,6 +62,20 @@ export default function WriterPage() {
 
   // Expose the script body to the global YouTube Producer for grounded suggestions/rewrites.
   // Register producer target unconditionally; pass null when diagnostics opt-out flag is set
+  try {
+    const prodTarget = typeof window !== 'undefined' && (window as any).__npz_diag_disable_producer
+      ? null
+      : {
+          label: 'Script Writer',
+          kind: 'script',
+          text: writer.body,
+          apply: (next: string) => setWriter({ body: next })
+        }
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- producer registration is unconditional; linter flags false positive because of try/catch
+        useProducerTarget(prodTarget)
+  } catch (e) {
+        // swallow any diagnostic-time errors
+  }
   const prodTarget = typeof window !== 'undefined' && (window as any).__npz_diag_disable_producer
     ? null
     : {

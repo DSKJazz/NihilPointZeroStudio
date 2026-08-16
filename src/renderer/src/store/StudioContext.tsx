@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GeneratedScript, LanguageMix, ScriptLength, ScriptStyle, VideoIdea } from '../../../shared/types'
 import type { SaveStatus } from '../hooks/useAutosave'

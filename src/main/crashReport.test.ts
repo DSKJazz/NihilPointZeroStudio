@@ -24,9 +24,6 @@ afterAll(() => {
   process.off('uncaughtException', guard)
 })
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { describeCrash, installCrashReporting, isWorthRecording } from './crashReport'
-import type { AiErrorEntry } from '../shared/types'
 
 const removers: (() => void)[] = []
 afterEach(() => {
@@ -176,6 +173,7 @@ describe('the handlers can be removed', () => {
     // Both handlers go, and nothing else's listeners were disturbed.
     expect(process.listenerCount('uncaughtException')).toBe(exceptionsBefore)
     expect(process.listenerCount('unhandledRejection')).toBe(rejectionsBefore)
+  })
   it('stops recording once removed', () => {
     const entries: AiErrorEntry[] = []
     const remove = installCrashReporting({ record: (e) => entries.push(e), onFatal: () => {} })

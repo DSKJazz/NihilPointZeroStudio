@@ -34,6 +34,7 @@ try {
     window.__npz_listeners_hooked = true
   }
 } catch (err) {
+  void err
   // Ignore the diagnostic wrapper when the browser globals are unavailable.
 }
 
