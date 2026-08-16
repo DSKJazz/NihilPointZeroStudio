@@ -1,0 +1,6 @@
+# Ignore dev-only probe page and other non-JS assets that ESLint shouldn't parse
+src/renderer/probe.html
+
+# Ignore build artifacts
+out/
+release/
