@@ -1065,11 +1065,6 @@ export function registerIpcHandlers(): void {
       ),
       problem
     }
-    const videos = await fetchMyChannelVideos()
-    return scoreTitle(
-      typeof title === 'string' ? title : '',
-      videos.map((v) => ({ title: v.title, publishedAt: v.publishedAt, views: v.views }))
-    )
   })
 
   // THE VIDEO IDEAS ALREADY SITTING IN THE COMMENTS. Every question returned is quoted
@@ -1260,35 +1255,7 @@ export function registerIpcHandlers(): void {
     return { found: true as const, ...report }
   })
 
-  // THE RENDER QUEUE. Batch already worked through a list, but it lived only in memory, so
-  // closing the app lost everything not yet built — and one failure at item three lost items
-  // four to ten, after the app had worked perfectly for two hours. This is written to disk
-  // after every change, can be added to while it runs, and a failure costs exactly one item.
-  const broadcastQueue = (items: import('../shared/renderQueue').QueueItem[]): void => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send(IPC.queueChanged, items)
-    }
-  }
-
-  /** Starts the runner if it is not already going. Safe to call after every add. */
-  const pumpQueue = (): void => {
-    void runQueue({
-      build: async (item, onProgress) => {
-        const job = await performVideoBuild(item.request as VideoBuildRequest, onProgress)
-        return { videoId: job.id }
-      },
-      onChange: broadcastQueue,
-      onProgress: (item, stage) => {
-        for (const win of BrowserWindow.getAllWindows()) {
-          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-            win.webContents.send(IPC.videoProgress, `${item.title}: ${stage}`)
-          }
-        }
-      }
-    })
-  }
-
-  ipcMain.handle(IPC.queueList, () => listRenderQueue())
+ipcMain.handle(IPC.queueList, () => listRenderQueue())
 
   ipcMain.handle(IPC.queueAdd, (_e, req: VideoBuildRequest) => {
     const items = saveRenderQueue([
