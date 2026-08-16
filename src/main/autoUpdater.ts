@@ -18,7 +18,7 @@ export function initializeElectronUpdater(): void {
     // runtime, log and bail out gracefully.
     let autoUpdater: any
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
       autoUpdater = require('electron-updater').autoUpdater
     } catch (err) {
       try {
