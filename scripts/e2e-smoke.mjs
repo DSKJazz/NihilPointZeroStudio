@@ -89,6 +89,15 @@ async function fillVideoTitle(win, text) {
 
 const dataHome = mkdtempSync(join(tmpdir(), 'npz-e2e-'))
 console.log(`E2E data home (isolated, throwaway): ${dataHome}`)
+// Diagnostic: log execArgv and possible NODE_OPTIONS that could inject --inspect into spawned child
+try {
+  console.log('DIAG: process.execArgv=', process.execArgv.join(' '))
+  console.log('DIAG: NODE_OPTIONS=' + (process.env.NODE_OPTIONS || ''))
+  console.log('DIAG: NPM_CONFIG_NODE_OPTIONS=' + (process.env.NPM_CONFIG_NODE_OPTIONS || ''))
+  console.log('DIAG: VSCODE_INSPECTOR_OPTIONS=' + (process.env.VSCODE_INSPECTOR_OPTIONS || ''))
+} catch (e) {
+  console.error('DIAG: failed to print execArgv/env', e)
+}
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
 async function waitForRouteTarget(win, route, expectedText) {
