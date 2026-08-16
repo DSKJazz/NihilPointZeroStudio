@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import { checkForUpdate } from './updateCheck'
 import { runAutoBackupIfDue } from './autoBackup'
 import { runCaretakerPass, scheduleCaretaker } from './caretaker'
+import { initializeElectronUpdater } from './autoUpdater'
 import { scanStranded } from './strandedData'
 import { decideDataHome, holdsUserWork, isUsableDir, readPin, writePin } from './dataHome'
 import {
@@ -189,6 +190,13 @@ if (!gotLock) {
     // wrapped here rather than edited into all 157 registrations.
     captureHandlers(registerIpcHandlers)
     createWindow()
+
+    // Initialize electron-updater for packaged installed apps (silent download + install on quit)
+    try {
+      initializeElectronUpdater()
+    } catch {
+      // initialization failures must not block startup
+    }
 
     // Register (or un-register) the Windows sign-in entry on every launch, so the saved
     // preference and what Windows actually believes cannot drift apart — a reinstall or a
