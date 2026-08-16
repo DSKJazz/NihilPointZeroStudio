@@ -195,7 +195,7 @@ export default function RecorderPage(): React.JSX.Element {
   useEffect(() => {
     void loadDevices()
     return () => stopEverything()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   function stopEverything(): void {

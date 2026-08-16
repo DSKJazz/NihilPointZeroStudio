@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GeneratedScript, LanguageMix, ScriptLength, ScriptStyle, VideoIdea } from '../../../shared/types'
 import type { SaveStatus } from '../hooks/useAutosave'
@@ -54,7 +55,7 @@ interface SceneState {
   title: string
   body: string
   // images or other scene metadata can be added later; keep minimal for compatibility
-  images?: any[]
+  images?: unknown[]
 }
 
 const DEFAULT_SCENE: SceneState = { title: '', body: '', images: [] }
@@ -114,24 +115,24 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     // setting window.__npz_diag_disable_autosave = true in the page context.
     try {
       if ((window as any).__npz_diag_disable_autosave) return
-    } catch (_) {}
+    } catch (e) { /* ignore */ }
 
     if (!loaded.current) return
     setSaveStatus('saving')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       try {
-        console.log('[STUDIO-AUTOSAVE] writing draft at', Date.now(), 'writer.topic=', String(writer.topic).slice(0,50))
-      } catch (_) {}
+        console.log('[STUDIO-AUTOSAVE] writing draft at', Date.now())
+      } catch (e) { /* ignore */ }
       window.api.drafts
         .set(DRAFT_KEY, { ideas, writer, scene })
         .then(() => {
-          try { console.log('[STUDIO-AUTOSAVE] write complete at', Date.now()) } catch (_) {}
+          try { console.log('[STUDIO-AUTOSAVE] write complete') } catch (e) { /* ignore */ }
           setSaveStatus('saved')
         })
         // A failed write must not sit on "Saving…" forever pretending to work.
         .catch((e) => {
-          try { console.log('[STUDIO-AUTOSAVE] write failed', e && e.message ? e.message : String(e)) } catch (_) {}
+          try { console.log('[STUDIO-AUTOSAVE] write failed', e instanceof Error ? e.message : String(e)) } catch (error) { /* ignore */ }
           setSaveStatus('error')
         })
     }, 600)
@@ -143,53 +144,47 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const value: StudioContextValue = {
     ideas,
     setIdeas: (patch) => {
-      try { console.log('[STUDIO] setIdeas deferred at', Date.now()) } catch (_) {}
-      // Defer to the next animation frame to avoid synchronous re-entrancy during navigation/autosave tight windows
-      try { window.requestAnimationFrame(() => {
-        try {
-          setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }))
-        } catch (_) {}
-      }) } catch (_) { queueMicrotask(() => {
-        try { setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {}
-      }) }
+      try { console.log('[STUDIO] setIdeas deferred') } catch (e) { /* ignore */ }
+      const apply = (): void => {
+        setIdeasState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }))
+      }
+      try {
+        window.requestAnimationFrame(apply)
+      } catch (e) {
+        queueMicrotask(apply)
+      }
     },
 
     clearIdeas: () => setIdeasState(DEFAULT_IDEAS),
     writer,
     setWriter: (patch) => {
-      try { console.log('[STUDIO] setWriter called — patch type:', typeof patch === 'function' ? 'fn' : 'object') } catch (_) {}
-      // Defer the state update to avoid synchronous re-entrancy that can interfere with
-      // routing in tight E2E sequences (diagnostic/backwards-compatible safety).
-      try { window.requestAnimationFrame(() => {
-        try {
-          try { console.log('[STUDIO] setWriter deferred at', Date.now()) } catch (_) {}
-          setWriterState((prev) => {
-            const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
-            try { console.log('[STUDIO] setWriter result snapshot: topic=', String(next.topic).slice(0,80)) } catch (_) {}
-            return next
-          })
-        } catch (_) {}
-      }) } catch (_) { queueMicrotask(() => {
-        try {
-          setWriterState((prev) => {
-            const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
-            try { console.log('[STUDIO] setWriter result snapshot: topic=', String(next.topic).slice(0,80)) } catch (_) {}
-            return next
-          })
-        } catch (_) {}
-      }) }
+      try { console.log('[STUDIO] setWriter deferred') } catch (e) { /* ignore */ }
+      const apply = (): void => {
+        setWriterState((prev) => {
+          const next = { ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }
+          return next
+        })
+      }
+      try {
+        window.requestAnimationFrame(apply)
+      } catch (e) {
+        queueMicrotask(apply)
+      }
     },
-
 
     clearWriter: () => setWriterState(DEFAULT_WRITER),
     // scene is intentionally always present to avoid consumer crashes
     scene,
     setScene: (patch) => {
-      try { console.log('[STUDIO] setScene deferred at', Date.now()) } catch (_) {}
-      // Defer to the next animation frame to avoid synchronous re-entrancy during navigation/autosave tight windows
-      try { window.requestAnimationFrame(() => {
-        try { setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {}
-      }) } catch (_) { queueMicrotask(() => { try { setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })) } catch (_) {} }) }
+      try { console.log('[STUDIO] setScene deferred') } catch (e) { /* ignore */ }
+      const apply = (): void => {
+        setSceneState((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }))
+      }
+      try {
+        window.requestAnimationFrame(apply)
+      } catch (e) {
+        queueMicrotask(apply)
+      }
     },
     saveStatus
   }
