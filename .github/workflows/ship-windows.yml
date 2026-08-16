@@ -52,6 +52,17 @@ jobs:
           Write-Host "Creating Desktop studio folder for runner: C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio"
           New-Item -ItemType Directory -Path "C:\\Users\\runneradmin\\Desktop\\NihilPointZeroStudio" -Force | Out-Null
 
+      - name: Sanitize runner environment
+        shell: pwsh
+        run: |
+          Write-Host "Sanitizing runner env: removing debug-related env vars"
+          Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
+          Remove-Item Env:DEBUG -ErrorAction SilentlyContinue
+          Remove-Item Env:ELECTRON_DEBUG -ErrorAction SilentlyContinue
+          Remove-Item Env:VSCODE_INSPECTOR_OPTIONS -ErrorAction SilentlyContinue
+          $env:NODE_ENV = 'production'
+          Write-Host "Env sanitized"
+
       - name: Run ship (E2E + packaging + release)
         shell: pwsh
         run: |
@@ -59,15 +70,34 @@ jobs:
           # Ensure GH_TOKEN (repo write permissions) is provided in repository secrets.
           npm run ship
 
-      - name: Upload ship logs (on failure)
+      - name: Collect ship diagnostics (on failure)
+        if: failure()
+        shell: pwsh
+        run: |
+          $outdir = Join-Path $PWD 'out\ship-diagnostics'
+          Remove-Item $outdir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $outdir | Out-Null
+          # Copy release artifacts if present
+          Copy-Item -Path 'release\*' -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          # Copy any ship-e2e-fail* dirs from TEMP
+          Get-ChildItem -Path $env:TEMP -Filter 'ship-e2e-fail-*' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          }
+          # Copy any npz-e2e* dirs (e2e data)
+          Get-ChildItem -Path $env:TEMP -Filter 'npz-e2e-*' -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          }
+          # Copy any out/*.log or logs/*
+          Copy-Item -Path 'out\*.log' -Destination $outdir -ErrorAction SilentlyContinue
+          Copy-Item -Path 'logs\*' -Destination $outdir -Recurse -ErrorAction SilentlyContinue
+          Get-ChildItem $outdir -Recurse | ForEach-Object { Write-Host "Collected: $($_.FullName)" }
+
+      - name: Upload ship diagnostics (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ship-logs
-          path: |
-            out/electron-debug.log
-            out/release/**
-            logs/**
+          name: ship-diagnostics
+          path: out/ship-diagnostics/**
 
       - name: Success note
         if: success()
