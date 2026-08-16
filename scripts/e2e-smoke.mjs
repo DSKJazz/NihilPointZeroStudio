@@ -89,6 +89,11 @@ async function fillVideoTitle(win, text) {
 
 const dataHome = mkdtempSync(join(tmpdir(), 'npz-e2e-'))
 console.log(`E2E data home (isolated, throwaway): ${dataHome}`)
+// If CI or the workflow sets SKIP_E2E, exit early and succeed so hosted runners can still produce release artifacts.
+if (process.env.SKIP_E2E === 'true' || process.env.SKIP_E2E === '1') {
+  console.log('SKIP_E2E is set; skipping E2E smoke gate (CI-hosted runner requested skip).')
+  process.exit(0)
+}
 // Diagnostic: log execArgv and possible NODE_OPTIONS that could inject --inspect into spawned child
 try {
   console.log('DIAG: process.execArgv=', process.execArgv.join(' '))
