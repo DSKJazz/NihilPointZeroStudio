@@ -58,6 +58,7 @@ extraResources:
 #     certificateProfileName: <profile name>
 #     codeSigningAccountName: <account name>
 win:
+  # Fresh-build trigger: configuration intentionally unchanged.
   # Two flavors from one build:
   #   portable — the classic single exe that travels on a USB with its data folder.
   #   nsis     — per-user installed app: launches in seconds from a FIXED path (no
