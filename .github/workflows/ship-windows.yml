@@ -51,9 +51,9 @@ jobs:
       - name: Build, lint and test
         shell: pwsh
         run: |
-          npm run lint --if-present
-          npm run build --if-present
-          npm test --if-present
+          npm run lint
+          npm run build
+          npm test
 
       - name: Ensure Desktop studio folder exists
         shell: pwsh
