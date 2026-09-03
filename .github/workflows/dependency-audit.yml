@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: npm
@@ -26,7 +26,7 @@ jobs:
       - name: Record dependency tree
         run: npm ls --all --json > dependency-tree.json || true
       - name: Upload dependency tree
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-tree
           path: dependency-tree.json

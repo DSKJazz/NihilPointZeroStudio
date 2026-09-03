@@ -219,7 +219,7 @@ jobs:
       # fails, so that is now the only time it exists. Normal-case storage cost: zero.
       - name: Keep a copy of the build (only if the release upload failed)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-exes
           path: |
