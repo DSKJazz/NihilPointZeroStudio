@@ -1,0 +1,33 @@
+name: Scheduled dependency audit
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Audit production and development dependencies
+        run: npm audit --audit-level=high
+      - name: Record dependency tree
+        run: npm ls --all --json > dependency-tree.json || true
+      - name: Upload dependency tree
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-tree
+          path: dependency-tree.json
+          retention-days: 7

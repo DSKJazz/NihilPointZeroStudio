@@ -103,7 +103,7 @@ Details that matter:
 - **It refuses to start without room.** Under ~1.2 GB free, it says so in plain words
   instead of half-downloading.
 - **Nothing was removed.** The instant restart (when a ship already put the new code on
-  disk) is still tried first because it is faster, and revealing the setup file is still
+  disk) is still tried first because it is faster, and revealing the batch installer is still
   the fallback — now with the reason the download failed printed in the banner, so it
   can never read as a shrug.
 - **Not available from the phone.** Running a Windows installer and quitting the app
@@ -554,7 +554,7 @@ reason logged), but "a tab is broken / a button does nothing" can no longer reac
 in a shipped build.
 
 ### 🛡 Updates no longer fight Windows Smart App Control
-Smart App Control blocks each freshly built (unsigned) setup.exe as an unknown file —
+Smart App Control blocks each freshly built (unsigned) installer executable as an unknown file —
 which stranded the installed app on an old build. Shipping now updates the installed
 app **in place**: the already-allowed program stays exactly as Windows approved it, and
 only the app's code archive (`app.asar`, a data file) is swapped. Verified safe against
@@ -730,7 +730,7 @@ motion-video option becomes available.
 ## New in the 2026-07-29 build
 - **⬆ The app now tells you when a newer version exists.** On startup it quietly checks
   the download page; if a newer build was published, a small blue notice appears with a
-  "Show me the file" button that opens the studio folder with the setup exe selected.
+  "Show me the file" button that opens the studio folder with the batch installer selected.
   Offline or failed check = total silence, never a nag.
 - **→ "Take me there" chips in the 🧭 Expert.** When an Expert answer mentions a tab
   ("open Scene Studio…"), one-click chips appear under the answer that jump straight to
@@ -806,7 +806,7 @@ motion-video option becomes available.
   you a stale app is current.
 
 ## New in the 2026-07-19 build
-- **An INSTALLED version now exists** — run `NIHILPOINTZERO-OS-setup.exe` once (in the studio
+- **An INSTALLED version now exists** — run `NIHILPOINTZERO-OS-install.bat` once (in the studio
   folder). It opens in ~2 seconds (no 60-90s unpack), taskbar pins are SAFE forever, and it uses
   the SAME `nihilpointzero-data` folder as the portable exe — same videos, scripts and settings
   in both. Keep the portable exe for USB travel; use the installed one day-to-day.
@@ -976,7 +976,7 @@ If you **pin the running portable app to the taskbar or Start**, Windows freezes
 times the exe on disk is updated.
 
 How to always run the newest build:
-1. **Easiest fix: use the installed version** (`NIHILPOINTZERO-OS-setup.exe`, run once). It has
+1. **Easiest fix: use the installed version** (`NIHILPOINTZERO-OS-install.bat`, run once). It has
    no temp folder and no pin trap — pins always launch the current code, in ~2 seconds.
 2. If using the portable exe: launch from the **Desktop shortcut** ("NIHILPOINTZERO-OS") or the
    **.exe in this folder** — never an old taskbar/Start pin.

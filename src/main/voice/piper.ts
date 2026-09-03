@@ -80,7 +80,7 @@ async function downloadFile(url: string, dest: string, onFrac?: (frac: number) =
   const reader = res.body.getReader()
   let done = 0
   try {
-    for (;;) {
+    for (; ;) {
       const { done: finished, value } = await Promise.race([reader.read(), wsFailed])
       if (finished) break
       if (value) {
@@ -108,7 +108,7 @@ function psQuote(s: string): string {
   return s.replace(/'/g, "''")
 }
 
-function extractZip(zipPath: string, destDir: string): Promise<void> {
+export function extractZip(zipPath: string, destDir: string): Promise<void> {
   return new Promise((resolve, reject) => {
     // Paths are app-controlled (userData) today, but escape them anyway — same
     // single-quote-doubling discipline as voiceover.ts, so this can never become an
