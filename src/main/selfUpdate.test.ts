@@ -18,10 +18,10 @@ import {
 
 const good = {
   name: INSTALLER_ASSET,
-  size: 217_688_427,
+  size: 1_524,
   state: 'uploaded',
-  digest: 'sha256:56c0b8508977e009954e0b456aca16e569e93f7fff521d7c6411a47208f848aa',
-  browser_download_url: 'https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/latest/NIHILPOINTZERO-OS-setup.exe'
+  digest: 'sha256:d01f3e8a712c4314b9fc98c1b73ff37b88f65b81c857d718d76333a1c4c55ee4',
+  browser_download_url: 'https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/v0.1.2/NIHILPOINTZERO-OS-install.bat'
 }
 
 describe('pickInstaller', () => {
@@ -31,13 +31,25 @@ describe('pickInstaller', () => {
   })
 
   it('matches the name case-insensitively', () => {
-    const res = pickInstaller([{ ...good, name: 'nihilpointzero-os-SETUP.exe' }])
+    const res = pickInstaller([{ ...good, name: 'NIHILPOINTZERO-OS-INSTALL.BAT' }])
     expect('asset' in res).toBe(true)
   })
 
   it('does NOT confuse the portable exe for the installer', () => {
     const res = pickInstaller([{ ...good, name: 'NIHILPOINTZERO-OS-portable.exe' }])
     expect('error' in res).toBe(true)
+  })
+
+  it('selects the published non-admin batch installer', () => {
+    const res = pickInstaller([
+      {
+        name: 'NIHILPOINTZERO-OS-install.bat',
+        size: 1524,
+        state: 'uploaded',
+        browser_download_url: 'https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/v0.1.2/NIHILPOINTZERO-OS-install.bat'
+      }
+    ])
+    expect('asset' in res && res.asset.name).toBe('NIHILPOINTZERO-OS-install.bat')
   })
 
   it('refuses an asset that is still uploading', () => {
@@ -180,7 +192,7 @@ describe('downloadInstaller', () => {
     const root = mkdtempSync(join(tmpdir(), 'npz-dl-'))
     const dest = join(root, 'setup.exe')
     const chunks = [Buffer.from('hello '), Buffer.from('world')].map((b) => new Uint8Array(b))
-    const res = await downloadInstaller('https://x/y.exe', dest, () => {}, async () => streamResponse(chunks))
+    const res = await downloadInstaller('https://x/y.exe', dest, () => { }, async () => streamResponse(chunks))
     expect(readFileSync(dest, 'utf8')).toBe('hello world')
     expect(res.size).toBe(11)
     // sha256("hello world")
@@ -203,14 +215,14 @@ describe('downloadInstaller', () => {
   it('throws a plain-English error on a failed request', async () => {
     const root = mkdtempSync(join(tmpdir(), 'npz-dl-'))
     await expect(
-      downloadInstaller('https://x/y.exe', join(root, 'a.exe'), () => {}, async () => new Response(null, { status: 404 }))
+      downloadInstaller('https://x/y.exe', join(root, 'a.exe'), () => { }, async () => new Response(null, { status: 404 }))
     ).rejects.toThrow(/404/)
   })
 
   it('produces a hash that catches a corrupted body', async () => {
     const root = mkdtempSync(join(tmpdir(), 'npz-dl-'))
     const dest = join(root, 'setup.exe')
-    const res = await downloadInstaller('https://x/y.exe', dest, () => {}, async () =>
+    const res = await downloadInstaller('https://x/y.exe', dest, () => { }, async () =>
       streamResponse([new Uint8Array(Buffer.from('hello worlD'))])
     )
     const verdict = verifyDownload(res, {

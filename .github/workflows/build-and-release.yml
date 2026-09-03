@@ -24,6 +24,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Check and clean temporary disk usage
+        shell: pwsh
+        run: |
+          Get-PSDrive C | Select-Object Name, Free
+          Get-ChildItem $env:RUNNER_TEMP -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Get-PSDrive C | Select-Object Name, Free
+
       - name: Install dependencies
         run: npm ci
 
