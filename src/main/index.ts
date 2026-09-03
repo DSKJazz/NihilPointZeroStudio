@@ -98,7 +98,7 @@ function createWindow(): void {
     height: 860,
     minWidth: 960,
     minHeight: 640,
-    show: false,
+    show: true,
     title: 'NIHILPOINTZERO-OS',
     autoHideMenuBar: true,
     webPreferences: {
@@ -185,11 +185,12 @@ if (!gotLock) {
   }
 
   app.whenReady().then(() => {
+    createWindow()
+
     // Registers exactly as before, and additionally remembers each handler so the same
     // function can be called from the phone. See remote/registry.ts for why it is
     // wrapped here rather than edited into all 157 registrations.
     captureHandlers(registerIpcHandlers)
-    createWindow()
 
     // Initialize electron-updater for packaged installed apps (silent download + install on quit)
     try {
@@ -368,20 +369,20 @@ if (!gotLock) {
       // so it is discoverable without opening Settings. Quiet when there is nothing.
       setTimeout(() => {
         void (async () => {
-        try {
-          const s = await scanStranded()
-          if (s.videoCount > 0) {
-            logActivity(
-              'ai',
-              `Found ${s.videoCount} finished video(s) (${s.size}) that Video Studio isn't showing`,
-              `They are NOT lost. Open Settings → "Where your work is kept" and press "Show these in Video Studio".` +
+          try {
+            const s = await scanStranded()
+            if (s.videoCount > 0) {
+              logActivity(
+                'ai',
+                `Found ${s.videoCount} finished video(s) (${s.size}) that Video Studio isn't showing`,
+                `They are NOT lost. Open Settings → "Where your work is kept" and press "Show these in Video Studio".` +
                 `${s.inPlace ? ` ${s.inPlace} are already in your work folder (the list just lost track of them).` : ''}` +
                 `${s.dir ? ` ${s.elsewhere} are in a folder the app no longer uses: ${s.dir}` : ''}`
-            )
+              )
+            }
+          } catch {
+            /* a failed look must never bother the user */
           }
-        } catch {
-          /* a failed look must never bother the user */
-        }
         })()
       }, 45_000)
 
