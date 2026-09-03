@@ -44,16 +44,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
 
-      - name: Force a fresh dependency install
-        shell: bash
+      - name: Check and clean temporary disk usage
+        shell: pwsh
         run: |
-          rm -rf node_modules package-lock.json 2>/dev/null || true
-          npm install --force
+          Get-PSDrive C | Select-Object Name, Free
+          Get-ChildItem $env:RUNNER_TEMP -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Get-PSDrive C | Select-Object Name, Free
 
-      # `npm ci` (not install) so the build uses exactly the locked dependency tree.
       - name: Install dependencies
         run: npm ci
 
@@ -102,7 +103,7 @@ jobs:
           STAMP="$(date -u '+%Y-%m-%d %H:%M')"
           echo "NPZ_BUILD_TAG=v$VER · $STAMP · ${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
-      - name: Build the Windows exes
+      - name: Build the Windows package
         run: npm run dist:win
 
       - name: Fail if the phone bridge is missing from the build
@@ -129,8 +130,9 @@ jobs:
           fi
 
           gh release upload "$VERSION_TAG" \
-            "release/NIHILPOINTZERO-OS-setup.exe" \
-            "release/NIHILPOINTZERO-OS-portable.exe" \
+            "release/NIHILPOINTZERO-OS-portable.zip" \
+            "release/NIHILPOINTZERO-OS-install.bat" \
+            "release/NIHILPOINTZERO-OS-uninstall.bat" \
             "release/latest.yml" \
             "docs/HOW-TO-USE.txt" \
             "docs/NIHILPOINTZERO-GUIDE.txt" \
@@ -168,8 +170,9 @@ jobs:
           # is the worst combination, because the docs describe features the user then
           # cannot find, or omit the ones that are there.
           gh release upload "$TAG" \
-            "release/NIHILPOINTZERO-OS-setup.exe" \
-            "release/NIHILPOINTZERO-OS-portable.exe" \
+            "release/NIHILPOINTZERO-OS-portable.zip" \
+            "release/NIHILPOINTZERO-OS-install.bat" \
+            "release/NIHILPOINTZERO-OS-uninstall.bat" \
             "release/latest.yml" \
             "docs/HOW-TO-USE.txt" \
             "docs/NIHILPOINTZERO-GUIDE.txt" \
@@ -200,8 +203,8 @@ jobs:
             --title "Download NIHILPOINTZERO-OS (always the newest version)" \
             --notes "Built automatically from main (commit ${GITHUB_SHA::7}).
 
-          - **NIHILPOINTZERO-OS-setup.exe** — installs the app (recommended).
-          - **NIHILPOINTZERO-OS-portable.exe** — single file, runs from anywhere.
+          - **NIHILPOINTZERO-OS-install.bat** — installs the app without administrator rights.
+          - **NIHILPOINTZERO-OS-portable.zip** — portable package, runs from an extracted folder.
 
           Note: this refreshes the GitHub download only. To update the studio folder on
           your own PC, run \`npm run ship\` there.
@@ -220,7 +223,8 @@ jobs:
         with:
           name: windows-exes
           path: |
-            release/NIHILPOINTZERO-OS-setup.exe
-            release/NIHILPOINTZERO-OS-portable.exe
+            release/NIHILPOINTZERO-OS-portable.zip
+            release/NIHILPOINTZERO-OS-install.bat
+            release/NIHILPOINTZERO-OS-uninstall.bat
           if-no-files-found: warn
           retention-days: 3

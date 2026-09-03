@@ -11,8 +11,8 @@ content in Roman Urdu / Urdu / English — institutional-grade tone.
 
 | I want to… | Download this | What it does |
 |---|---|---|
-| **Install it on a PC** (recommended) | [**NIHILPOINTZERO-OS-setup.exe**](https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest/download/NIHILPOINTZERO-OS-setup.exe) | Normal Windows installer. Creates a Start-menu entry and desktop shortcut. ~207 MB |
-| **Run it on a PC without installing** (USB stick, borrowed PC) | [**NIHILPOINTZERO-OS-portable.exe**](https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest/download/NIHILPOINTZERO-OS-portable.exe) | One file, no installation. Keeps its data in a `nihilpointzero-data` folder next to itself. ~207 MB |
+| **Install it on a PC** (recommended) | [**NIHILPOINTZERO-OS-install.bat**](https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest/download/NIHILPOINTZERO-OS-install.bat) | Downloads and installs the app without administrator rights. Creates a Start-menu entry. |
+| **Run it on a PC without installing** (USB stick, borrowed PC) | [**NIHILPOINTZERO-OS-portable.zip**](https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest/download/NIHILPOINTZERO-OS-portable.zip) | Extract the package and run `NIHILPOINTZERO-OS-portable.exe`. |
 
 The guide, cheatsheet, and how-to documents are also attached on the Downloads page — those are small and readable on a phone.
 
@@ -57,7 +57,7 @@ Keys are stored only in your local user data folder and never sent anywhere exce
 ```
 npm run dev        # run with hot reload
 npm run test       # tests
-npm run dist:win   # build installer + portable exe -> release\
+  npm run dist:win   # build the portable package -> release\
 npm run ship       # test, build, deploy to Desktop studio, push, update release downloads
 ```
 

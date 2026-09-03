@@ -9,11 +9,6 @@ files:
 win:
   target:
     - portable
-    - nsis
   icon: resources/icon.ico
-  signExecutable: false
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
 portable:
   artifactName: NIHILPOINTZERO-OS-portable.exe

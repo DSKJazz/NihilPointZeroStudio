@@ -32,17 +32,17 @@ jobs:
       - name: Lint
         shell: pwsh
         run: |
-          npm run lint --if-present
+          npm run lint
 
       - name: Build
         shell: pwsh
         run: |
-          npm run build --if-present
+          npm run build
 
       - name: Run tests
         shell: pwsh
         run: |
-          npm test --if-present
+          npm test
 
       - name: Upload build artifacts (debug)
         if: failure()

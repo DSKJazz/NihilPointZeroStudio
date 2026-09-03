@@ -49,7 +49,7 @@ TWO WAYS TO RUN IT:
   PORTABLE (the classic way): double-click NIHILPOINTZERO-OS-portable.exe ONCE and
   wait ~40-60s (no window shows while it unpacks — normal). This is the copy that
   travels on a USB with your whole folder.
-  INSTALLED (recommended for daily use on THIS PC): run NIHILPOINTZERO-OS-setup.exe
+  INSTALLED (recommended for daily use on THIS PC): run NIHILPOINTZERO-OS-install.bat
   once. From then on the app opens in ~2 seconds, taskbar pins are SAFE, and it uses
   the SAME nihilpointzero-data folder — your videos/settings appear in both versions.
 If SmartScreen warns: More info -> Run anyway (it's safe, just unsigned). The
@@ -554,7 +554,7 @@ Q: How do I use my own keys? A: Settings has fields (AI Horde for photos, MVSEP 
 13. TROUBLESHOOTING
 -------------------------------------------------------------------------------
 - Nothing on first double-click (portable exe): wait ~60s; don't double-click again.
-  (The installed version opens in ~2s — run NIHILPOINTZERO-OS-setup.exe once to get it.)
+  (The installed version opens in ~2s — run NIHILPOINTZERO-OS-install.bat once to get it.)
 - "My updates/changes didn't show up" / old look: check the BUILD BADGE in the sidebar
   (under "OS"). If it's older than expected you launched a STALE copy — this happens when
   you pinned the PORTABLE app to the taskbar/Start while it was running (Windows freezes
@@ -1084,7 +1084,7 @@ If the phone ever still looks old — press "Check for a newer version" in Setti
 or just close the tab and open it again.
 
 ONE THING THAT CATCHES EVERYONE
-Running NIHILPOINTZERO-OS-setup.exe does NOT upgrade anything by itself. It
+Running NIHILPOINTZERO-OS-install.bat downloads and installs the current release. It
 installs whichever file is already sitting in the folder. A new file only appears
 after a build — either `npm run ship` on this PC, or the automatic build on
 GitHub. So if you install and the badge has not changed, nothing was wrong: there

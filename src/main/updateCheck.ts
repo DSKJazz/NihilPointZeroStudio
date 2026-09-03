@@ -98,7 +98,7 @@ export async function checkForUpdate(): Promise<void> {
     available = { remoteTag: remote, localTag: __BUILD_TAG__ }
     logActivity(
       'ai',
-      `A newer app version exists (${remote}) — run NIHILPOINTZERO-OS-setup.exe from the Desktop studio folder to update`
+      `A newer app version exists (${remote}) — run NIHILPOINTZERO-OS-install.bat from the release page to update`
     )
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed() && !win.webContents.isDestroyed()) {

@@ -31,8 +31,8 @@ import { join } from 'path'
 
 const RELEASE_API = 'https://api.github.com/repos/DSKJazz/NihilPointZeroStudio/releases/latest'
 
-/** The installer's name on the release. Kept in one place — ship.ps1 uploads this name. */
-export const INSTALLER_ASSET = 'NIHILPOINTZERO-OS-setup.exe'
+/** The non-admin installer wrapper published with the portable release. */
+export const INSTALLER_ASSET = 'NIHILPOINTZERO-OS-install.bat'
 
 /** Below this, don't even start: the installer is ~210 MB and a half-written one is worse
  * than none. Room for the download plus the space the installer itself needs to unpack. */
@@ -66,7 +66,7 @@ export function pickInstaller(assets: unknown): { asset: ReleaseAsset } | { erro
   if (typeof found.browser_download_url !== 'string' || !found.browser_download_url.startsWith('https://')) {
     return { error: 'The download link for the newest version looks wrong, so it was not used.' }
   }
-  if (!found.size || found.size < 1_000_000) {
+  if (!found.size || found.size < 100) {
     return { error: 'The installer on the download page looks incomplete, so it was not used.' }
   }
   return { asset: found }
@@ -153,7 +153,7 @@ export async function downloadInstaller(
   let done = 0
   let lastPct = -1
   try {
-    for (;;) {
+    for (; ;) {
       const { done: finished, value } = await reader.read()
       if (finished) break
       if (!value) continue
@@ -289,7 +289,7 @@ export async function runSelfUpdate(
     }
 
     say(100, 'Starting the installer…')
-    deps.log?.('Downloaded the update and started the installer')
+    deps.log?.('Downloaded the portable installer and started it')
     deps.launch(dest)
     deps.quit()
     return { ok: true }

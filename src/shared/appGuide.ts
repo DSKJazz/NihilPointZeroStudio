@@ -37,7 +37,7 @@ moves or deletes the originals.
 
 OTHER GLOBAL FEATURES: on startup the app quietly checks for a newer published version and
 shows a small blue notice with a "Get the update" button (opens the studio folder with
-NIHILPOINTZERO-OS-setup.exe selected, or the download page if that copy is old). Backups live
+NIHILPOINTZERO-OS-install.bat selected, or the download page if that copy is old). Backups live
 in C:\\Users\\<you>\\NihilPointZero-Backups: the app backs up all user work there automatically
 at most once every 7 days (BACKUP-NOW.cmd in the Desktop studio folder does the same by hand),
 copy-only. Settings -> Backups has: Back up now, Restore missing files (non-destructive — only
@@ -172,5 +172,5 @@ TROUBLESHOOTING
 - "Scenes fail to generate": the free image queue gets busy; the app now paces and
   auto-retries. Pause and resume later if the queue is having a bad hour.
 - Stale app: compare the sidebar badge to the Build line in MEGA-DIAGNOSTIC-REPORT.md;
-  if older, run NIHILPOINTZERO-OS-setup.exe once from the Desktop studio folder.
+  if older, run NIHILPOINTZERO-OS-install.bat once from the Desktop studio folder.
 `
