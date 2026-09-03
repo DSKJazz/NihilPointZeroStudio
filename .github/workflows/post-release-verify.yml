@@ -1,0 +1,47 @@
+name: Post-release verification
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify
+        required: true
+        default: v0.1.3
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify published release assets and metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG:-${INPUT_TAG}}"
+          test -n "$tag"
+          expected=(latest.yml NIHILPOINTZERO-OS-install.bat NIHILPOINTZERO-OS-portable.zip NIHILPOINTZERO-OS-uninstall.bat)
+          mapfile -t actual < <(gh release view "$tag" --json assets --jq '.assets[].name' | sort)
+          printf '%s\n' "${actual[@]}"
+          printf '%s\n' "${expected[@]}" | sort > expected-assets.txt
+          printf '%s\n' "${actual[@]}" > actual-assets.txt
+          diff -u expected-assets.txt actual-assets.txt
+          gh release download "$tag" --pattern 'latest.yml' --dir verify
+          gh release download "$tag" --pattern 'NIHILPOINTZERO-OS-portable.zip' --dir verify
+          grep -q '^version: ' verify/latest.yml
+          grep -q 'NIHILPOINTZERO-OS-portable.zip' verify/latest.yml
+          size="$(stat -c '%s' verify/NIHILPOINTZERO-OS-portable.zip)"
+          listed="$(awk '/^    size:/{print $2; exit}' verify/latest.yml)"
+          test "$size" = "$listed"
+          sha512="$(sha512sum verify/NIHILPOINTZERO-OS-portable.zip | awk '{print $1}' | xxd -r -p | base64 -w0)"
+          listed_sha512="$(awk '/^    sha512:/{print $2; exit}' verify/latest.yml)"
+          test "$sha512" = "$listed_sha512"
