@@ -16,8 +16,8 @@ permissions:
 
 jobs:
   ship:
-    name: Run npm run ship on Windows
-    runs-on: windows-latest
+    name: Run npm run ship on Windows (self-hosted preferred)
+    runs-on: [self-hosted, windows]
     timeout-minutes: 180
     env:
       CI: true

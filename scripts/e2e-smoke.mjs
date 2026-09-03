@@ -16,7 +16,7 @@
  * Windows TTS, local ffmpeg). Anything needing the internet is checked for
  * PRESENCE and RESPONSIVENESS, never for online success.
  */
-import { _electron as electron } from 'playwright-core'
+import { _electron as electron, chromium } from 'playwright-core'
 import { existsSync, mkdtempSync, rmSync, createWriteStream } from 'fs'
 import { spawnSync } from 'child_process'
 import { tmpdir } from 'os'
@@ -102,6 +102,14 @@ try {
   console.log('DIAG: VSCODE_INSPECTOR_OPTIONS=' + (process.env.VSCODE_INSPECTOR_OPTIONS || ''))
 } catch (e) {
   console.error('DIAG: failed to print execArgv/env', e)
+}
+// Ensure any spawned electron/CDP browser is cleaned up when the node process exits
+process.on('exit', () => {
+  try { if (global.__spawnedElectron && typeof global.__spawnedElectron.kill === 'function') { global.__spawnedElectron.kill() } } catch (e) {}
+  try { if (global.__cdpBrowser && typeof global.__cdpBrowser.close === 'function') { void global.__cdpBrowser.close() } } catch (e) {}
+})
+process.on('SIGINT', () => process.exit(1))
+process.on('uncaughtException', (err) => { try { console.error('UNCAUGHT EX', err) } catch {} ; process.exit(1) })
 }
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
@@ -213,7 +221,46 @@ async function findSpokenNarrationLocator(win) {
 }
 
 
+// Pre-launch probe: attempt to spawn the Electron binary directly for 2s to capture any immediate stderr output
+try {
+  const { spawn } = await import('child_process')
+  const { createRequire } = await import('module')
+  const req = createRequire(import.meta.url)
+  let electronExe
+  try {
+    electronExe = req('electron')
+    console.log('DIAG: electron module resolved to', electronExe)
+  } catch (e) {
+    console.error('DIAG: require("electron") failed', e)
+  }
+  if (electronExe) {
+    try {
+      const probe = spawn(electronExe, [join(repo, 'out', 'main', 'index.js')], {
+        env: { ...process.env, NPZ_E2E_USERDATA: dataHome, NODE_ENV: 'production' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+      let probeTimedOut = false
+      probe.stdout.on('data', (d) => { try { console.log('[PROBE STDOUT] ' + String(d).trim()) } catch {} })
+      probe.stderr.on('data', (d) => { try { console.error('[PROBE STDERR] ' + String(d).trim()) } catch {} })
+      // kill probe after 2000ms — this is only to capture early logs
+      setTimeout(() => {
+        probeTimedOut = true
+        try { probe.kill() } catch {}
+      }, 2000)
+      // await probe exit or timeout
+      await new Promise((res) => probe.on('exit', () => res()).once('error', () => res()))
+      if (probeTimedOut) console.log('DIAG: probe killed after timeout')
+    } catch (e) {
+      console.error('DIAG: probe spawn failed', e)
+    }
+  }
+} catch (e) {
+  console.error('DIAG: pre-launch probe failed', e)
+}
+
 const app = await electron.launch({
+  // prevent Playwright from injecting its default --inspect / remote-debugging flags
+  ignoreDefaultArgs: ['--inspect=0', '--remote-debugging-port=0'],
   args: [join(repo, 'out', 'main', 'index.js')],
   cwd: repo,
   env: (() => {
@@ -234,6 +281,80 @@ try {
   try {
     const child = app.process && app.process()
     if (child && child.pid) console.log('Launched electron child PID:', child.pid)
+    // Log child spawn details to help diagnose unexpected debug flags
+    try {
+      if (child) {
+        console.log('E2E DIAG: child.spawnfile=' + (child.spawnfile || ''))
+        const spawnArgsStr = (Array.isArray(child.spawnargs) ? child.spawnargs.join(' ') : String(child.spawnargs || ''))
+        console.log('E2E DIAG: child.spawnargs=' + spawnArgsStr)
+        // If Playwright injected inspector flags, fallback to spawning Electron directly and connecting via CDP
+        if (/--inspect|--inspect-brk|--remote-debugging-port/i.test(spawnArgsStr)) {
+          console.log('E2E DIAG: detected inspector flags in spawn args — using CDP spawn fallback')
+          try {
+            const { spawn } = await import('child_process')
+            const { createRequire } = await import('module')
+            const req = createRequire(import.meta.url)
+            const electronExe = req('electron')
+            console.log('E2E DIAG: electron exe for spawn fallback = ' + electronExe)
+            const spawnEnv = { ...process.env, NPZ_E2E_USERDATA: dataHome, NODE_ENV: 'production' }
+            const child2 = spawn(electronExe, [join(repo, 'out', 'main', 'index.js'), '--remote-debugging-port=0'], { env: spawnEnv, stdio: ['ignore','pipe','pipe'] })
+            child2.stdout.on('data', (d) => { try { const s = String(d).trim(); console.log('[SPAWN STDOUT] ' + s) } catch {} })
+            child2.stderr.on('data', (d) => { try { const s = String(d).trim(); console.error('[SPAWN STDERR] ' + s) } catch {} })
+            // Wait for DevTools URL on stdout/stderr
+            const devtoolsRe = /DevTools listening on (ws:\/\/[^\s]+)/i
+            let devtoolsUrl = null
+            const start = Date.now()
+            while (!devtoolsUrl && Date.now() - start < 10000) {
+              await new Promise((r) => setTimeout(r, 200))
+              try {
+                // try to read any buffered output (best-effort)
+                // Note: we already log stdout/stderr; check child2 for any captured lines via a small sync read is not straightforward here
+              } catch (e) {}
+              // No reliable sync buffer access; rely on Playwright chromium.connectOverCDP if the child writes the URL
+            }
+            // Try to parse URL by reading stdout synchronously (not available). Instead attempt to connect to ws://127.0.0.1:9222 as a fallback; Playwright supports auto port 0 which chooses a random port, so attempt to probe a small range
+            const probePorts = [9222, 9223, 9224, 0]
+            let browser = null
+            for (const p of probePorts) {
+              try {
+                const endpoint = p === 0 ? undefined : `http://127.0.0.1:${p}`
+                // Attempt CDP connect; if it fails, ignore
+                if (endpoint) {
+                  try { browser = await chromium.connectOverCDP({ wsEndpoint: endpoint }) } catch (e) { browser = null }
+                }
+                if (browser) break
+              } catch (e) {}
+            }
+            if (!browser) {
+              console.error('E2E DIAG: CDP spawn fallback failed to connect to any known port')
+              try { child2.kill() } catch {}
+            } else {
+              // Obtain the first page and use it as `win`
+              const pages = await browser.pages()
+              let page = pages && pages.length ? pages[0] : null
+              if (!page) {
+                // create a new page in an existing context
+                const contexts = browser.contexts()
+                const ctx = contexts && contexts.length ? contexts[0] : await browser.newContext()
+                page = (await ctx.pages())[0] || await ctx.newPage()
+              }
+              if (page) {
+                win = page
+                // Attach a marker so later cleanup can close browser and kill child2 if needed
+                win._cdpBrowser = browser
+                win._spawnedChild = child2
+                              // make global references so process exit handlers can clean up
+                              try { global.__spawnedElectron = child2; global.__cdpBrowser = browser } catch (e) {}
+                              console.log('E2E DIAG: connected to spawned electron via CDP')
+                            }
+            }
+          } catch (e) {
+            console.error('E2E DIAG: spawn-and-connect fallback failed', e)
+          }
+        }
+      }
+    } catch (e) { console.error('E2E DIAG: failed to read child.spawnargs', e) }
+
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
   let debugWaitDetected = false
   try {

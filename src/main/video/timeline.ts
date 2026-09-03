@@ -98,7 +98,7 @@ function buildOverlayChain(overlays: TimelineTextOverlay[], inLabel: string, out
     // without an explicit font aborts the whole render.
     chains.push(
       `[${prev}]drawtext=fontfile='${fontFile}':text='${sanitizeOverlayText(ov.text)}':fontcolor=white:fontsize=${size}:` +
-        `box=1:boxcolor=black@0.4:boxborderw=12:x=${x}:y=${y}${alpha}:enable='between(t,${f3(start)},${f3(end)})'[${next}]`
+      `box=1:boxcolor=black@0.4:boxborderw=12:x=${x}:y=${y}${alpha}:enable='between(t,${f3(start)},${f3(end)})'[${next}]`
     )
     prev = next
   })
@@ -137,8 +137,8 @@ export function buildTimelinePlan(doc: TimelineDoc, fontFile: string = defaultFo
     const outSec = Math.max(inSec, clip.outSec)
     chains.push(
       `[${i}:v]trim=start=${f3(inSec)}:end=${f3(outSec)},setpts=PTS-STARTPTS,` +
-        `scale=${W}:${H}:force_original_aspect_ratio=decrease,` +
-        `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps}[v${i}]`
+      `scale=${W}:${H}:force_original_aspect_ratio=decrease,` +
+      `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps}[v${i}]`
     )
   })
 
@@ -218,9 +218,9 @@ export function buildTimelineArgs(doc: TimelineDoc, encoderArgs: string[], outPa
   args.push(...encoderArgs, '-r', String(doc.fps))
   if (plan.audioMap) {
     args.push('-c:a', 'aac', '-b:a', '192k')
-    // Bound the muxed output to the (shortest = video) stream so trailing audio can't
-    // play over a frozen last frame.
-    args.push('-shortest')
+    // The narration can be shorter than the picture. Bound the muxed output to the
+    // video track so a short voice recording cannot truncate the last shot.
+    args.push('-t', f3(videoTrackDuration(doc)))
   }
   args.push('-movflags', '+faststart', outPath)
   return args

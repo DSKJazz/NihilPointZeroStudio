@@ -1,6 +1,6 @@
 {
   "name": "finscript-studio",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "NIHILPOINTZERO-OS — institutional-grade financial content & analysis engine (Roman Urdu / Urdu / English)",
   "main": "./out/main/index.js",
   "private": true,
@@ -13,7 +13,7 @@
     "test:e2e": "npm run build && node scripts/e2e-smoke.mjs",
     "lint": "eslint src",
     "changelog:update": "node scripts/update-changelog.mjs",
-    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never --config.win.sign=false",
     "ship": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ship.ps1",
     "typecheck:phone": "tsc -p tsconfig.phone.json --noEmit && tsc -p tsconfig.phone-test.json --noEmit",
     "build:phone": "node scripts/build-phone.mjs",

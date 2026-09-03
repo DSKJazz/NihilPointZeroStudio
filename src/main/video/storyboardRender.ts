@@ -53,6 +53,20 @@ function layoutFromDims(w: number, h: number): Layout {
   }
 }
 
+async function optionalWithTimeout<T>(work: Promise<T>, fallback: T, timeoutMs = 15_000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      work,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs)
+      })
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 export interface StoryboardRenderOptions {
   /** The user's real photo, used for beats whose subject.kind === 'photo'. */
   photoPath?: string
@@ -174,7 +188,7 @@ async function renderStoryboardInner(
     }
     onProgress?.('Removing photo background (on-device, free)…')
     const cutoutPath = join(assetDir, 'me-cutout.png')
-    const ok = await removeBackgroundToPng(basePhoto, cutoutPath)
+    const ok = await optionalWithTimeout(removeBackgroundToPng(basePhoto, cutoutPath), false)
     if (!ok) onProgress?.('Background cutout unavailable — using your photo framed in the scene instead.')
     prepared = { basePhoto, cutout: ok ? cutoutPath : null }
     return prepared
@@ -261,12 +275,15 @@ async function renderStoryboardInner(
         let haveBg = false
         try {
           // signal: Stop aborts this in-flight generation immediately (no retry-cycle wait).
-          await generateImage(sceneImagePrompt(doc.style, beat.visual, doc.title), bg, {
-            width: gen.width,
-            height: gen.height,
-            seed: i + 1,
-            signal: renderSessionSignal()
-          })
+          await optionalWithTimeout(
+            generateImage(sceneImagePrompt(doc.style, beat.visual, doc.title), bg, {
+              width: gen.width,
+              height: gen.height,
+              seed: i + 1,
+              signal: renderSessionSignal()
+            }),
+            undefined
+          )
           haveBg = existsSync(bg)
         } catch {
           /* handled by fallback below */
