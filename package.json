@@ -22,17 +22,17 @@
     "typecheck:remote": "tsc -p tsconfig.remote.json --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
+    "@anthropic-ai/sdk": "^0.122.0",
     "@huggingface/transformers": "^4.2.0",
     "electron-updater": "^6.8.9",
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0",
-    "openai": "^6.45.0",
+    "openai": "^7.8.0",
     "pdf-parse": "^2.4.5",
     "qrcode": "^1.5.4",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
@@ -41,8 +41,8 @@
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.0",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.5.2",
     "electron": "^43.0.0",
