@@ -28,10 +28,10 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm run test --silent
+        run: npm run test
 
       - name: Run lint
-        run: npm run lint --silent || true
+        run: npm run lint
 
       - name: Build Windows artifacts
         run: npm run dist:win --silent
