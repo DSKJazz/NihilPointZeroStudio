@@ -8,14 +8,14 @@ if not defined TARGET set "TARGET=%LOCALAPPDATA%\NIHILPOINTZERO-OS"
 set "STAGE=%TARGET%.staging"
 set "GITHUB_URL=https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/v0.1.3/NIHILPOINTZERO-OS-portable.zip"
 set "TEMP_ZIP=%TEMP%\NIHILPOINTZERO-OS-portable-%RANDOM%.zip"
-set "EXPECTED_SHA256=602717e3c18eb5d568a593e74d84df2771a7b1f9cfa6af89fa0ca21c2abf7e8d"
+set "EXPECTED_SHA256=d57a1db04c741cceb6b3f9836106f0bfc615f975ba83018b79e312911c125a25"
 
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%" || exit /b 1
 
 echo Downloading NIHILPOINTZERO-OS v0.1.3...
 curl.exe -L --fail --retry 3 "%GITHUB_URL%" -o "%TEMP_ZIP%" || exit /b 1
-for /f "tokens=*" %%H in ('powershell.exe -NoProfile -Command "(Get-FileHash -LiteralPath '%TEMP_ZIP%' -Algorithm SHA256).Hash"') do set "ACTUAL_SHA256=%%H"
+for /f "skip=1 tokens=1" %%H in ('certutil.exe -hashfile "%TEMP_ZIP%" SHA256') do if not defined ACTUAL_SHA256 set "ACTUAL_SHA256=%%H"
 if /i not "%ACTUAL_SHA256%"=="%EXPECTED_SHA256%" (
 	echo Download checksum verification failed.
 	if exist "%TEMP_ZIP%" del /q "%TEMP_ZIP%"
@@ -34,7 +34,7 @@ move "%STAGE%" "%TARGET%" || exit /b 1
 
 set "START_MENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\NIHILPOINTZERO"
 if not exist "%START_MENU%" mkdir "%START_MENU%"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ws=New-Object -ComObject WScript.Shell; $lnk=$ws.CreateShortcut([Environment]::GetFolderPath('StartMenu') + '\Programs\NIHILPOINTZERO\NIHILPOINTZERO-OS.lnk'); $lnk.TargetPath='%TARGET%\NIHILPOINTZERO-OS-portable.exe'; $lnk.WorkingDirectory='%TARGET%'; $lnk.Description='NIHILPOINTZERO-OS v0.1.2'; $lnk.Save()"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ws=New-Object -ComObject WScript.Shell; $lnk=$ws.CreateShortcut([Environment]::GetFolderPath('StartMenu') + '\Programs\NIHILPOINTZERO\NIHILPOINTZERO-OS.lnk'); $lnk.TargetPath='%TARGET%\NIHILPOINTZERO-OS-portable.exe'; $lnk.WorkingDirectory='%TARGET%'; $lnk.Description='NIHILPOINTZERO-OS v0.1.3'; $lnk.Save()"
 
 if exist "%TEMP_ZIP%" del /q "%TEMP_ZIP%"
 echo Installation complete. Launch "%TARGET%\NIHILPOINTZERO-OS-portable.exe".
