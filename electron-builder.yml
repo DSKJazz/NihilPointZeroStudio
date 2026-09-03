@@ -6,64 +6,18 @@ directories:
 files:
   - out/**
   - package.json
-  # ---- Package diet (this is a Windows x64 app; none of the below can ever run here) ----
-  # ffprobe-static ships mac/linux/32-bit binaries (~275 MB) — only win32/x64 is used.
-  - "!**/node_modules/ffprobe-static/bin/darwin/**"
-  - "!**/node_modules/ffprobe-static/bin/linux/**"
-  - "!**/node_modules/ffprobe-static/bin/win32/ia32/**"
-  # onnxruntime-node likewise ships every platform's native runtime — keep only win32/x64.
-  # (napi-v* wildcard: the folder name tracks the N-API version and moved v3 → v6 with
-  # onnxruntime 1.24; the wildcard survives future bumps.)
-  - "!**/node_modules/onnxruntime-node/bin/napi-v*/darwin/**"
-  - "!**/node_modules/onnxruntime-node/bin/napi-v*/linux/**"
-  - "!**/node_modules/onnxruntime-node/bin/napi-v*/win32/arm64/**"
-  # onnxruntime-web must stay installed (statically imported by @huggingface/transformers,
-  # via a JS entry) — but its browser wasm payload and source maps are never used in the
-  # Electron main process. ~100+ MB.
-  - "!**/node_modules/onnxruntime-web/dist/*.wasm"
-  - "!**/node_modules/onnxruntime-web/**/*.map"
-# Native/CLI binaries and pdfjs workers cannot be executed/loaded from inside the
-# asar archive, so unpack them to app.asar.unpacked (video/ffmpeg.ts rewrites the
-# path accordingly, and pdf-parse loads pdfjs from the unpacked copy).
 asarUnpack:
   - "**/node_modules/ffmpeg-static/**"
   - "**/node_modules/ffprobe-static/**"
   - "**/node_modules/pdf-parse/**"
   - "**/node_modules/pdfjs-dist/**"
-  # onnxruntime-node ships a native .node addon + platform DLLs that cannot be
-  # loaded from inside the asar archive, so unpack it (used by the offline
-  # speech-to-text Whisper model via @xenova/transformers).
   - "**/node_modules/onnxruntime-node/**"
-# The Whisper speech-to-text model (bundled so dictation works fully offline,
-# with no download on any machine). Lands at <resources>/models, which the main
-# process reads via process.resourcesPath.
 extraResources:
   - from: resources/models
     to: models
-  # Bundled royalty-free starter pack (procedurally authored music beds + SFX) so the
-  # DJ station is instantly full on first launch. Lands at <resources>/audio-pack.
   - from: resources/audio-pack
     to: audio-pack
-# ---- CODE SIGNING (currently OFF — activate to pass Smart App Control/SmartScreen) ----
-# The permanent fix for Windows trust: sign every build with Azure Trusted Signing
-# (~$10/month, individual identity validation). Once the Azure account + certificate
-# profile exist, uncomment the block below, fill in the four values, and set the
-# AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET environment variables before
-# `npm run dist:win`. Full walkthrough: docs/SIGNING.md.
-#
-# win:
-#   azureSignOptions:
-#     publisherName: <your name as validated by Azure>
-#     endpoint: https://weu.codesigning.azure.net   # your Trusted Signing region endpoint
-#     certificateProfileName: <profile name>
-#     codeSigningAccountName: <account name>
 win:
-  # Fresh-build trigger: configuration intentionally unchanged.
-  # Two flavors from one build:
-  #   portable — the classic single exe that travels on a USB with its data folder.
-  #   nsis     — per-user installed app: launches in seconds from a FIXED path (no
-  #              ~1 GB re-extraction on every start) and taskbar pins stay valid
-  #              across updates (the fix for the stale-pin/old-code trap).
   target:
     - portable
     - nsis
@@ -71,25 +25,12 @@ win:
   signExecutable: false
 portable:
   artifactName: NIHILPOINTZERO-OS-portable.exe
-  # No fixed unpackDirName: electron-builder then extracts each BUILD to its own
-  # temp dir (keyed to the exe), so a new version never reuses a previous version's
-  # stale extraction. (A fixed name caused old code + a missing ffmpeg / ENOENT.)
-  # electron-builder 26.15.3 defines this option for the portable target; placing it
-  # under nsis fails schema validation.
   requestExecutionLevel: user
 nsis:
   artifactName: NIHILPOINTZERO-OS-setup.exe
-  # One-click per-user install (no admin prompt), Start-menu + desktop shortcut.
-  # Uninstall keeps user data.
   oneClick: true
   perMachine: false
   deleteAppDataOnUninstall: false
-
-# Publish settings for electron-updater / electron-builder so each build produces
-# the release metadata (latest.yml) electron-updater expects. This keeps the
-# existing release workflow but ensures electron-builder writes update metadata
-# into the release assets. The release itself must be a normal GitHub Release with
-# a versioned tag (e.g. v0.1.2). The ship pipeline should create that tag.
 publish:
   provider: github
   owner: DSKJazz
