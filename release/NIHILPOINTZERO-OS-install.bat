@@ -1,19 +1,19 @@
 @echo off
 setlocal EnableExtensions
 
-rem NIHILPOINTZERO-OS v0.1.2 non-admin installer.
+rem NIHILPOINTZERO-OS v0.1.3 non-admin installer.
 rem Override NPZ_INSTALL_TARGET in tests or use the default Local AppData target.
 set "TARGET=%NPZ_INSTALL_TARGET%"
 if not defined TARGET set "TARGET=%LOCALAPPDATA%\NIHILPOINTZERO-OS"
 set "STAGE=%TARGET%.staging"
-set "GITHUB_URL=https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/v0.1.2/NIHILPOINTZERO-OS-portable.zip"
+set "GITHUB_URL=https://github.com/DSKJazz/NihilPointZeroStudio/releases/download/v0.1.3/NIHILPOINTZERO-OS-portable.zip"
 set "TEMP_ZIP=%TEMP%\NIHILPOINTZERO-OS-portable-%RANDOM%.zip"
-set "EXPECTED_SHA256=9c744ed28128a937ba15208640448b3d010699b68183c1f4f3953a51bc8c1a76"
+set "EXPECTED_SHA256=602717e3c18eb5d568a593e74d84df2771a7b1f9cfa6af89fa0ca21c2abf7e8d"
 
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%" || exit /b 1
 
-echo Downloading NIHILPOINTZERO-OS v0.1.2...
+echo Downloading NIHILPOINTZERO-OS v0.1.3...
 curl.exe -L --fail --retry 3 "%GITHUB_URL%" -o "%TEMP_ZIP%" || exit /b 1
 for /f "tokens=*" %%H in ('powershell.exe -NoProfile -Command "(Get-FileHash -LiteralPath '%TEMP_ZIP%' -Algorithm SHA256).Hash"') do set "ACTUAL_SHA256=%%H"
 if /i not "%ACTUAL_SHA256%"=="%EXPECTED_SHA256%" (
