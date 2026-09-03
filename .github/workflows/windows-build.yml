@@ -47,6 +47,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Force a fresh dependency install
+        shell: bash
+        run: |
+          rm -rf node_modules package-lock.json 2>/dev/null || true
+          npm install --force
+
       # `npm ci` (not install) so the build uses exactly the locked dependency tree.
       - name: Install dependencies
         run: npm ci
