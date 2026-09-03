@@ -68,6 +68,7 @@ win:
     - portable
     - nsis
   icon: resources/icon.ico
+  signExecutable: false
 portable:
   artifactName: NIHILPOINTZERO-OS-portable.exe
   # No fixed unpackDirName: electron-builder then extracts each BUILD to its own
