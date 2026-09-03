@@ -24,10 +24,13 @@ import { detectLocal, generateLocalClip } from './aiLocal'
 import { generatePuterClip, puterSceneCap } from './puter'
 import { generatePollinationsClip } from './pollinationsVideo'
 import { getAiVideoConfig } from '../store'
+import { getStockConfig } from '../store'
 import { cleanupClipTemp, normalizeClip } from './videoEngine'
 import { beginRenderSession, endRenderSession, renderSessionSignal, throwIfCancelled } from './ffmpeg'
 import { compileStoryboardToTimeline, type ResolvedBeatAsset, type ResolvedBeatSound } from './storyboard'
 import { videosDir } from '../store'
+import { downloadMusicFile, findMusic, pickBestTrack } from '../music/pixabayMusic'
+import { moodsFromText, synthMoodFromText } from '../music/mood'
 import type { Mood, SfxKind, StoryboardDoc, TimelineDoc } from '../../shared/types'
 
 /** Scene-image dimensions at the project's aspect (short side ~720), so a 9:16 or 1:1
@@ -127,6 +130,30 @@ async function renderStoryboardInner(
   mkdirSync(assetDir, { recursive: true })
 
   const assets: Record<string, ResolvedBeatAsset> = {}
+  const hasManualMusic = doc.beats.some((beat) => beat.sounds?.some((sound) => sound.kind === 'music'))
+  const musicText = [doc.title, ...doc.beats.flatMap((beat) => [beat.visual, beat.narration ?? '', beat.mood ?? ''])].join(' ')
+  let automaticMusicPath: string | undefined
+  let automaticMusicName = 'Built-in free soundtrack'
+  if (!hasManualMusic) {
+    onProgress?.('Understanding the subject and choosing a free soundtrack…')
+    const moods = moodsFromText(musicText)
+    const libraryTracks = await optionalWithTimeout(findMusic(moods, getStockConfig().pixabayKey), [], 12_000)
+    const noAttributionTracks = libraryTracks.filter((track) => !track.needsAttribution)
+    const selected = pickBestTrack(noAttributionTracks, doc.beats.reduce((total, beat) => total + beat.durationSec, 0))
+    if (selected) {
+      const libraryPath = join(assetDir, 'automatic-soundtrack.mp3')
+      try {
+        await downloadMusicFile(selected.url, libraryPath)
+        automaticMusicPath = libraryPath
+        automaticMusicName = `${selected.title} (${selected.license}, ${selected.source})`
+      } catch {
+        // The built-in generator below keeps the render free and self-contained.
+      }
+    }
+    if (!automaticMusicPath) {
+      automaticMusicPath = await renderMusic(synthMoodFromText(musicText), Math.max(2, doc.beats.reduce((total, beat) => total + beat.durationSec, 0)), 0)
+    }
+  }
   // THE HONESTY GATE'S LEDGER. Every beat that could not show its real picture is
   // recorded here — the quiet dark-backdrop substitution stays (one bad beat must not
   // abort an evening's render), but a video that is MOSTLY substitutions is not that
@@ -405,6 +432,17 @@ async function renderStoryboardInner(
   const effDoc: StoryboardDoc = {
     ...doc,
     beats: doc.beats.map((b) => ({ ...b, durationSec: effDur[b.id] ?? b.durationSec }))
+  }
+  if (automaticMusicPath) {
+    const firstBeat = effDoc.beats.find((beat) => assets[beat.id])
+    if (firstBeat) {
+      const totalDuration = effDoc.beats.reduce((total, beat) => total + (effDur[beat.id] ?? beat.durationSec), 0)
+      assets[firstBeat.id].sounds = [
+        ...(assets[firstBeat.id].sounds ?? []),
+        { path: automaticMusicPath, atSec: 0, outSec: totalDuration, gain: 0.18, fadeInSec: 0.8, fadeOutSec: 1.2 }
+      ]
+      onProgress?.(`Using ${automaticMusicName} under the full film.`)
+    }
   }
   const timeline = compileStoryboardToTimeline(effDoc, assets)
   // A Stop pressed after the last beat must stop HERE — renderTimeline opens a fresh
