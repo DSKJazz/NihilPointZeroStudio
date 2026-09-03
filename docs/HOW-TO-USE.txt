@@ -7,7 +7,7 @@ just orientation; the other files below go deeper (no need to read them cover-to
 
 WHAT'S IN THIS FOLDER
    NIHILPOINTZERO-OS-portable.exe   -> the program (double-click to run)
-   NIHILPOINTZERO-OS-setup.exe      -> OPTIONAL one-click INSTALLER (recommended for
+   NIHILPOINTZERO-OS-install.bat     -> OPTIONAL non-admin INSTALLER (recommended for
                                         daily use on THIS PC: opens in ~2 seconds
                                         instead of ~40-60, and taskbar pins are SAFE).
                                         It finds and uses this same data folder — your
@@ -53,7 +53,7 @@ HOW TO KNOW YOU'RE ON THE NEWEST BUILD  (READ THIS — it caused a lot of confus
    • PORTABLE EXE ONLY: do not pin it to the taskbar/Start while it's open — Windows
      freezes that pin to a TEMPORARY unpacked copy and keeps launching OLD code forever.
      Launch it from the Desktop shortcut or the .exe in this folder.
-   • INSTALLED VERSION (run NIHILPOINTZERO-OS-setup.exe once): pinning is completely
+   • INSTALLED VERSION (run NIHILPOINTZERO-OS-install.bat once): pinning is completely
      SAFE — it runs from a fixed location, so pins always launch the current code, and
      it opens in seconds. This is the recommended way to use the studio on your own PC;
      keep the portable exe for USB travel.
@@ -307,12 +307,12 @@ HOW TO UPDATE, WITHOUT TYPING ANYTHING
    half-updated, and it never touches your nihilpointzero-data folder — your videos,
    scripts and settings are not at risk either way.
 
-   When it finishes it tells you to double-click NIHILPOINTZERO-OS-setup.exe once.
+   When it finishes it tells you to run NIHILPOINTZERO-OS-install.bat once.
    Do that; it keeps all your work.
 
    NO CODE FOLDER ON THIS PC? Then just download the finished app:
      1. go to github.com/DSKJazz/NihilPointZeroStudio/releases/latest
-     2. under "Assets", click NIHILPOINTZERO-OS-setup.exe
+   2. under "Assets", click NIHILPOINTZERO-OS-install.bat
      3. open your Downloads folder and double-click it
    That page is rebuilt automatically whenever the code changes, so whatever is on
    it is always the newest — you never have to check.

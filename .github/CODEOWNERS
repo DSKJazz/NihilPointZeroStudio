@@ -1,0 +1,8 @@
+# Require the repository owner to review source, release, and workflow changes.
+* @DSKJazz
+
+# Release automation and security policy require explicit owner review.
+/.github/ @DSKJazz
+/SECURITY.md @DSKJazz
+/release/ @DSKJazz
+/scripts/ @DSKJazz

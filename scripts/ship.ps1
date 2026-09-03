@@ -56,7 +56,8 @@ Step 'Refuse to build from a tree that is behind main' {
                 throw 'Behind origin/main - attempted to pull in CI and failed.'
             }
             Write-Host '   Successfully updated to origin/main in CI' -ForegroundColor DarkGray
-        } else {
+        }
+        else {
             Write-Host ''
             Write-Host "  STOPPED: $missing commit(s) are on GitHub but not in this folder." -ForegroundColor Red
             Write-Host '  Building now would produce an app MISSING finished work - which has' -ForegroundColor Red
@@ -107,7 +108,8 @@ Step 'UI click-through of the REAL app (every tab must respond, a video must bui
             Copy-Item -Path (Join-Path $repo 'out\renderer\index.html') -Destination $tmp -ErrorAction SilentlyContinue
             Copy-Item -Path (Join-Path $repo 'out\main\index.js') -Destination $tmp -ErrorAction SilentlyContinue
             Get-ChildItem -Path $tmp | ForEach-Object { Write-Host "  Collected: $($_.FullName)" }
-        } catch { Write-Host '  Failed to collect diagnostics' -ForegroundColor Yellow }
+        }
+        catch { Write-Host '  Failed to collect diagnostics' -ForegroundColor Yellow }
         # If running under CI, do not abort the whole ship; instead warn and continue so artifacts can be produced for manual verification.
         if ($env:CI -and $env:CI -ne '') {
             Write-Host '  Running under CI: marking E2E as FAILED but continuing with ship so artifacts and release can be produced for manual verification.' -ForegroundColor Yellow
@@ -118,13 +120,16 @@ Step 'UI click-through of the REAL app (every tab must respond, a video must bui
                 $noteFile = Join-Path $noteDir 'E2E-FAILED.txt'
                 "E2E smoke gate failed at $(Get-Date -Format o) on runner $($env:COMPUTERNAME)" | Out-File -FilePath $noteFile -Encoding utf8
                 Write-Host "  Created $noteFile"
-            } catch {
+            }
+            catch {
                 Write-Host '  Failed to write E2E failure note' -ForegroundColor Yellow
             }
-        } else {
+        }
+        else {
             throw 'FAILED: UI click-through gate (E2E smoke)'
         }
-    } else {
+    }
+    else {
         Write-Host '  E2E smoke passed'
     }
 }
@@ -195,10 +200,8 @@ Step 'Verify NSIS tooling (self-heal after antivirus quarantine)' {
 }
 
 Step 'Clear previous build artifacts' {
-    # NSIS fails with "Can't open output file" if an old exe is momentarily
-    # locked (e.g. antivirus scan). Deleting first surfaces the lock early,
-    # with a retry to ride out a scan in progress.
-    foreach ($exe in 'NIHILPOINTZERO-OS-portable.exe', 'NIHILPOINTZERO-OS-setup.exe') {
+    # Delete stale portable output before packaging so an old artifact cannot be shipped.
+    foreach ($exe in 'NIHILPOINTZERO-OS-portable.exe') {
         $p = Join-Path $repo "release\$exe"
         if (Test-Path $p) {
             try { Remove-Item $p -Force -ErrorAction Stop }
@@ -207,20 +210,13 @@ Step 'Clear previous build artifacts' {
     }
 }
 
-Step 'Build (portable + installer)' {
-    # Real-time antivirus keeps a lock on the freshly written setup.exe for a moment,
-    # and makensis dies with "Can't open output file" - three ships in one night died
-    # exactly there (2026-08-01). It is transient: deleting the half-written output and
-    # running again works. So do that automatically instead of failing the whole ship
-    # and making a human retry by hand. (Durable fix: an AV exclusion for
-    # %LOCALAPPDATA%\electron-builder\Cache and the release folder - a user-only action.)
-    $setup = Join-Path $repo 'release\NIHILPOINTZERO-OS-setup.exe'
+Step 'Build portable package' {
     foreach ($attempt in 1..3) {
         npm run dist:win
         if (-not $LASTEXITCODE) { break }
         if ($attempt -eq 3) { throw 'FAILED: Build (portable + installer) - three attempts, see the log above' }
-        Write-Host "  build failed (attempt $attempt) - likely the antivirus lock on setup.exe; clearing it and retrying in 20s" -ForegroundColor Yellow
-        Remove-Item $setup -Force -ErrorAction SilentlyContinue
+        Write-Host "  build failed (attempt $attempt) - clearing the portable output and retrying in 20s" -ForegroundColor Yellow
+        Remove-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.exe') -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 20
     }
     $global:LASTEXITCODE = 0
@@ -243,7 +239,8 @@ Step 'Verify the phone bridge was built' {
 
 Step 'Deploy exes to Desktop studio' {
     Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.exe') $studio -Force
-    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-setup.exe')    $studio -Force
+    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-install.bat') $studio -Force
+    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-uninstall.bat') $studio -Force
 }
 
 Step 'Update the INSTALLED app in place (Smart App Control-safe)' {
@@ -261,14 +258,17 @@ Step 'Update the INSTALLED app in place (Smart App Control-safe)' {
     $unpacked = Join-Path $repo 'release\win-unpacked'
     if (-not (Test-Path (Join-Path $instDir 'NIHILPOINTZERO-OS.exe'))) {
         Write-Host '  (no installed copy on this PC - skipped)' -ForegroundColor DarkGray
-    } elseif (Get-Process -Name 'NIHILPOINTZERO-OS' -ErrorAction SilentlyContinue) {
-        Write-Host '  INSTALLED APP IS RUNNING - close it and re-ship (or run setup.exe) to update it' -ForegroundColor Yellow
-    } else {
+    }
+    elseif (Get-Process -Name 'NIHILPOINTZERO-OS' -ErrorAction SilentlyContinue) {
+        Write-Host '  INSTALLED APP IS RUNNING - close it and re-ship (or run the batch installer) to update it' -ForegroundColor Yellow
+    }
+    else {
         $instFf = Get-FileHash (Join-Path $instDir 'ffmpeg.dll') -Algorithm SHA256 -ErrorAction SilentlyContinue
-        $newFf  = Get-FileHash (Join-Path $unpacked 'ffmpeg.dll') -Algorithm SHA256 -ErrorAction SilentlyContinue
+        $newFf = Get-FileHash (Join-Path $unpacked 'ffmpeg.dll') -Algorithm SHA256 -ErrorAction SilentlyContinue
         if (-not $instFf -or -not $newFf -or $instFf.Hash -ne $newFf.Hash) {
-            Write-Host '  Electron runtime changed - run NIHILPOINTZERO-OS-setup.exe once (Windows may ask to allow it)' -ForegroundColor Yellow
-        } else {
+            Write-Host '  Electron runtime changed - run NIHILPOINTZERO-OS-install.bat once (Windows may ask to allow it)' -ForegroundColor Yellow
+        }
+        else {
             # Keep ONE rollback copy, then swap the code archive + its unpacked natives.
             Copy-Item (Join-Path $instDir 'resources\app.asar') (Join-Path $instDir 'resources\app.asar.previous') -Force
             Copy-Item (Join-Path $unpacked 'resources\app.asar') (Join-Path $instDir 'resources\app.asar') -Force
@@ -283,7 +283,7 @@ Step 'Update the INSTALLED app in place (Smart App Control-safe)' {
 
 Step 'Deploy docs to Desktop studio' {
     foreach ($doc in 'HOW-TO-USE.txt', 'NIHILPOINTZERO-GUIDE.txt',
-                     'NIHILPOINTZERO-CHEATSHEET.txt', 'MEGA-DIAGNOSTIC-REPORT.md') {
+        'NIHILPOINTZERO-CHEATSHEET.txt', 'MEGA-DIAGNOSTIC-REPORT.md') {
         Copy-Item (Join-Path $repo "docs\$doc") $studio -Force
     }
     # The setup guide lives at the repo root (it covers building from source too).
@@ -306,8 +306,8 @@ Step 'Push to GitHub' {
 }
 
 Step 'Update GitHub release downloads' {
-    $gh   = 'DSKJazz/NihilPointZeroStudio'
-    $tag  = 'latest'
+    $gh = 'DSKJazz/NihilPointZeroStudio'
+    $tag = 'latest'
 
     # Token from the git credential store (same auth git push just used).
     # Piping into git from PowerShell can mangle encoding, so feed exact bytes.
@@ -325,8 +325,8 @@ Step 'Update GitHub release downloads' {
 
 | You are on... | Download | Notes |
 |---|---|---|
-| A Windows PC (normal use) | **NIHILPOINTZERO-OS-setup.exe** | Installs the app with a desktop shortcut |
-| A Windows PC, no install wanted | **NIHILPOINTZERO-OS-portable.exe** | Single file, keeps data in a folder next to itself |
+| A Windows PC (normal use) | **NIHILPOINTZERO-OS-install.bat** | Installs the app without administrator rights |
+| A Windows PC, no install wanted | **NIHILPOINTZERO-OS-portable.zip** | Extract the package and run the portable executable |
 | A phone or tablet | (guides below only) | The app itself runs on Windows PCs only |
 
 If Windows shows "Windows protected your PC": click **More info -> Run anyway** (the app is not code-signed yet).
@@ -341,9 +341,11 @@ If Windows shows "Windows protected your PC": click **More info -> Run anyway** 
     # Get or create the single rolling release.
     try {
         $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$gh/releases/tags/$tag" -Headers $hdr
-    } catch {
+    }
+    catch {
         $newJson = @{ tag_name = $tag; name = 'Download NIHILPOINTZERO-OS (always the newest version)'
-                      body = $body; draft = $false; prerelease = $false } | ConvertTo-Json
+            body = $body; draft = $false; prerelease = $false 
+        } | ConvertTo-Json
         $rel = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$gh/releases" -Headers $hdr `
             -Body ([Text.Encoding]::UTF8.GetBytes($newJson)) -ContentType 'application/json; charset=utf-8'
     }
@@ -354,7 +356,8 @@ If Windows shows "Windows protected your PC": click **More info -> Run anyway** 
         Invoke-RestMethod -Method Patch -Uri "https://api.github.com/repos/$gh/git/refs/tags/$tag" -Headers $hdr `
             -Body ([Text.Encoding]::UTF8.GetBytes((@{ sha = $sha; force = $true } | ConvertTo-Json))) `
             -ContentType 'application/json; charset=utf-8' | Out-Null
-    } catch { Write-Host '  (tag pointer not moved - harmless)' -ForegroundColor DarkGray }
+    }
+    catch { Write-Host '  (tag pointer not moved - harmless)' -ForegroundColor DarkGray }
 
     # Refresh release title/body with the new version stamp.
     $patchJson = @{ name = 'Download NIHILPOINTZERO-OS (always the newest version)'; body = $body } | ConvertTo-Json
@@ -366,8 +369,9 @@ If Windows shows "Windows protected your PC": click **More info -> Run anyway** 
     # download page ends up with the same set, so it can never serve a fresh exe beside
     # a stale instruction.
     $assets = @(
-        (Join-Path $repo 'release\NIHILPOINTZERO-OS-setup.exe'),
-        (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.exe'),
+        (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.zip'),
+        (Join-Path $repo 'release\NIHILPOINTZERO-OS-install.bat'),
+        (Join-Path $repo 'release\NIHILPOINTZERO-OS-uninstall.bat'),
         (Join-Path $repo 'docs\HOW-TO-USE.txt'),
         (Join-Path $repo 'docs\NIHILPOINTZERO-GUIDE.txt'),
         (Join-Path $repo 'docs\NIHILPOINTZERO-CHEATSHEET.txt'),
@@ -405,15 +409,18 @@ If Windows shows "Windows protected your PC": click **More info -> Run anyway** 
                             throw "Upload of $name failed: $($resp.StatusCode) $($resp.Content.ReadAsStringAsync().GetAwaiter().GetResult())"
                         }
                         break
-                    } finally { $fs.Dispose() }
-                } catch {
+                    }
+                    finally { $fs.Dispose() }
+                }
+                catch {
                     if ($try -eq 3) { throw }
                     Write-Host "  upload of $name failed ($($_.Exception.Message)) - retrying in 10s..." -ForegroundColor Yellow
                     Start-Sleep -Seconds 10
                 }
             }
         }
-    } finally { $client.Dispose() }
+    }
+    finally { $client.Dispose() }
     $global:LASTEXITCODE = 0
 }
 
@@ -423,4 +430,4 @@ Write-Host "  Desktop studio updated: $studio"
 Write-Host '  GitHub updated: push complete'
 Write-Host '  Download page updated: https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest'
 Write-Host '  Installed app: updated in place automatically when possible (see the step above);' -ForegroundColor Yellow
-Write-Host '  the setup.exe is only needed when the Electron runtime itself changed.' -ForegroundColor Yellow
+Write-Host '  the batch installer is used when the installed runtime needs replacement.' -ForegroundColor Yellow

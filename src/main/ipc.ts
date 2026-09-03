@@ -62,9 +62,9 @@ export function selfUpdateEnv(): SelfUpdateDeps {
     tempRoot: app.getPath('temp'),
     freeMB: freeDiskMB,
     launch: (path) => {
-      // Detached + unref so the installer outlives this process; it needs the app closed
-      // to replace its files, so the quit is part of the update, not a side effect.
-      const child = spawn(path, [], { detached: true, stdio: 'ignore' })
+      // Batch files need cmd.exe. Detached + unref lets the wrapper outlive this process;
+      // it downloads and stages the portable package after the app closes.
+      const child = spawn('cmd.exe', ['/d', '/c', path], { detached: true, stdio: 'ignore' })
       child.unref()
     },
     // A beat so the spawn is definitely away before the event loop stops.
@@ -485,7 +485,7 @@ export function registerIpcHandlers(): void {
     let buffer: Buffer
     let fileName: string
     try {
-      ;({ buffer, fileName } = await fetchPsxDocument(url))
+      ; ({ buffer, fileName } = await fetchPsxDocument(url))
     } catch (err) {
       return { canceled: false, error: err instanceof PsxFetchError ? err.message : 'Failed to fetch document' }
     }
@@ -880,12 +880,12 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Reveal the setup exe in the Desktop studio folder so a non-technical user finds it
-  // in one click. ONLY when that exe is at least as new as the advertised build — on a
-  // PC where the studio folder was merely copied, the local exe is the OLD installer and
+  // Reveal the batch installer in the Desktop studio folder so a non-technical user finds it
+  // in one click. ONLY when that installer is at least as new as the advertised build — on a
+  // PC where the studio folder was merely copied, the local installer is OLD and
   // revealing it would trap the user in an update loop. Stale/missing -> download page.
   ipcMain.handle(IPC.updateRevealSetup, (_e, remoteTag?: string) => {
-    const setup = join(app.getPath('desktop'), 'NihilPointZeroStudio', 'NIHILPOINTZERO-OS-setup.exe')
+    const setup = join(app.getPath('desktop'), 'NihilPointZeroStudio', 'NIHILPOINTZERO-OS-install.bat')
     const remoteAt = typeof remoteTag === 'string' ? tagDate(remoteTag) : null
     if (existsSync(setup)) {
       const mtime = statSync(setup).mtimeMs
@@ -1255,7 +1255,7 @@ export function registerIpcHandlers(): void {
     return { found: true as const, ...report }
   })
 
-ipcMain.handle(IPC.queueList, () => listRenderQueue())
+  ipcMain.handle(IPC.queueList, () => listRenderQueue())
 
   ipcMain.handle(IPC.queueAdd, (_e, req: VideoBuildRequest) => {
     const items = saveRenderQueue([
@@ -2192,10 +2192,10 @@ ipcMain.handle(IPC.queueList, () => listRenderQueue())
       const parsed = extractJson(raw) as { title?: string; description?: string; hashtags?: unknown }
       const tags = Array.isArray(parsed.hashtags)
         ? (parsed.hashtags as unknown[])
-            .filter((t): t is string => typeof t === 'string')
-            .map((t: string) => t.replace(/^#+/, '').replace(/\s+/g, '').trim())
-            .filter(Boolean)
-            .slice(0, 12)
+          .filter((t): t is string => typeof t === 'string')
+          .map((t: string) => t.replace(/^#+/, '').replace(/\s+/g, '').trim())
+          .filter(Boolean)
+          .slice(0, 12)
         : []
       const meta = {
         title: (parsed.title || fallback.title).slice(0, 100),
@@ -3079,7 +3079,7 @@ ipcMain.handle(IPC.queueList, () => listRenderQueue())
     const outPath = join(videosDir(), `storyboard-${id.slice(0, 8)}.mp4`)
     let timeline
     try {
-      ;({ timeline } = await renderStoryboard(id, doc, outPath, {
+      ; ({ timeline } = await renderStoryboard(id, doc, outPath, {
         photoPath: opts?.photoPath,
         beautifyStrength: opts?.beautifyStrength,
         windowsVoice: opts?.windowsVoice,

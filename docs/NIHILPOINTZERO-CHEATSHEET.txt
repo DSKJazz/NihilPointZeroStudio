@@ -19,9 +19,9 @@ UPDATE IT ......... double-click UPDATE-MY-STUDIO.cmd in the workshop code folde
                     your Desktop folder and updates the installed app. 5-10 min, walk away.
                     NO code folder? Download the finished app instead:
                     github.com/DSKJazz/NihilPointZeroStudio/releases/latest -> Assets ->
-                    NIHILPOINTZERO-OS-setup.exe -> double-click it.
+                    NIHILPOINTZERO-OS-install.bat -> run it from Command Prompt.
 RUN IT ............ EITHER double-click NIHILPOINTZERO-OS-portable.exe (portable; unpacks ~40-60s)
-                    OR run NIHILPOINTZERO-OS-setup.exe ONCE to install -> opens in ~2s from then on,
+                    OR run NIHILPOINTZERO-OS-install.bat ONCE to install -> opens in ~2s from then on,
                     taskbar pins are SAFE, and it uses the SAME data folder (same videos/settings).
 MOVE IT ........... copy the WHOLE "NihilPointZeroStudio" folder -> paste on any PC -> run the portable exe
 GOLDEN RULE ....... keep the .exe and "nihilpointzero-data" folder together, always
@@ -180,7 +180,7 @@ ALREADY SET UP ...... Natural voice (Piper) + offline Demucs installed on THIS P
 
 ------------------------------  IF STUCK  -------------------------------------------------------
 Nothing happens ......... portable exe unpacks on every launch (~40-60s now) — don't double-click again.
-                          Tired of the wait? Run NIHILPOINTZERO-OS-setup.exe once -> ~2s launches.
+                          Tired of the wait? Run NIHILPOINTZERO-OS-install.bat once -> ~2s launches.
 Old look / no updates ... check the BUILD BADGE in the sidebar; if old you ran a stale taskbar/Start
                           pin of the PORTABLE exe — launch the Desktop shortcut or the .exe directly
                           (or use the installed version, which never has this problem)
