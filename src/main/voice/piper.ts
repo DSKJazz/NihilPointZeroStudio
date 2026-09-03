@@ -80,7 +80,7 @@ async function downloadFile(url: string, dest: string, onFrac?: (frac: number) =
   const reader = res.body.getReader()
   let done = 0
   try {
-    for (;;) {
+    for (; ;) {
       const { done: finished, value } = await Promise.race([reader.read(), wsFailed])
       if (finished) break
       if (value) {
