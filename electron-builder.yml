@@ -6,33 +6,14 @@ directories:
 files:
   - out/**
   - package.json
-asarUnpack:
-  - "**/node_modules/ffmpeg-static/**"
-  - "**/node_modules/ffprobe-static/**"
-  - "**/node_modules/pdf-parse/**"
-  - "**/node_modules/pdfjs-dist/**"
-  - "**/node_modules/onnxruntime-node/**"
-extraResources:
-  - from: resources/models
-    to: models
-  - from: resources/audio-pack
-    to: audio-pack
 win:
   target:
     - portable
     - nsis
   icon: resources/icon.ico
   signExecutable: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
 portable:
   artifactName: NIHILPOINTZERO-OS-portable.exe
-  requestExecutionLevel: user
-nsis:
-  artifactName: NIHILPOINTZERO-OS-setup.exe
-  oneClick: true
-  perMachine: false
-  deleteAppDataOnUninstall: false
-publish:
-  provider: github
-  owner: DSKJazz
-  repo: NihilPointZeroStudio
-  releaseType: release
