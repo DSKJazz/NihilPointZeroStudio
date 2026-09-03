@@ -880,12 +880,12 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Reveal the setup exe in the Desktop studio folder so a non-technical user finds it
-  // in one click. ONLY when that exe is at least as new as the advertised build — on a
-  // PC where the studio folder was merely copied, the local exe is the OLD installer and
+  // Reveal the batch installer in the Desktop studio folder so a non-technical user finds it
+  // in one click. ONLY when that installer is at least as new as the advertised build — on a
+  // PC where the studio folder was merely copied, the local installer is OLD and
   // revealing it would trap the user in an update loop. Stale/missing -> download page.
   ipcMain.handle(IPC.updateRevealSetup, (_e, remoteTag?: string) => {
-    const setup = join(app.getPath('desktop'), 'NihilPointZeroStudio', 'NIHILPOINTZERO-OS-setup.exe')
+    const setup = join(app.getPath('desktop'), 'NihilPointZeroStudio', 'NIHILPOINTZERO-OS-install.bat')
     const remoteAt = typeof remoteTag === 'string' ? tagDate(remoteTag) : null
     if (existsSync(setup)) {
       const mtime = statSync(setup).mtimeMs

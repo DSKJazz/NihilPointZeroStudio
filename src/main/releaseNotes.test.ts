@@ -70,7 +70,7 @@ describe('a rendered example of each format', () => {
     const body = [
       'Built automatically from main (commit c6669e0).',
       '',
-      '- **NIHILPOINTZERO-OS-setup.exe** — installs the app (recommended).',
+      '- **NIHILPOINTZERO-OS-install.bat** — installs the app without administrator rights.',
       '',
       `Build ${tag}`
     ].join('\n')

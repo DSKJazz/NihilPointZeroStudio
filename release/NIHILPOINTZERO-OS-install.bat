@@ -14,15 +14,17 @@ if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%" || exit /b 1
 
 echo Downloading NIHILPOINTZERO-OS v0.1.2...
-curl.exe -L --fail --retry 3 "%GITHUB_URL%" -o "%TEMP_ZIP%"
-if errorlevel 1 exit /b 1
+curl.exe -L --fail --retry 3 "%GITHUB_URL%" -o "%TEMP_ZIP%" || exit /b 1
+for /f "tokens=*" %%H in ('powershell.exe -NoProfile -Command "(Get-FileHash -LiteralPath '%TEMP_ZIP%' -Algorithm SHA256).Hash"') do set "ACTUAL_SHA256=%%H"
+if /i not "%ACTUAL_SHA256%"=="%EXPECTED_SHA256%" (
+	echo Download checksum verification failed.
+	if exist "%TEMP_ZIP%" del /q "%TEMP_ZIP%"
+	exit /b 1
+)
 
-where tar.exe >nul 2>nul
-if errorlevel 1 exit /b 1
-
+where tar.exe >nul 2>nul || exit /b 1
 echo Installing to "%TARGET%"...
-tar.exe -xf "%TEMP_ZIP%" -C "%STAGE%"
-if errorlevel 1 exit /b 1
+tar.exe -xf "%TEMP_ZIP%" -C "%STAGE%" || exit /b 1
 
 if not exist "%STAGE%\NIHILPOINTZERO-OS-portable.exe" exit /b 1
 if not exist "%STAGE%\icudtl.dat" exit /b 1

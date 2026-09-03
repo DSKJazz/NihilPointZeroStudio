@@ -1,18 +1,12 @@
 name: Ship (Windows)
 
 # Runs the full ship pipeline on a Windows runner
-# Triggers: manual dispatch, pull requests to main, and when merged/pushed to main
+# Triggers: manual dispatch only. Release publishing is owned by windows-build.yml.
 on:
   workflow_dispatch: {}
-  pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
 
 permissions:
-  contents: write
-  packages: write
-  issues: write
+  contents: read
 
 jobs:
   ship:
@@ -21,8 +15,6 @@ jobs:
     timeout-minutes: 180
     env:
       CI: true
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      SKIP_E2E: 'true'
       # Ensure no debugger flags are present on the runner (help Playwright/Electron start cleanly)
       NODE_OPTIONS: ''
       DEBUG: ''
@@ -72,12 +64,12 @@ jobs:
           $env:NODE_ENV = 'production'
           Write-Host "Env sanitized"
 
-      - name: Run ship (E2E + packaging + release)
+      - name: Run packaging validation
         shell: pwsh
         run: |
-          # The ship script performs the E2E smoke gate and will publish release assets.
-          # Ensure GH_TOKEN (repo write permissions) is provided in repository secrets.
-          npm run ship
+          npm run dist:win
+          if (-not (Test-Path 'release\NIHILPOINTZERO-OS-portable.zip')) { throw 'Portable ZIP was not produced' }
+          if (-not (Test-Path 'out\remote\bridge.js')) { throw 'Phone bridge was not produced' }
 
       - name: Collect ship diagnostics (on failure)
         if: failure()
