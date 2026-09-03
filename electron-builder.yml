@@ -72,6 +72,8 @@ portable:
   # No fixed unpackDirName: electron-builder then extracts each BUILD to its own
   # temp dir (keyed to the exe), so a new version never reuses a previous version's
   # stale extraction. (A fixed name caused old code + a missing ffmpeg / ENOENT.)
+  # electron-builder 26.15.3 defines this option for the portable target; placing it
+  # under nsis fails schema validation.
   requestExecutionLevel: user
 nsis:
   artifactName: NIHILPOINTZERO-OS-setup.exe
