@@ -200,10 +200,8 @@ Step 'Verify NSIS tooling (self-heal after antivirus quarantine)' {
 }
 
 Step 'Clear previous build artifacts' {
-    # NSIS fails with "Can't open output file" if an old exe is momentarily
-    # locked (e.g. antivirus scan). Deleting first surfaces the lock early,
-    # with a retry to ride out a scan in progress.
-    foreach ($exe in 'NIHILPOINTZERO-OS-portable.exe', 'NIHILPOINTZERO-OS-setup.exe') {
+    # Delete stale portable output before packaging so an old artifact cannot be shipped.
+    foreach ($exe in 'NIHILPOINTZERO-OS-portable.exe') {
         $p = Join-Path $repo "release\$exe"
         if (Test-Path $p) {
             try { Remove-Item $p -Force -ErrorAction Stop }
@@ -212,20 +210,13 @@ Step 'Clear previous build artifacts' {
     }
 }
 
-Step 'Build (portable + installer)' {
-    # Real-time antivirus keeps a lock on the freshly written setup.exe for a moment,
-    # and makensis dies with "Can't open output file" - three ships in one night died
-    # exactly there (2026-08-01). It is transient: deleting the half-written output and
-    # running again works. So do that automatically instead of failing the whole ship
-    # and making a human retry by hand. (Durable fix: an AV exclusion for
-    # %LOCALAPPDATA%\electron-builder\Cache and the release folder - a user-only action.)
-    $setup = Join-Path $repo 'release\NIHILPOINTZERO-OS-setup.exe'
+Step 'Build portable package' {
     foreach ($attempt in 1..3) {
         npm run dist:win
         if (-not $LASTEXITCODE) { break }
         if ($attempt -eq 3) { throw 'FAILED: Build (portable + installer) - three attempts, see the log above' }
-        Write-Host "  build failed (attempt $attempt) - likely the antivirus lock on setup.exe; clearing it and retrying in 20s" -ForegroundColor Yellow
-        Remove-Item $setup -Force -ErrorAction SilentlyContinue
+        Write-Host "  build failed (attempt $attempt) - clearing the portable output and retrying in 20s" -ForegroundColor Yellow
+        Remove-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.exe') -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 20
     }
     $global:LASTEXITCODE = 0
@@ -248,7 +239,8 @@ Step 'Verify the phone bridge was built' {
 
 Step 'Deploy exes to Desktop studio' {
     Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-portable.exe') $studio -Force
-    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-setup.exe')    $studio -Force
+    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-install.bat') $studio -Force
+    Copy-Item (Join-Path $repo 'release\NIHILPOINTZERO-OS-uninstall.bat') $studio -Force
 }
 
 Step 'Update the INSTALLED app in place (Smart App Control-safe)' {
@@ -268,13 +260,13 @@ Step 'Update the INSTALLED app in place (Smart App Control-safe)' {
         Write-Host '  (no installed copy on this PC - skipped)' -ForegroundColor DarkGray
     }
     elseif (Get-Process -Name 'NIHILPOINTZERO-OS' -ErrorAction SilentlyContinue) {
-        Write-Host '  INSTALLED APP IS RUNNING - close it and re-ship (or run setup.exe) to update it' -ForegroundColor Yellow
+        Write-Host '  INSTALLED APP IS RUNNING - close it and re-ship (or run the batch installer) to update it' -ForegroundColor Yellow
     }
     else {
         $instFf = Get-FileHash (Join-Path $instDir 'ffmpeg.dll') -Algorithm SHA256 -ErrorAction SilentlyContinue
         $newFf = Get-FileHash (Join-Path $unpacked 'ffmpeg.dll') -Algorithm SHA256 -ErrorAction SilentlyContinue
         if (-not $instFf -or -not $newFf -or $instFf.Hash -ne $newFf.Hash) {
-            Write-Host '  Electron runtime changed - run NIHILPOINTZERO-OS-setup.exe once (Windows may ask to allow it)' -ForegroundColor Yellow
+            Write-Host '  Electron runtime changed - run NIHILPOINTZERO-OS-install.bat once (Windows may ask to allow it)' -ForegroundColor Yellow
         }
         else {
             # Keep ONE rollback copy, then swap the code archive + its unpacked natives.

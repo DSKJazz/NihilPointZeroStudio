@@ -12,10 +12,10 @@ build the app yourself.
 
 1. Go to the download page:
    **https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest**
-2. Download **`NIHILPOINTZERO-OS-setup.exe`**.
+ 2. Download **`NIHILPOINTZERO-OS-install.bat`**.
 3. Double-click it. If Windows shows *"Windows protected your PC"*, click
    **More info → Run anyway** (the app isn't code-signed yet — a certificate costs money).
-4. It installs in a few seconds and adds a Desktop shortcut. Open it and you're done.
+ 4. It installs to `%LOCALAPPDATA%\NIHILPOINTZERO-OS` and adds a Start Menu shortcut.
 
 ## Option B — Portable (USB / no installation)
 
@@ -133,7 +133,7 @@ If you do NOT have the code folder, or the easy way will not run, just download 
 already-built app:
 
 1. Go to **https://github.com/DSKJazz/NihilPointZeroStudio/releases/latest**
-2. Under **Assets**, click **NIHILPOINTZERO-OS-setup.exe** — it downloads.
+ 2. Under **Assets**, click **NIHILPOINTZERO-OS-install.bat** — it downloads.
 3. Open your Downloads folder and double-click it.
 
 It updates in place and keeps all your work. That page is rebuilt automatically every
