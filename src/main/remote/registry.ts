@@ -73,6 +73,7 @@ export function captureHandlers(register: () => void): void {
   // before, and calling this twice would stack a wrapper each time.
   const original = ipcMain.handle
   const patched = (channel: string, listener: Handler): void => {
+    if (handlers.has(channel)) return
     handlers.set(channel, listener)
     original.call(ipcMain, channel, listener as Parameters<typeof original>[1])
   }
