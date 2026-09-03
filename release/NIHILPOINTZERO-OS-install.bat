@@ -28,7 +28,7 @@ tar.exe -xf "%TEMP_ZIP%" -C "%STAGE%" || exit /b 1
 
 if not exist "%STAGE%\NIHILPOINTZERO-OS-portable.exe" exit /b 1
 if not exist "%STAGE%\icudtl.dat" exit /b 1
-if not exist "%STAGE%\resources\app\out\main\index.js" exit /b 1
+if not exist "%STAGE%\resources\app.asar" if not exist "%STAGE%\resources\app\out\main\index.js" exit /b 1
 if exist "%TARGET%" rmdir /s /q "%TARGET%"
 move "%STAGE%" "%TARGET%" || exit /b 1
 
