@@ -125,7 +125,7 @@ away. If anything goes wrong it stops and says so in plain words rather than
 half-updating — and it never goes near your `nihilpointzero-data` folder, so your
 videos, scripts and settings are not at risk either way.
 
-When it finishes it will tell you to run `NIHILPOINTZERO-OS-setup.exe` once. Do that.
+When it finishes it will tell you to run `NIHILPOINTZERO-OS-install.bat` once. Do that.
 
 ### The other way — download the finished app
 
