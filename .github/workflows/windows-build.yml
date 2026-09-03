@@ -113,6 +113,29 @@ jobs:
         run: |
           set -euo pipefail
           TAG=latest
+          VERSION_TAG="v$(node -p "require('./package.json').version")"
+
+          if ! gh release view "$VERSION_TAG" >/dev/null 2>&1; then
+            gh release create "$VERSION_TAG" \
+              --title "NIHILPOINTZERO-OS $VERSION_TAG" \
+              --notes "Built automatically from main (commit ${GITHUB_SHA::7})." \
+              --latest
+          fi
+
+          gh release upload "$VERSION_TAG" \
+            "release/NIHILPOINTZERO-OS-setup.exe" \
+            "release/NIHILPOINTZERO-OS-portable.exe" \
+            "release/latest.yml" \
+            "docs/HOW-TO-USE.txt" \
+            "docs/NIHILPOINTZERO-GUIDE.txt" \
+            "docs/NIHILPOINTZERO-CHEATSHEET.txt" \
+            "docs/MEGA-DIAGNOSTIC-REPORT.md" \
+            "docs/QA-REPORT.md" \
+            "CHANGELOG.md" \
+            "SETUP_GUIDE.md" \
+            "UPDATE-MY-STUDIO.cmd" \
+            "BACKUP-NOW.cmd" \
+            --clobber
 
           # Create the rolling release the first time; afterwards just reuse it.
           if ! gh release view "$TAG" >/dev/null 2>&1; then
@@ -141,6 +164,7 @@ jobs:
           gh release upload "$TAG" \
             "release/NIHILPOINTZERO-OS-setup.exe" \
             "release/NIHILPOINTZERO-OS-portable.exe" \
+            "release/latest.yml" \
             "docs/HOW-TO-USE.txt" \
             "docs/NIHILPOINTZERO-GUIDE.txt" \
             "docs/NIHILPOINTZERO-CHEATSHEET.txt" \

@@ -1,7 +1,6 @@
 {
   "name": "finscript-studio",
-  "version": "0.1.1",
-  "author": "NihilPointZero Studio",
+  "version": "0.1.2",
   "description": "NIHILPOINTZERO-OS — institutional-grade financial content & analysis engine (Roman Urdu / Urdu / English)",
   "main": "./out/main/index.js",
   "private": true,
