@@ -27,10 +27,6 @@ type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
 type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
 type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
 
-type Learned = Awaited<ReturnType<typeof window.api.channel.learn>>
-type Mined = Awaited<ReturnType<typeof window.api.channel.comments>>
-type Gaps = Awaited<ReturnType<typeof window.api.channel.gaps>>
-
 export default function ChannelPage(): React.JSX.Element {
   const [learned, setLearned] = useState<Learned | null>(null)
   const [mined, setMined] = useState<Mined | null>(null)
