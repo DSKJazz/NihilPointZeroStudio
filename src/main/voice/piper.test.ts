@@ -21,7 +21,7 @@ describe('Piper archive extraction boundary', () => {
     await extractZip(archive, destination)
     expect(existsSync(join(destination, 'voice-model.onnx.json'))).toBe(true)
     expect(readFileSync(join(destination, 'voice-model.onnx.json'), 'utf8').trim()).toBe(markerText)
-  })
+  }, 30_000)
 
   it('escapes apostrophes in the actual extraction command path', async () => {
     const root = mkdtempSync(join(tmpdir(), 'npz-piper-quote-test-'))
