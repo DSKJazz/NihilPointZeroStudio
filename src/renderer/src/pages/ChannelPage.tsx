@@ -109,9 +109,8 @@ export default function ChannelPage(): React.JSX.Element {
                 {learned.titleFindings.map((f) => (
                   <div
                     key={f.pattern}
-                    className={`text-xs rounded-md border p-2 ${
-                      f.trustworthy ? 'border-ink-800 bg-ink-950 text-ink-200' : 'border-ink-800/50 bg-ink-950/40 text-ink-500'
-                    }`}
+                    className={`text-xs rounded-md border p-2 ${f.trustworthy ? 'border-ink-800 bg-ink-950 text-ink-200' : 'border-ink-800/50 bg-ink-950/40 text-ink-500'
+                      }`}
                   >
                     {f.headline}
                   </div>

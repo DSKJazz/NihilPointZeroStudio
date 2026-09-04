@@ -11,3 +11,10 @@ release
 .live-start
 .live-tests
 .live-log
+
+# Local audit exports and recovery archives — never commit these.
+quarantine-prep/
+output.json
+history_aiza.txt
+docs/Local_State_Report.txt
+docs/Target_State_Report.txt

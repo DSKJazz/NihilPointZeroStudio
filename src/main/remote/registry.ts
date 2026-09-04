@@ -77,17 +77,17 @@ export function captureHandlers(register: () => void): void {
     handlers.set(channel, listener)
     original.call(ipcMain, channel, listener as Parameters<typeof original>[1])
   }
-  ;(ipcMain as unknown as { handle: unknown }).handle = patched
+    ; (ipcMain as unknown as { handle: unknown }).handle = patched
   try {
     register()
   } finally {
     // Always restore, even if registration throws — a permanently patched ipcMain
     // would be a nasty thing to leave behind.
-    ;(ipcMain as unknown as { handle: unknown }).handle = original
+    ; (ipcMain as unknown as { handle: unknown }).handle = original
   }
 }
 
-export class RemoteInvokeError extends Error {}
+export class RemoteInvokeError extends Error { }
 
 /**
  * Calls a handler on behalf of a remote caller.

@@ -1,43 +1,35 @@
-# Current Task: v0.1.2 Release Follow-up
+# Current Task: Runtime-Aware Production Workflow
 
-**Date:** 2026-09-03  
-**Branch:** `fix-portable-execution-level`
+**Date:** 2026-09-04
+**Branch:** `chore/runtime-aware-generation-handoffs`
 
 ## Current State
 
-NIHILPOINTZERO-OS v0.1.2 is published with these release assets:
+The runtime-aware generation and production handoff batch is implemented locally. It carries requested duration and creator instructions through script and storyboard prompts, preserves Pakistan-specific visual grounding, supports multi-file analysis imports, and connects Script, Storyboard, Scene, and Video Studio drafts.
 
-- `NIHILPOINTZERO-OS-portable.zip`
-- `NIHILPOINTZERO-OS-install.bat`
-- `NIHILPOINTZERO-OS-uninstall.bat`
-- `latest.yml`
-
-The updater now resolves and launches the batch installer through `cmd.exe`. The focused updater contract suite passes 36/36 tests, and lint completes with zero errors.
+The feature batch and dependency validation gates are committed on this dedicated branch. The branch is not yet pushed or merged to `main`.
 
 ## Completed In This Cycle
 
-- Replaced the broken NSIS installation path with a non-admin batch installer.
-- Added a matching batch uninstaller.
-- Enforced test and lint failures as release blockers in CI.
-- Removed the obsolete NSIS target from `electron-builder.yml`.
-- Added CI temporary-directory cleanup before dependency installation.
+- Added runtime-aware narration requirements and storyboard duration fitting.
+- Preserved creator/style instructions through storyboard planning and autosave.
+- Tightened Pakistan-specific and shot-relevant visual prompting.
+- Added multi-file analysis imports with partial-error handling.
+- Added direct storyboard handoffs to Scene Studio and Video Studio.
+- Archived the stale workshop copy and removed audit-only artifacts from the repository.
+- Integrated dependency audit, update validation, and post-release verification workflows.
+- Closed the failing grouped Dependabot toolchain upgrade instead of merging incompatible major-version changes.
+- Removed disposable Copilot marketplace and agent-plugin caches from the laptop.
 
-## Remaining Validation
+## Validation
 
-- Run the full test suite after confirming adequate free disk space.
-- Perform a real installed-app update from one published version to a newer release.
-- Verify the live GitHub release description and asset links.
-- Review and commit the pending source/configuration changes before merging to `main`.
-
-## Known Risks
-
-- The current updater uses a batch installer, so Windows `cmd.exe`, PowerShell, `curl.exe`, and `tar.exe` availability should be checked on supported Windows versions.
-- Release assets are not code-signed, which may produce Windows SmartScreen warnings.
-- The portable package is large; investigate size reduction after release correctness is stable.
+- Full Vitest suite passes: 1,694 passed, 1 skipped.
+- Production build passes.
+- Lint completes with zero errors; existing warnings remain for later cleanup.
+- Local E2E click-through passes with the harness CDP fallback; all tabs and the core render/handoff paths were exercised.
 
 ## Next Owner Actions
 
-1. Review the working tree and commit the updater/configuration changes.
-2. Run `npm run test`, `npm run lint`, and the Windows packaging command.
-3. Exercise installation, update, and uninstall on a clean Windows profile.
-4. Merge the validated branch into `main` and confirm the resulting release assets.
+1. Complete Windows portable-wrapper packaging on a machine with adequate time and disk headroom.
+2. Monitor the published pull request checks.
+3. Merge the reviewed branch and package the next release.

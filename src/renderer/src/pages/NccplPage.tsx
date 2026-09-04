@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAutosave } from '../hooks/useAutosave'
+import { useNavigate } from 'react-router-dom'
 
 /**
  * NCCPL tab. NCCPL's portal blocks automated access (HTTP 403), so — honestly — the app
@@ -17,6 +18,7 @@ const KIND_MAP: Record<Kind, 'technical' | 'financial' | 'flow'> = {
 }
 
 export default function NccplPage(): React.JSX.Element {
+  const navigate = useNavigate()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -25,6 +27,7 @@ export default function NccplPage(): React.JSX.Element {
   const [summary, setSummary] = useState('')
   const [instruction, setInstruction] = useState('')
   const [language, setLanguage] = useState('English')
+  const [targetMinutes, setTargetMinutes] = useState(12)
   const [script, setScript] = useState('')
   const [title, setTitle] = useState('')
   const [progress, setProgress] = useState<string | null>(null)
@@ -38,8 +41,8 @@ export default function NccplPage(): React.JSX.Element {
   // Autosave the whole tab (uploaded-file analysis + your prompt/language + generated
   // script) so nothing is lost on close/restart. Memoized ref → no save-loop.
   const persisted = useMemo(
-    () => ({ fileName, kind, summary, instruction, language, title, script }),
-    [fileName, kind, summary, instruction, language, title, script]
+    () => ({ fileName, kind, summary, instruction, language, targetMinutes, title, script }),
+    [fileName, kind, summary, instruction, language, targetMinutes, title, script]
   )
   const saveStatus = useAutosave('nccpl-tab', persisted, (v) => {
     if (v.fileName != null) setFileName(v.fileName)
@@ -47,6 +50,7 @@ export default function NccplPage(): React.JSX.Element {
     if (v.summary != null) setSummary(v.summary)
     if (v.instruction != null) setInstruction(v.instruction)
     if (v.language) setLanguage(v.language)
+    if (typeof v.targetMinutes === 'number') setTargetMinutes(Math.max(1, Math.min(60, v.targetMinutes)))
     if (v.title != null) setTitle(v.title)
     if (v.script != null) setScript(v.script)
   })
@@ -59,12 +63,14 @@ export default function NccplPage(): React.JSX.Element {
     try {
       const res = await window.api.data.importFile()
       if (res.canceled) return
-      if (res.error) { setError(res.error); return }
-      if (res.analysis) {
+      if (res.error && !res.analyses?.length) { setError(res.error); return }
+      if (res.analyses?.length || res.analysis) {
+        const analyses = res.analyses ?? (res.analysis ? [res.analysis] : [])
         setScript('')
-        setKind(res.analysis.kind as Kind)
-        setSummary(res.analysis.summary)
-        setFileName(res.analysis.fileName)
+        setKind(analyses[0].kind as Kind)
+        setSummary(analyses.map((item) => `--- ${item.fileName} (${item.kind}) ---\n${item.summary}`).join('\n\n'))
+        setFileName(analyses.map((item) => item.fileName).join(', '))
+        if (res.error) setNote(res.error)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not read the file.')
@@ -81,7 +87,8 @@ export default function NccplPage(): React.JSX.Element {
       const res = await window.api.analysis.script(KIND_MAP[kind ?? 'document'], subject, summary, {
         style: 'documentary',
         instruction: instruction.trim() || undefined,
-        language: language || undefined
+        language: language || undefined,
+        targetSeconds: targetMinutes * 60
       })
       if (!res.ok) { setError(res.error ?? 'Could not generate the script.'); return }
       setTitle(res.title ?? subject)
@@ -104,6 +111,11 @@ export default function NccplPage(): React.JSX.Element {
     } finally {
       setBusy(null); setProgress(null)
     }
+  }
+
+  async function openInStoryboard(): Promise<void> {
+    await window.api.drafts.set('storyboard-project', { mode: 'auto', title, brief: script, creatorInstructions: instruction })
+    navigate('/storyboard')
   }
 
   return (
@@ -156,6 +168,9 @@ export default function NccplPage(): React.JSX.Element {
                 <option>Roman Urdu</option>
                 <option>Urdu</option>
               </select>
+              <label className="text-xs text-ink-400">Minutes
+                <input type="number" min={1} max={60} value={targetMinutes} onChange={(e) => setTargetMinutes(Math.max(1, Math.min(60, Number(e.target.value) || 1)))} className="ml-1 w-14 rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-200" />
+              </label>
               <button onClick={generateScript} disabled={!!busy} className="ml-auto rounded-md border border-ink-700 px-3 py-2 text-sm text-ink-200 hover:bg-ink-800 disabled:opacity-40">✍ Generate script</button>
             </div>
           </div>
@@ -168,6 +183,7 @@ export default function NccplPage(): React.JSX.Element {
           <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={12} className="w-full rounded-md border border-ink-700 bg-ink-950 p-3 text-sm text-ink-200 font-mono" />
           <div className="mt-2 flex gap-2">
             <button onClick={buildVideo} disabled={!!busy} className="rounded-md bg-gold-500 px-4 py-2 text-sm font-medium text-ink-950 disabled:opacity-40">🎬 Build narration video</button>
+            <button onClick={() => void openInStoryboard()} disabled={!!busy} className="rounded-md border border-gold-700 px-3 py-2 text-sm text-gold-300 hover:bg-ink-800 disabled:opacity-40">🎞 Open in Storyboard</button>
             <button onClick={() => { navigator.clipboard?.writeText(script); setNote('Script copied.') }} className="rounded-md border border-ink-700 px-3 py-2 text-sm text-ink-200 hover:bg-ink-800">Copy</button>
           </div>
         </div>

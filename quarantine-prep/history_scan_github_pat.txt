@@ -1,4 +1,0 @@
-﻿Scanning pattern: ghp_[A-Za-z0-9]{36,} -> quarantine-prep/history_scan_github_pat.txt
-
---- Working tree matches ---
-

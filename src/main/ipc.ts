@@ -124,7 +124,7 @@ import { assembleVoice } from './audio/voiceAssemble'
 import { executeActions, interpretInstruction } from './director'
 import { executeAgentPlan, interpretCommand, runBatch, sanitizeAgentPlan } from './agent'
 import { extractJson } from './director'
-import { buildStoryboardPrompt, sanitizeStoryboard, storyboardFromScript } from './video/storyboard'
+import { buildStoryboardPrompt, fitStoryboardDuration, sanitizeStoryboard, storyboardFromScript } from './video/storyboard'
 import { buildShortArgs, pickShortMoments } from './video/shorts'
 import { renderStoryboard } from './video/storyboardRender'
 import { planPresenterStoryboard, type PresenterMode } from './video/presenter'
@@ -447,37 +447,58 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.chartPriceFile, async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const dialogOptions: Electron.OpenDialogOptions = {
-      title: 'Choose a price file (CSV / Excel)',
-      properties: ['openFile'],
+      title: 'Choose one or more price files (CSV / Excel)',
+      properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Price data', extensions: ['csv', 'xlsx', 'xls'] }]
     }
     const res = win ? await dialog.showOpenDialog(win, dialogOptions) : await dialog.showOpenDialog(dialogOptions)
-    if (res.canceled || !res.filePaths[0]) return { canceled: true }
-    try {
-      const sheet = parseSpreadsheetFile(res.filePaths[0])
-      const series = buildPriceSeries(sheet)
-      logActivity('user', 'Charted a price file', basename(res.filePaths[0]))
-      return { canceled: false, series, name: basename(res.filePaths[0]) }
-    } catch (err) {
-      return { canceled: false, error: err instanceof Error ? err.message : 'Could not read that file.' }
+    if (res.canceled || !res.filePaths.length) return { canceled: true }
+    const parsed: { name: string; series: ReturnType<typeof buildPriceSeries> }[] = []
+    const errors: string[] = []
+    for (const filePath of res.filePaths) {
+      try {
+        parsed.push({ name: basename(filePath), series: buildPriceSeries(parseSpreadsheetFile(filePath)) })
+        logActivity('user', 'Charted a price file', basename(filePath))
+      } catch (err) {
+        errors.push(`${basename(filePath)}: ${err instanceof Error ? err.message : 'could not read'}`)
+      }
+    }
+    if (!parsed.length) return { canceled: false, error: errors.join('; ') || 'Could not read those files.' }
+    return {
+      canceled: false,
+      series: parsed[0].series,
+      name: parsed.map((item) => item.name).join(', '),
+      seriesList: parsed,
+      error: errors.length ? `Skipped ${errors.length} file${errors.length === 1 ? '' : 's'}: ${errors.join('; ')}` : undefined
     }
   })
 
   ipcMain.handle(IPC.dataImportFile, async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const dialogOptions: Electron.OpenDialogOptions = {
-      properties: ['openFile'],
+      title: 'Choose one or more analysis files (CSV / Excel)',
+      properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Spreadsheets', extensions: ['csv', 'xlsx', 'xls'] }]
     }
     const result = win ? await dialog.showOpenDialog(win, dialogOptions) : await dialog.showOpenDialog(dialogOptions)
-    if (result.canceled || !result.filePaths[0]) return { canceled: true }
-    const filePath = result.filePaths[0]
-    try {
-      const analysis = analyzeImportedFile(filePath, basename(filePath))
-      logActivity('user', 'Imported file for analysis', `${analysis.fileName} (${analysis.kind})`)
-      return { canceled: false, analysis }
-    } catch (err) {
-      return { canceled: false, error: err instanceof Error ? err.message : 'Failed to parse file' }
+    if (result.canceled || !result.filePaths.length) return { canceled: true }
+    const analyses: ReturnType<typeof analyzeImportedFile>[] = []
+    const errors: string[] = []
+    for (const filePath of result.filePaths) {
+      try {
+        const analysis = analyzeImportedFile(filePath, basename(filePath))
+        analyses.push(analysis)
+        logActivity('user', 'Imported file for analysis', `${analysis.fileName} (${analysis.kind})`)
+      } catch (err) {
+        errors.push(`${basename(filePath)}: ${err instanceof Error ? err.message : 'failed to parse'}`)
+      }
+    }
+    if (!analyses.length) return { canceled: false, error: errors.join('; ') || 'Failed to parse files' }
+    return {
+      canceled: false,
+      analysis: analyses[0],
+      analyses,
+      error: errors.length ? `Skipped ${errors.length} file${errors.length === 1 ? '' : 's'}: ${errors.join('; ')}` : undefined
     }
   })
 
@@ -613,7 +634,7 @@ export function registerIpcHandlers(): void {
     }
     try {
       const prompt = buildAnalysisScriptPrompt({ kind: 'technical', subject: `${analysis.symbol} on the PSX`, figures: summary, directives })
-      const script = await getActiveProvider().generateText(prompt, 1800)
+      const script = await getActiveProvider().generateText(prompt, directives?.targetSeconds && directives.targetSeconds > 600 ? 6000 : 1800)
       logActivity('ai', 'Generated a PSX analysis script', analysis.symbol)
       return { ok: true, title: `${analysis.symbol} — PSX Live Analysis (${analysis.latestDate})`, script }
     } catch (err) {
@@ -630,7 +651,7 @@ export function registerIpcHandlers(): void {
       if (!figures || !figures.trim()) return { ok: false, error: 'Nothing to write about — analyze a file first.' }
       try {
         const prompt = buildAnalysisScriptPrompt({ kind, subject: subject || 'this data', figures, directives })
-        const script = await getActiveProvider().generateText(prompt, 1800)
+        const script = await getActiveProvider().generateText(prompt, directives?.targetSeconds && directives.targetSeconds > 600 ? 6000 : 1800)
         logActivity('ai', 'Generated an analysis script', `${kind}: ${subject}`)
         return { ok: true, title: `${subject || 'Analysis'} — ${kind} script`, script }
       } catch (err) {
@@ -3006,7 +3027,7 @@ export function registerIpcHandlers(): void {
     IPC.storyboardPlan,
     async (
       _e,
-      params: { mode: 'auto' | 'guided'; title: string; brief: string; totalSeconds?: number; language?: string; width?: number; height?: number; fps?: number }
+      params: { mode: 'auto' | 'guided'; title: string; brief: string; totalSeconds?: number; language?: string; creatorInstructions?: string; width?: number; height?: number; fps?: number }
     ) => {
       const defaults = { width: params.width ?? 1920, height: params.height ?? 1080, fps: params.fps ?? 25 }
       // Defence in depth against a runaway requested length. A real project arrived
@@ -3024,7 +3045,8 @@ export function registerIpcHandlers(): void {
               title: params.title,
               brief: params.brief,
               totalSeconds: params.totalSeconds,
-              language: params.language
+              language: params.language,
+              creatorInstructions: params.creatorInstructions
             }) + extra
           const doc = sanitizeStoryboard(extractJson(await getActiveProvider().generateText(prompt, 2600)), defaults)
           return doc.beats.length ? doc : null
@@ -3051,6 +3073,7 @@ export function registerIpcHandlers(): void {
         )
         logActivity('ai', 'Director AI could not structure the script — built the storyboard directly from it instead', params.title)
       }
+      doc = fitStoryboardDuration(doc, params.totalSeconds)
       // Keep the title/language the user asked for if the model dropped them.
       if (params.title.trim()) doc.title = params.title.trim()
       if (params.language) doc.language = params.language

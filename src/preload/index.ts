@@ -77,8 +77,8 @@ const api = {
   },
   exportText: (suggestedName: string, content: string) => ipcRenderer.invoke(IPC.exportText, suggestedName, content),
   data: {
-    importFile: () => ipcRenderer.invoke(IPC.dataImportFile),
-    chartPriceFile: (): Promise<{ canceled: boolean; series?: import('../shared/types').PriceSeries; name?: string; error?: string }> =>
+    importFile: (): Promise<{ canceled: boolean; analysis?: { fileName: string; kind: 'technical' | 'fundamental' | 'flow' | 'document'; summary: string }; analyses?: { fileName: string; kind: 'technical' | 'fundamental' | 'flow' | 'document'; summary: string }[]; error?: string }> => ipcRenderer.invoke(IPC.dataImportFile),
+    chartPriceFile: (): Promise<{ canceled: boolean; series?: import('../shared/types').PriceSeries; name?: string; seriesList?: Array<{ name: string; series: import('../shared/types').PriceSeries }>; error?: string }> =>
       ipcRenderer.invoke(IPC.chartPriceFile),
     fetchPsxDocument: (url: string) => ipcRenderer.invoke(IPC.dataFetchPsxDocument, url),
     correlateFlowPrice: () => ipcRenderer.invoke(IPC.dataCorrelateFlowPrice)
@@ -92,7 +92,7 @@ const api = {
       ipcRenderer.invoke(IPC.psxLiveExcel, symbol),
     script: (
       symbol: string,
-      directives?: { instruction?: string; language?: string; style?: string }
+      directives?: { instruction?: string; language?: string; style?: string; targetSeconds?: number }
     ): Promise<{ ok: boolean; title?: string; script?: string; error?: string }> =>
       ipcRenderer.invoke(IPC.psxLiveScript, symbol, directives),
     series: (symbol: string): Promise<{ ok: boolean; series?: import('../shared/types').PriceSeries; name?: string; error?: string }> =>
@@ -105,7 +105,7 @@ const api = {
       kind: 'technical' | 'financial' | 'flow',
       subject: string,
       figures: string,
-      directives?: { instruction?: string; language?: string; style?: string }
+      directives?: { instruction?: string; language?: string; style?: string; targetSeconds?: number }
     ): Promise<{ ok: boolean; title?: string; script?: string; error?: string }> =>
       ipcRenderer.invoke(IPC.analysisScript, kind, subject, figures, directives)
   },
@@ -322,6 +322,7 @@ const api = {
       brief: string
       totalSeconds?: number
       language?: string
+      creatorInstructions?: string
       width?: number
       height?: number
       fps?: number
@@ -633,11 +634,11 @@ const api = {
       videoId: string
     ): Promise<
       | {
-          ok: true
-          keeps: import('../shared/types').KeepSpan[]
-          summary: import('../shared/types').SilenceSummary
-          durationSec: number
-        }
+        ok: true
+        keeps: import('../shared/types').KeepSpan[]
+        summary: import('../shared/types').SilenceSummary
+        durationSec: number
+      }
       | { ok: false; error: string }
     > => ipcRenderer.invoke(IPC.silencePlan, videoId),
     apply: (

@@ -10,6 +10,7 @@ import { MOODS, SFX_KINDS, VIDEO_STYLES } from '../../../shared/types'
 import type { BeatSound, ShotSubjectKind, StoryboardBeat, StoryboardDoc, VideoStyle } from '../../../shared/types'
 import type { ImportedProject } from '../../../shared/project'
 import { fileUrl } from '../../../shared/mediaUrl'
+import { useStudio } from '../store/StudioContext'
 
 /**
  * Storyboard Director — write your film shot by shot ("0–15s: I arrive in a Ferrari,
@@ -35,9 +36,11 @@ const nid = (): string => `b${Date.now().toString(36)}${seq++}`
 
 export default function StoryboardPage(): React.JSX.Element {
   const navigate = useNavigate()
+  const { setScene } = useStudio()
   const [mode, setMode] = useState<'auto' | 'guided'>('auto')
   const [title, setTitle] = useState('')
   const [brief, setBrief] = useState('')
+  const [creatorInstructions, setCreatorInstructions] = useState('')
   const [language, setLanguage] = useState('English')
   const [resKey, setResKey] = useState('1080p')
   const [fps, setFps] = useState(25)
@@ -74,13 +77,14 @@ export default function StoryboardPage(): React.JSX.Element {
   useProducerTarget({ label: 'Storyboard brief', kind: 'brief', text: brief, apply: (next) => setBrief(next) })
 
   const persisted = useMemo(
-    () => ({ mode, title, brief, language, resKey, fps, totalSeconds, style, beats, photoPath, beautifyStrength }),
-    [mode, title, brief, language, resKey, fps, totalSeconds, style, beats, photoPath, beautifyStrength]
+    () => ({ mode, title, brief, creatorInstructions, language, resKey, fps, totalSeconds, style, beats, photoPath, beautifyStrength }),
+    [mode, title, brief, creatorInstructions, language, resKey, fps, totalSeconds, style, beats, photoPath, beautifyStrength]
   )
   const saveStatus = useAutosave('storyboard-project', persisted, (v) => {
     if (v.mode) setMode(v.mode)
     if (v.title != null) setTitle(v.title)
     if (v.brief != null) setBrief(v.brief)
+    if (v.creatorInstructions != null) setCreatorInstructions(v.creatorInstructions)
     if (v.language) setLanguage(v.language)
     if (v.resKey) setResKey(v.resKey)
     if (typeof v.fps === 'number') setFps(v.fps)
@@ -165,7 +169,7 @@ export default function StoryboardPage(): React.JSX.Element {
     }
     setBusy('Directing your storyboard…'); setProgress(null)
     try {
-      const res = await window.api.storyboard.plan({ mode, title, brief, totalSeconds, language, width: dims.w, height: dims.h, fps })
+      const res = await window.api.storyboard.plan({ mode, title, brief, creatorInstructions, totalSeconds, language, width: dims.w, height: dims.h, fps })
       if (res.ok && res.storyboard) {
         setBeats(res.storyboard.beats)
         // Only adopt the AI's style suggestion when the user hasn't chosen one.
@@ -197,7 +201,7 @@ export default function StoryboardPage(): React.JSX.Element {
       const j = i + dir
       if (i < 0 || j < 0 || j >= p.length) return p
       const n = [...p]
-      ;[n[i], n[j]] = [n[j], n[i]]
+        ;[n[i], n[j]] = [n[j], n[i]]
       return n
     })
   }
@@ -296,6 +300,16 @@ export default function StoryboardPage(): React.JSX.Element {
     } finally {
       setBusy(null); setProgress(null)
     }
+  }
+
+  function openInSceneStudio(): void {
+    setScene({ title: title || 'Storyboard film', body: brief })
+    navigate('/scenes')
+  }
+
+  async function openInVideoStudio(): Promise<void> {
+    await window.api.scriptpad.save(title || 'Storyboard film', brief)
+    navigate('/video', { state: { useScriptPad: true } })
   }
 
 
@@ -408,9 +422,25 @@ export default function StoryboardPage(): React.JSX.Element {
             className="mt-1 w-full rounded-md border border-ink-700 bg-ink-950 p-3 text-sm text-ink-200"
           />
         </div>
+        <div>
+          <label className="text-xs text-ink-400">Your creator rules (optional)</label>
+          <textarea
+            value={creatorInstructions}
+            onChange={(e) => setCreatorInstructions(e.target.value)}
+            rows={3}
+            placeholder="Example: Always use my signature 9.0 rating, direct Roman Urdu, Pakistan-specific examples, verified numbers, and no generic stock people."
+            className="mt-1 w-full rounded-md border border-ink-700 bg-ink-950 p-3 text-sm text-ink-200"
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={plan} disabled={!!busy} className="rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-40 px-4 py-2 text-sm font-medium text-ink-950">
             ✦ Direct storyboard
+          </button>
+          <button onClick={openInSceneStudio} disabled={!brief.trim() || !!busy} className="rounded-md border border-gold-700 px-4 py-2 text-sm text-gold-300 hover:bg-ink-800 disabled:opacity-40">
+            🎞 Open in Scene Studio
+          </button>
+          <button onClick={() => void openInVideoStudio()} disabled={!brief.trim() || !!busy} className="rounded-md border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-800 disabled:opacity-40">
+            🎬 Open in Video Studio
           </button>
           <button onClick={() => void importFromPhone()} disabled={!!busy} className="rounded-md border border-ink-700 px-4 py-2 text-sm text-ink-200 hover:bg-ink-800 disabled:opacity-40">
             📱 Open a plan from my phone
