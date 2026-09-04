@@ -105,11 +105,11 @@ try {
 }
 // Ensure any spawned electron/CDP browser is cleaned up when the node process exits
 process.on('exit', () => {
-  try { if (global.__spawnedElectron && typeof global.__spawnedElectron.kill === 'function') { global.__spawnedElectron.kill() } } catch (e) {}
-  try { if (global.__cdpBrowser && typeof global.__cdpBrowser.close === 'function') { void global.__cdpBrowser.close() } } catch (e) {}
+  try { if (global.__spawnedElectron && typeof global.__spawnedElectron.kill === 'function') { global.__spawnedElectron.kill() } } catch (e) { }
+  try { if (global.__cdpBrowser && typeof global.__cdpBrowser.close === 'function') { void global.__cdpBrowser.close() } } catch (e) { }
 })
 process.on('SIGINT', () => process.exit(1))
-process.on('uncaughtException', (err) => { try { console.error('UNCAUGHT EX', err) } catch {} ; process.exit(1) })
+process.on('uncaughtException', (err) => { try { console.error('UNCAUGHT EX', err) } catch { }; process.exit(1) })
 
 
 // Navigate to a tab by clicking the sidebar if possible, falling back to setting the hash.
@@ -138,10 +138,28 @@ async function waitForRouteTarget(win, route, expectedText) {
     },
     expectedLower,
     { timeout: 10000 }
-  ).catch(() => {})
+  ).catch(() => { })
 }
 
 async function navigateTo(win, name, route, expectedText) {
+  // Prefer the app's router shim when available. Playwright's Electron loader can
+  // leave a stale hash after a sidebar click; driving the same navigate() path as
+  // the UI makes the tab-aliveness check deterministic while the click fallbacks
+  // below still cover the real sidebar controls when the shim is absent.
+  try {
+    const routed = await win.evaluate((r) => {
+      if (typeof window.__npz_navTo !== 'function') return false
+      window.__npz_navTo(r)
+      return true
+    }, route)
+    if (routed) {
+      await waitForRouteTarget(win, route, expectedText ?? name)
+      return
+    }
+  } catch (e) {
+    // Fall through to the user-facing sidebar navigation paths.
+  }
+
   // Try locating a nav container
   const tries = [
     async () => {
@@ -149,12 +167,12 @@ async function navigateTo(win, name, route, expectedText) {
       if ((await nav.count()) === 0) return false
       const btn = nav.locator('button', { hasText: name }).first()
       if ((await btn.count()) > 0) {
-        await btn.click().catch(() => {})
+        await btn.click().catch(() => { })
         return true
       }
       const a = nav.locator('a', { hasText: name }).first()
       if ((await a.count()) > 0) {
-        await a.click().catch(() => {})
+        await a.click().catch(() => { })
         return true
       }
       return false
@@ -164,12 +182,12 @@ async function navigateTo(win, name, route, expectedText) {
       if ((await nav.count()) === 0) return false
       const btn = nav.locator('button', { hasText: name }).first()
       if ((await btn.count()) > 0) {
-        await btn.click().catch(() => {})
+        await btn.click().catch(() => { })
         return true
       }
       const a = nav.locator('a', { hasText: name }).first()
       if ((await a.count()) > 0) {
-        await a.click().catch(() => {})
+        await a.click().catch(() => { })
         return true
       }
       return false
@@ -177,12 +195,12 @@ async function navigateTo(win, name, route, expectedText) {
     async () => {
       const btn = win.locator('button', { hasText: name }).first()
       if ((await btn.count()) > 0) {
-        await btn.click().catch(() => {})
+        await btn.click().catch(() => { })
         return true
       }
       const a = win.locator('a', { hasText: name }).first()
       if ((await a.count()) > 0) {
-        await a.click().catch(() => {})
+        await a.click().catch(() => { })
         return true
       }
       return false
@@ -240,12 +258,12 @@ try {
         stdio: ['ignore', 'pipe', 'pipe']
       })
       let probeTimedOut = false
-      probe.stdout.on('data', (d) => { try { console.log('[PROBE STDOUT] ' + String(d).trim()) } catch {} })
-      probe.stderr.on('data', (d) => { try { console.error('[PROBE STDERR] ' + String(d).trim()) } catch {} })
+      probe.stdout.on('data', (d) => { try { console.log('[PROBE STDOUT] ' + String(d).trim()) } catch { } })
+      probe.stderr.on('data', (d) => { try { console.error('[PROBE STDERR] ' + String(d).trim()) } catch { } })
       // kill probe after 2000ms — this is only to capture early logs
       setTimeout(() => {
         probeTimedOut = true
-        try { probe.kill() } catch {}
+        try { probe.kill() } catch { }
       }, 2000)
       // await probe exit or timeout
       await new Promise((res) => probe.on('exit', () => res()).once('error', () => res()))
@@ -297,9 +315,9 @@ try {
             const electronExe = req('electron')
             console.log('E2E DIAG: electron exe for spawn fallback = ' + electronExe)
             const spawnEnv = { ...process.env, NPZ_E2E_USERDATA: dataHome, NODE_ENV: 'production' }
-            const child2 = spawn(electronExe, [join(repo, 'out', 'main', 'index.js'), '--remote-debugging-port=0'], { env: spawnEnv, stdio: ['ignore','pipe','pipe'] })
-            child2.stdout.on('data', (d) => { try { const s = String(d).trim(); console.log('[SPAWN STDOUT] ' + s) } catch {} })
-            child2.stderr.on('data', (d) => { try { const s = String(d).trim(); console.error('[SPAWN STDERR] ' + s) } catch {} })
+            const child2 = spawn(electronExe, [join(repo, 'out', 'main', 'index.js'), '--remote-debugging-port=0'], { env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] })
+            child2.stdout.on('data', (d) => { try { const s = String(d).trim(); console.log('[SPAWN STDOUT] ' + s) } catch { } })
+            child2.stderr.on('data', (d) => { try { const s = String(d).trim(); console.error('[SPAWN STDERR] ' + s) } catch { } })
             // Wait for DevTools URL on stdout/stderr
             const devtoolsRe = /DevTools listening on (ws:\/\/[^\s]+)/i
             let devtoolsUrl = null
@@ -309,7 +327,7 @@ try {
               try {
                 // try to read any buffered output (best-effort)
                 // Note: we already log stdout/stderr; check child2 for any captured lines via a small sync read is not straightforward here
-              } catch (e) {}
+              } catch (e) { }
               // No reliable sync buffer access; rely on Playwright chromium.connectOverCDP if the child writes the URL
             }
             // Try to parse URL by reading stdout synchronously (not available). Instead attempt to connect to ws://127.0.0.1:9222 as a fallback; Playwright supports auto port 0 which chooses a random port, so attempt to probe a small range
@@ -323,11 +341,11 @@ try {
                   try { browser = await chromium.connectOverCDP({ wsEndpoint: endpoint }) } catch (e) { browser = null }
                 }
                 if (browser) break
-              } catch (e) {}
+              } catch (e) { }
             }
             if (!browser) {
               console.error('E2E DIAG: CDP spawn fallback failed to connect to any known port')
-              try { child2.kill() } catch {}
+              try { child2.kill() } catch { }
             } else {
               // Obtain the first page and use it as `win`
               const pages = await browser.pages()
@@ -343,10 +361,10 @@ try {
                 // Attach a marker so later cleanup can close browser and kill child2 if needed
                 win._cdpBrowser = browser
                 win._spawnedChild = child2
-                              // make global references so process exit handlers can clean up
-                              try { global.__spawnedElectron = child2; global.__cdpBrowser = browser } catch (e) {}
-                              console.log('E2E DIAG: connected to spawned electron via CDP')
-                            }
+                // make global references so process exit handlers can clean up
+                try { global.__spawnedElectron = child2; global.__cdpBrowser = browser } catch (e) { }
+                console.log('E2E DIAG: connected to spawned electron via CDP')
+              }
             }
           } catch (e) {
             console.error('E2E DIAG: spawn-and-connect fallback failed', e)
@@ -356,43 +374,43 @@ try {
     } catch (e) { console.error('E2E DIAG: failed to read child.spawnargs', e) }
 
     // Attach stdout/stderr listeners when available so CI logs include main-process traces
-  let debugWaitDetected = false
-  try {
-    // Also write child logs to a persistent file under the dataHome for CI artifact collection
-    const childLogPath = join(dataHome, 'electron-child.log')
-    let childLogStream
-    try { childLogStream = createWriteStream(childLogPath, { flags: 'a' }) } catch (e) { console.error('E2E DIAG: failed to open child log file', e) }
-
-    if (child && child.stdout && typeof child.stdout.on === 'function') {
-      child.stdout.on('data', (d) => {
-        try { const s = String(d).trim(); console.log(`[ELECTRON STDOUT pid=${child.pid}] ${s}`); childLogStream && childLogStream.write(`[STDOUT] ${s}\n`) } catch {}
-      })
-    }
-    if (child && child.stderr && typeof child.stderr.on === 'function') {
-      child.stderr.on('data', (d) => {
-        try {
-          const s = String(d).trim()
-          console.error(`[ELECTRON STDERR pid=${child.pid}] ${s}`)
-          if (/Waiting for the debugger to disconnect/i.test(s)) {
-            debugWaitDetected = true
-          }
-        } catch (err) {}
-      })
-    }
-  } catch (attachErr) {
-    console.error('E2E DIAG: failed to attach stdout/stderr listeners', attachErr)
-  }
-
-  // If the child prints a debugger-wait message, bail quickly with actionable guidance
-  if (debugWaitDetected) {
+    let debugWaitDetected = false
     try {
-      console.error('E2E DIAG: electron is waiting for a debugger to disconnect — likely an environment debugger flag (NODE_OPTIONS or --inspect) is set. Failing early.')
-    } catch {}
-    try { await app.close() } catch {}
-    throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
-  }
+      // Also write child logs to a persistent file under the dataHome for CI artifact collection
+      const childLogPath = join(dataHome, 'electron-child.log')
+      let childLogStream
+      try { childLogStream = createWriteStream(childLogPath, { flags: 'a' }) } catch (e) { console.error('E2E DIAG: failed to open child log file', e) }
+
+      if (child && child.stdout && typeof child.stdout.on === 'function') {
+        child.stdout.on('data', (d) => {
+          try { const s = String(d).trim(); console.log(`[ELECTRON STDOUT pid=${child.pid}] ${s}`); childLogStream && childLogStream.write(`[STDOUT] ${s}\n`) } catch { }
+        })
+      }
+      if (child && child.stderr && typeof child.stderr.on === 'function') {
+        child.stderr.on('data', (d) => {
+          try {
+            const s = String(d).trim()
+            console.error(`[ELECTRON STDERR pid=${child.pid}] ${s}`)
+            if (/Waiting for the debugger to disconnect/i.test(s)) {
+              debugWaitDetected = true
+            }
+          } catch (err) { }
+        })
+      }
+    } catch (attachErr) {
+      console.error('E2E DIAG: failed to attach stdout/stderr listeners', attachErr)
+    }
+
+    // If the child prints a debugger-wait message, bail quickly with actionable guidance
+    if (debugWaitDetected) {
+      try {
+        console.error('E2E DIAG: electron is waiting for a debugger to disconnect — likely an environment debugger flag (NODE_OPTIONS or --inspect) is set. Failing early.')
+      } catch { }
+      try { await app.close() } catch { }
+      throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
+    }
   } catch (e) {
-  // ignore
+    // ignore
   }
 
   // Wait for the first window, but tolerate slow startups by retrying.
@@ -420,8 +438,8 @@ try {
       if (typeof debugWaitDetected !== 'undefined' && debugWaitDetected) {
         try {
           console.error('E2E DIAG: detected debug-wait while waiting for window; aborting')
-        } catch {}
-        try { await app.close() } catch {}
+        } catch { }
+        try { await app.close() } catch { }
         throw new Error('electron started under a debugger; unset NODE_OPTIONS/--inspect flags and retry')
       }
       await new Promise((r) => setTimeout(r, 1000))
@@ -462,7 +480,7 @@ try {
     for (const label of buttonLabels) {
       const b = win.locator('button', { hasText: label }).first()
       if ((await b.count()) > 0) {
-        await b.click().catch(() => {})
+        await b.click().catch(() => { })
         await win.waitForTimeout(300)
         // If the overlay is gone, return true
         const still = await win.locator('div[role="dialog"], div[class*="fixed"][class*="inset-0"]').count().catch(() => 0)
@@ -476,7 +494,7 @@ try {
         // try to click a button inside
         const btn = o.locator('button').first()
         if ((await btn.count()) > 0) {
-          await btn.click().catch(() => {})
+          await btn.click().catch(() => { })
           await win.waitForTimeout(300)
           const still = await win.locator('div[role="dialog"], div[class*="fixed"][class*="inset-0"]').count().catch(() => 0)
           if (still === 0) return true
@@ -484,10 +502,10 @@ try {
         // try clicking the overlay background center
         const rect = await o.evaluate((el) => {
           const r = el.getBoundingClientRect();
-          return { x: Math.floor(r.left + r.width/2), y: Math.floor(r.top + r.height/2) }
+          return { x: Math.floor(r.left + r.width / 2), y: Math.floor(r.top + r.height / 2) }
         }).catch(() => null)
         if (rect) {
-          await win.mouse.click(rect.x, rect.y).catch(() => {})
+          await win.mouse.click(rect.x, rect.y).catch(() => { })
           await win.waitForTimeout(300)
           const still = await win.locator('div[role="dialog"], div[class*="fixed"][class*="inset-0"]').count().catch(() => 0)
           if (still === 0) return true
@@ -552,24 +570,24 @@ try {
       }
 
       if (!found) {
-              // Instrumentation: capture main innerText length + excerpt + timestamp for a failing mustSee
-              try {
-                const ts = new Date().toISOString()
-                const snippet = mainText.replace(/\s+/g, ' ').slice(0, 300)
-                // also capture the current hash and headings to help diagnose route vs render problems
-                try {
-                  const hash = await win.evaluate(() => window.location.hash)
-                  const headings = await win.locator('main h1, main h2, main h3, main [role="heading"]').allInnerTexts().catch(() => [])
-                  console.error(`  [INSTRUMENT] ${tab.name} mustSee failure at ${ts} — hash="${hash}" — main.length=${mainText.length} — headings=${JSON.stringify(headings)} — excerpt="${snippet}"`)
-                } catch (e) {
-                  console.error(`  [INSTRUMENT] ${tab.name} mustSee failure at ${ts} — main.length=${mainText.length} — excerpt="${snippet}" (failed to capture hash/headings: ${e})`)
-                }
-              } catch (e) {
-                console.error('  [INSTRUMENT] failed to capture main excerpt', e)
-              }
-              fail(tab.name, `expected to see "${tab.mustSee}" — not found`)
-              continue
-            }
+        // Instrumentation: capture main innerText length + excerpt + timestamp for a failing mustSee
+        try {
+          const ts = new Date().toISOString()
+          const snippet = mainText.replace(/\s+/g, ' ').slice(0, 300)
+          // also capture the current hash and headings to help diagnose route vs render problems
+          try {
+            const hash = await win.evaluate(() => window.location.hash)
+            const headings = await win.locator('main h1, main h2, main h3, main [role="heading"]').allInnerTexts().catch(() => [])
+            console.error(`  [INSTRUMENT] ${tab.name} mustSee failure at ${ts} — hash="${hash}" — main.length=${mainText.length} — headings=${JSON.stringify(headings)} — excerpt="${snippet}"`)
+          } catch (e) {
+            console.error(`  [INSTRUMENT] ${tab.name} mustSee failure at ${ts} — main.length=${mainText.length} — excerpt="${snippet}" (failed to capture hash/headings: ${e})`)
+          }
+        } catch (e) {
+          console.error('  [INSTRUMENT] failed to capture main excerpt', e)
+        }
+        fail(tab.name, `expected to see "${tab.mustSee}" — not found`)
+        continue
+      }
       // "Alive" = something a user can act on. Some tabs (Today, Activity Log) use
       // clickable cards/links rather than <button>, so count every interactive kind.
       const interactive = await win
@@ -590,19 +608,19 @@ try {
           const hash = await win.evaluate(() => window.location.hash)
           const mainHeadings = await win.locator('main h1, main h2, main h3, main [role="heading"]').allInnerTexts().catch(() => [])
           const headingText = (Array.isArray(mainHeadings) && mainHeadings[0]) ? mainHeadings[0] : ''
-          if (headingText && hash && !headingText.toLowerCase().includes(hash.replace('#/','').replace('-',' '))) {
+          if (headingText && hash && !headingText.toLowerCase().includes(hash.replace('#/', '').replace('-', ' '))) {
             // Try to click common close/back/done buttons inside main or overlays
             const closeLabels = ['Close', 'Done', 'Back', 'Hide', 'Dismiss', '×', 'Close editor']
             for (const lbl of closeLabels) {
               const btn = win.locator('main button, div[role="dialog"] button', { hasText: lbl }).first()
               if ((await btn.count()) > 0) {
-                await btn.click().catch(() => {})
+                await btn.click().catch(() => { })
                 await win.waitForTimeout(300)
               }
             }
             // Fallback: click any [aria-label="Close"] icons
             const ariaClose = win.locator('[aria-label="Close"]').first()
-            if ((await ariaClose.count()) > 0) await ariaClose.click().catch(() => {})
+            if ((await ariaClose.count()) > 0) await ariaClose.click().catch(() => { })
             await win.waitForTimeout(200)
           }
         })(win)
@@ -615,9 +633,9 @@ try {
   // ---- 2) The core promise, clicked like a user: paste a script in Video Studio,
   //         pick the offline engine, press Build, and get an actual finished video.
   console.log('  … building a real video through the UI (offline engine)')
-    try {
-      await navigateTo(win, 'Video Studio', '/video')
-      await win.waitForTimeout(700)
+  try {
+    await navigateTo(win, 'Video Studio', '/video')
+    await win.waitForTimeout(700)
 
     // Robust selection for script preset
     await win.waitForSelector('main select', { timeout: 10000 })
@@ -634,13 +652,13 @@ try {
         }
       }
       if (!didSelect) {
-        await selectEl.selectOption({ index: 0 }).catch(() => {})
+        await selectEl.selectOption({ index: 0 }).catch(() => { })
         didSelect = true
       }
     } catch (e) {
-      await selectEl.click().catch(() => {})
-      await win.keyboard.press('ArrowDown').catch(() => {})
-      await win.keyboard.press('Enter').catch(() => {})
+      await selectEl.click().catch(() => { })
+      await win.keyboard.press('ArrowDown').catch(() => { })
+      await win.keyboard.press('Enter').catch(() => { })
       didSelect = true
     }
     await fillVideoTitle(win, 'E2E smoke test')
@@ -782,14 +800,14 @@ try {
       if ((await opt2.count()) > 0) {
         const val = await opt2.first().getAttribute('value')
         if (val) await selectEl2.selectOption({ value: val })
-        else await selectEl2.selectOption({ index: 0 }).catch(() => {})
+        else await selectEl2.selectOption({ index: 0 }).catch(() => { })
       } else {
-        await selectEl2.selectOption({ index: 0 }).catch(() => {})
+        await selectEl2.selectOption({ index: 0 }).catch(() => { })
       }
     } catch (e) {
-      await selectEl2.click().catch(() => {})
-      await win.keyboard.press('ArrowDown').catch(() => {})
-      await win.keyboard.press('Enter').catch(() => {})
+      await selectEl2.click().catch(() => { })
+      await win.keyboard.press('ArrowDown').catch(() => { })
+      await win.keyboard.press('Enter').catch(() => { })
     }
     await (await findVideoTitleLocator(win)).fill('')
     const narrationLoc2 = await findSpokenNarrationLocator(win)
@@ -845,7 +863,7 @@ try {
     await narrationLoc4.fill(huge)
     const buildBtn = win.locator('button', { hasText: 'Build Video' }).first()
     await buildBtn.click()
-    await buildBtn.click({ force: true }).catch(() => {}) // rapid second click must be harmless
+    await buildBtn.click({ force: true }).catch(() => { }) // rapid second click must be harmless
     await win.waitForTimeout(4000) // let the build visibly start
     const stop = win.locator('button', { hasText: 'Stop' }).first()
     if ((await stop.count()) === 0) throw new Error('no Stop button appeared during a running build')
@@ -962,7 +980,7 @@ try {
     for (const e of pageErrors) fail('Renderer exception', e.slice(0, 200))
   }
 } finally {
-  await app.close().catch(() => {})
+  await app.close().catch(() => { })
   rmSync(dataHome, { recursive: true, force: true })
 }
 

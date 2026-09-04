@@ -20,9 +20,15 @@ export function useAutosave<T>(
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(state)
   const dirty = useRef(false)
-  restoreRef.current = onRestore
-  latest.current = state
   const skipRestore = options?.skipRestore ?? false
+
+  useEffect(() => {
+    restoreRef.current = onRestore
+  }, [onRestore])
+
+  useEffect(() => {
+    latest.current = state
+  }, [state])
 
   // Restore once — unless the caller is seeding fresh state (e.g. an imported document)
   // and must NOT be overwritten by the previously-saved draft.
@@ -66,7 +72,7 @@ export function useAutosave<T>(
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-     
+
   }, [key, state])
 
   // Flush any pending save on unmount (tab switch) and on app close, so the last <600ms
@@ -80,7 +86,7 @@ export function useAutosave<T>(
       window.removeEventListener('beforeunload', flush)
       flush()
     }
-     
+
   }, [key])
 
   return status

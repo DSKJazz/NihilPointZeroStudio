@@ -22,8 +22,13 @@ export function useHistory<T>(
   const restoring = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const restoreRef = useRef(restore)
-  restoreRef.current = restore
   const [, bump] = useState(0)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+
+  useEffect(() => {
+    restoreRef.current = restore
+  }, [restore])
 
   const serialized = JSON.stringify(state)
 
@@ -42,6 +47,8 @@ export function useHistory<T>(
       past.current.push(before)
       if (past.current.length > LIMIT) past.current.shift()
       future.current = [] // a fresh edit invalidates the redo branch
+      setCanUndo(past.current.length > 0)
+      setCanRedo(false)
       bump((n) => n + 1)
     }, DEBOUNCE_MS)
     return () => {
@@ -53,6 +60,8 @@ export function useHistory<T>(
     const prev = past.current.pop()
     if (prev === undefined) return
     future.current.push(current.current)
+    setCanUndo(past.current.length > 0)
+    setCanRedo(future.current.length > 0)
     restoring.current = true
     current.current = prev
     restoreRef.current(JSON.parse(prev) as T)
@@ -63,6 +72,8 @@ export function useHistory<T>(
     const next = future.current.pop()
     if (next === undefined) return
     past.current.push(current.current)
+    setCanUndo(past.current.length > 0)
+    setCanRedo(future.current.length > 0)
     restoring.current = true
     current.current = next
     restoreRef.current(JSON.parse(next) as T)
@@ -86,5 +97,5 @@ export function useHistory<T>(
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo])
 
-  return { undo, redo, canUndo: past.current.length > 0, canRedo: future.current.length > 0 }
+  return { undo, redo, canUndo, canRedo }
 }
