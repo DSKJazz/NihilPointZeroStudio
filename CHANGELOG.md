@@ -8,6 +8,8 @@
 - Add multi-file analysis imports with partial-error reporting.
 - Add direct Script, Storyboard, Scene Studio, and Video Studio draft handoffs.
 - Remove tracked local audit exports and archive the stale workshop copy outside the repository.
+- Add dependency audit, dependency-update validation, and post-release verification workflows.
+- Reject the failing grouped major toolchain upgrade until its changes can be tested incrementally.
 
 ## 0.1.1 - 2026-08-08
 
