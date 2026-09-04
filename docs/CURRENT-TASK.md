@@ -26,11 +26,10 @@ The feature batch and dependency validation gates are committed on this dedicate
 - Full Vitest suite passes: 1,694 passed, 1 skipped.
 - Production build passes.
 - Lint completes with zero errors; existing warnings remain for later cleanup.
-- Local E2E click-through remains environment-blocked by the Electron/Playwright debugger startup issue.
+- Local E2E click-through passes with the harness CDP fallback; all tabs and the core render/handoff paths were exercised.
 
 ## Next Owner Actions
 
-1. Complete the clean-install and Windows packaging checks.
-2. Push the dedicated branch and monitor CI.
-3. Run the Windows E2E click-through on a self-hosted or non-debugger-injected environment.
-4. Merge the reviewed branch and package the next release.
+1. Complete Windows portable-wrapper packaging on a machine with adequate time and disk headroom.
+2. Monitor the published pull request checks.
+3. Merge the reviewed branch and package the next release.

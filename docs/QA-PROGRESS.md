@@ -15,8 +15,9 @@ This file is the resumable source of truth for the runtime-aware generation and 
 - [x] Integrate dependency audit and release verification gates.
 - [x] Create recovery archives for Git refs, source, app data, and plugin inventory.
 - [x] Remove disposable Copilot marketplace, agent-plugin, npm, and stale temp caches.
-- [ ] Run a clean Windows E2E click-through without debugger injection.
-- [ ] Run a clean `npm ci` and Windows packaging validation.
+- [x] Run a clean Windows E2E click-through; CDP fallback passed all tabs and core render/handoff paths.
+- [x] Run a clean `npm ci`; dependency audit reported 0 vulnerabilities.
+- [ ] Complete Windows portable-wrapper packaging; unpacked executable startup already passes.
 - [ ] Push the dedicated branch and monitor CI.
 - [ ] Merge the reviewed branch and run release packaging before the next release.
 
