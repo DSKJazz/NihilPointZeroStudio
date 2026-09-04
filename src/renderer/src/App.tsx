@@ -118,7 +118,7 @@ export default function App() {
       } catch (e) { /* ignore */ }
     }, 200)
     return () => clearInterval(id)
-  }, [])
+  }, [pathname])
 
   return (
     <StudioProvider>

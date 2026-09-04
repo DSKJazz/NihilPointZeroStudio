@@ -50,6 +50,7 @@ function describeStep(step: AgentStep): string {
 export default function AgentPage(): React.JSX.Element {
   const [command, setCommand] = useState('')
   const saveStatus = useAutosave<string>('agent-command', command, (v) => setCommand(v))
+    const [imageCacheBust] = useState(() => Date.now())
   const [plan, setPlan] = useState<AgentPlan | null>(null)
   const [interpreting, setInterpreting] = useState(false)
   const [running, setRunning] = useState(false)
@@ -434,7 +435,7 @@ export default function AgentPage(): React.JSX.Element {
               )}
               {(r.type === 'make_thumbnail' || r.type === 'generate_image') && r.path && (
                 <div className="mt-3">
-                  <img src={`${fileUrl(r.path)}?t=${Date.now()}`} alt="thumbnail" className="w-full max-w-md rounded-md" />
+                  <img src={`${fileUrl(r.path)}?t=${imageCacheBust}`} alt="thumbnail" className="w-full max-w-md rounded-md" />
                   <button
                     onClick={() => void window.api.video.reveal(r.path!)}
                     className="mt-2 rounded bg-ink-800 px-3 py-1.5 text-xs text-ink-200 hover:bg-ink-700"

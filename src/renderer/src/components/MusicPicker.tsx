@@ -47,8 +47,9 @@ export default function MusicPicker({
 
   // Stop any preview when the panel closes, so audio never keeps playing invisibly.
   useEffect(() => {
+    const audio = audioRef.current
     return () => {
-      audioRef.current?.pause()
+      audio?.pause()
     }
   }, [])
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GeneratedScript, LanguageMix, ScriptLength, ScriptStyle, VideoIdea } from '../../../shared/types'
 import type { SaveStatus } from '../hooks/useAutosave'
@@ -114,7 +113,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     // Diagnostic guard: allow disabling autosave for targeted E2E debugging by
     // setting window.__npz_diag_disable_autosave = true in the page context.
     try {
-      if ((window as any).__npz_diag_disable_autosave) return
+      const diagnosticWindow = window as Window & { __npz_diag_disable_autosave?: boolean }
+      if (diagnosticWindow.__npz_diag_disable_autosave) return
     } catch (e) { /* ignore */ }
 
     if (!loaded.current) return
