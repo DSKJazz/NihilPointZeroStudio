@@ -902,11 +902,14 @@ RULES:
 - Make durationSec match the narration length (roughly 2.5 words/second). Keep beats 1–120s.
 - Use transitionSec 0 for hard cuts, 0.5–2 for crossfades between moods/locations.
 - Choose style, mood and motion to fit the topic. Make it cinematic and retention-optimised.
+- Every visual must be directly relevant to the narration. Never add random people, fashion, animals, fantasy, water-walking, or generic lifestyle imagery unless the script explicitly requires it.
+- For Pakistan subjects, use authentic Pakistani locations, institutions, currency, documents, markets, streets, agriculture, ports, factories, and data displays. Do not substitute India, Dubai, or generic Western finance imagery.
+- Make every adjacent shot visibly different: vary location, object, scale, camera angle, chart/document/establishing shot, and colour while preserving the same subject.
 - Use "caption" only on a few emphasis beats (not every one), and keep it under ~6 words.
 - Write ALL narration AND captions in Roman Urdu.
 MODE: AUTO — the user pasted a title and script and wants YOU to decide everything (topic,
 mood, genre, style, shot breakdown). Split the script into natural beats with fitting visuals.
-Aim for about 600s total.
+Aim for about 600s total, but do not return a short summary. Cover the whole script and allocate enough narration to fill the requested runtime.
 TITLE: The Rupee Trap
 REQUEST / SCRIPT:
 A script
@@ -939,6 +942,9 @@ RULES:
 - Make durationSec match the narration length (roughly 2.5 words/second). Keep beats 1–120s.
 - Use transitionSec 0 for hard cuts, 0.5–2 for crossfades between moods/locations.
 - Choose style, mood and motion to fit the topic. Make it cinematic and retention-optimised.
+- Every visual must be directly relevant to the narration. Never add random people, fashion, animals, fantasy, water-walking, or generic lifestyle imagery unless the script explicitly requires it.
+- For Pakistan subjects, use authentic Pakistani locations, institutions, currency, documents, markets, streets, agriculture, ports, factories, and data displays. Do not substitute India, Dubai, or generic Western finance imagery.
+- Make every adjacent shot visibly different: vary location, object, scale, camera angle, chart/document/establishing shot, and colour while preserving the same subject.
 - Use "caption" only on a few emphasis beats (not every one), and keep it under ~6 words.
 MODE: GUIDED — the user described the shots themselves. Faithfully structure THEIR beats,
 timings and actions; only fill gaps (visual detail, transitions) where they left them open.

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { PriceSeries } from '../../../shared/types'
 import { useAutosave } from '../hooks/useAutosave'
 
@@ -17,6 +18,7 @@ const PAD_T = 12
 const MAX_BARS = 150
 
 export default function ChartsPage(): React.JSX.Element {
+  const navigate = useNavigate()
   // Draw-on animation. A chart that appears all at once is a picture; a chart that
   // draws itself while you talk over it is the explanation. `frame` is null when idle,
   // which is what makes the static chart the default — nothing moves unless asked.
@@ -30,6 +32,7 @@ export default function ChartsPage(): React.JSX.Element {
   const [loadedSymbol, setLoadedSymbol] = useState('')
   const [instruction, setInstruction] = useState('')
   const [language, setLanguage] = useState('English')
+  const [targetMinutes, setTargetMinutes] = useState(12)
   const [script, setScript] = useState('')
   const [scriptTitle, setScriptTitle] = useState('')
   const [genBusy, setGenBusy] = useState<string | null>(null)
@@ -45,13 +48,14 @@ export default function ChartsPage(): React.JSX.Element {
   // Autosave the symbol + narration script so nothing is lost on tab-switch/restart
   // (memoized ref → the hook's status re-render can't cause a save-loop).
   const persisted = useMemo(
-    () => ({ symbol, instruction, language, script, scriptTitle }),
-    [symbol, instruction, language, script, scriptTitle]
+    () => ({ symbol, instruction, language, targetMinutes, script, scriptTitle }),
+    [symbol, instruction, language, targetMinutes, script, scriptTitle]
   )
   useAutosave('charts-tab', persisted, (v) => {
     if (v.symbol) setSymbol(v.symbol)
     if (v.instruction != null) setInstruction(v.instruction)
     if (v.language) setLanguage(v.language)
+    if (typeof v.targetMinutes === 'number') setTargetMinutes(Math.max(1, Math.min(60, v.targetMinutes)))
     if (v.script != null) setScript(v.script)
     if (v.scriptTitle != null) setScriptTitle(v.scriptTitle)
   })
@@ -80,11 +84,12 @@ export default function ChartsPage(): React.JSX.Element {
     try {
       const res = await window.api.data.chartPriceFile()
       if (res.canceled) return
-      if (res.error) { setError(res.error); return }
+      if (res.error && !res.series) { setError(res.error); return }
       if (res.series?.error) { setError(res.series.error); return }
       setSeries(res.series ?? null)
       setName(res.name ?? '')
       setLoadedSymbol('') // imported file, not a live symbol
+      if (res.error) setNote(res.error)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to read file')
     } finally {
@@ -110,7 +115,7 @@ export default function ChartsPage(): React.JSX.Element {
   async function generateScript(): Promise<void> {
     if (!series || !series.bars.length) { setError('Load a chart first.'); return }
     setGenBusy('Writing a script from this chart…'); setError(null); setNote(null)
-    const directives = { style: 'documentary', instruction: instruction.trim() || undefined, language: language || undefined }
+    const directives = { style: 'documentary', instruction: instruction.trim() || undefined, language: language || undefined, targetSeconds: targetMinutes * 60 }
     try {
       // Live PSX symbol → fetch fresh (most accurate); imported file → use the charted series' figures.
       const res = loadedSymbol
@@ -137,6 +142,11 @@ export default function ChartsPage(): React.JSX.Element {
     } finally {
       setGenBusy(null); setProgress(null)
     }
+  }
+
+  async function openInStoryboard(): Promise<void> {
+    await window.api.drafts.set('storyboard-project', { mode: 'auto', title: scriptTitle || name, brief: script, creatorInstructions: instruction })
+    navigate('/storyboard')
   }
 
   // Show the most recent MAX_BARS bars for readability.
@@ -350,6 +360,7 @@ export default function ChartsPage(): React.JSX.Element {
               <option>Roman Urdu</option>
               <option>Urdu</option>
             </select>
+            <label className="text-xs text-ink-400">Minutes <input type="number" min={1} max={60} value={targetMinutes} onChange={(e) => setTargetMinutes(Math.max(1, Math.min(60, Number(e.target.value) || 1)))} className="ml-1 w-14 rounded-md border border-ink-700 bg-ink-950 px-2 py-1 text-sm text-ink-200" /></label>
             <button
               onClick={generateScript}
               disabled={!!genBusy || !series || n === 0}
@@ -366,6 +377,7 @@ export default function ChartsPage(): React.JSX.Element {
               <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={10} className="w-full rounded-md border border-ink-700 bg-ink-950 p-3 text-sm text-ink-200 font-mono" />
               <div className="mt-2 flex gap-2">
                 <button onClick={buildVideo} disabled={!!genBusy} className="rounded-md bg-gold-500 px-4 py-2 text-sm font-medium text-ink-950 disabled:opacity-40">🎬 Build narration video</button>
+                <button onClick={() => void openInStoryboard()} disabled={!!genBusy} className="rounded-md border border-gold-700 px-3 py-2 text-sm text-gold-300 hover:bg-ink-800 disabled:opacity-40">🎞 Open in Storyboard</button>
                 <button onClick={() => { navigator.clipboard?.writeText(script); setNote('Script copied.') }} className="rounded-md border border-ink-700 px-3 py-2 text-sm text-ink-200 hover:bg-ink-800">Copy</button>
               </div>
             </div>

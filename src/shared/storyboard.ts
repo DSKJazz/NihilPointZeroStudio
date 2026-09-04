@@ -237,7 +237,7 @@ export function compileStoryboardToTimeline(
       })
     }
     // Per-beat sounds (music / SFX / user file), placed at beat start + their own offset.
-    ;(asset?.sounds ?? []).forEach((snd, si) => {
+    ; (asset?.sounds ?? []).forEach((snd, si) => {
       audio.push({
         id: `snd-${b.id}-${si}`,
         src: snd.path,
@@ -407,6 +407,27 @@ export function storyboardFromScript(input: {
   return { title: input.title || 'Untitled', language: input.language, beats }
 }
 
+/** Fits AI-created beats to the requested runtime using the same pure math as the fallback. */
+export function fitStoryboardDuration(doc: StoryboardDoc, totalSeconds?: number): StoryboardDoc {
+  if (!totalSeconds || totalSeconds <= 0 || !doc.beats.length) return doc
+  const total = Math.max(10, Math.min(3600, Math.round(totalSeconds)))
+  const weights = doc.beats.map((beat) => Math.max(1, beat.durationSec))
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0)
+  const exact = weights.map((weight) => (total * weight) / weightSum)
+  const durations = exact.map(Math.floor)
+  let leftover = total - durations.reduce((sum, duration) => sum + duration, 0)
+  exact
+    .map((value, index) => ({ index, fraction: value - durations[index] }))
+    .sort((a, b) => b.fraction - a.fraction)
+    .forEach(({ index }) => {
+      if (leftover > 0) {
+        durations[index] += 1
+        leftover -= 1
+      }
+    })
+  return { ...doc, beats: doc.beats.map((beat, index) => ({ ...beat, durationSec: Math.max(1, durations[index]) })) }
+}
+
 /**
  * Builds the strict prompt that asks the model for a JSON storyboard. In AUTO mode the
  * model invents the whole thing from a title + script; in GUIDED mode it structures the
@@ -418,6 +439,7 @@ export function buildStoryboardPrompt(input: {
   brief: string
   totalSeconds?: number
   language?: string
+  creatorInstructions?: string
 }): string {
   const lines = [
     'You are the DIRECTOR of a video studio. Turn the request into a JSON STORYBOARD of timed beats.',
@@ -446,15 +468,19 @@ export function buildStoryboardPrompt(input: {
     '- Make durationSec match the narration length (roughly 2.5 words/second). Keep beats 1–120s.',
     '- Use transitionSec 0 for hard cuts, 0.5–2 for crossfades between moods/locations.',
     '- Choose style, mood and motion to fit the topic. Make it cinematic and retention-optimised.',
+    '- Every visual must be directly relevant to the narration. Never add random people, fashion, animals, fantasy, water-walking, or generic lifestyle imagery unless the script explicitly requires it.',
+    '- For Pakistan subjects, use authentic Pakistani locations, institutions, currency, documents, markets, streets, agriculture, ports, factories, and data displays. Do not substitute India, Dubai, or generic Western finance imagery.',
+    '- Make every adjacent shot visibly different: vary location, object, scale, camera angle, chart/document/establishing shot, and colour while preserving the same subject.',
     '- Use "caption" only on a few emphasis beats (not every one), and keep it under ~6 words.',
     input.language ? `- Write ALL narration AND captions in ${input.language}.` : '',
+    input.creatorInstructions?.trim() ? `- CREATOR STYLE RULES (follow exactly): ${input.creatorInstructions.trim().slice(0, 3000)}` : '',
     ''
   ]
   if (input.mode === 'auto') {
     lines.push(
       'MODE: AUTO — the user pasted a title and script and wants YOU to decide everything (topic,',
       'mood, genre, style, shot breakdown). Split the script into natural beats with fitting visuals.',
-      input.totalSeconds ? `Aim for about ${input.totalSeconds}s total.` : ''
+      input.totalSeconds ? `Aim for about ${input.totalSeconds}s total, but do not return a short summary. Cover the whole script and allocate enough narration to fill the requested runtime.` : ''
     )
   } else {
     lines.push(

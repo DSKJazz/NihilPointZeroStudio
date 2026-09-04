@@ -179,16 +179,16 @@ async function renderStoryboardInner(
     opts.motionEngine === 'ai-free-video'
       ? aiCfg.freeCloudProvider === 'pollinations'
         ? generatePollinationsClip({
-            key: aiCfg.pollinationsKey ?? '',
-            model: aiCfg.pollinationsModel,
-            prompt,
-            seconds,
-            width: gen.width,
-            height: gen.height,
-            seed,
-            signal: renderSessionSignal(),
-            onStatus: onProgress
-          })
+          key: aiCfg.pollinationsKey ?? '',
+          model: aiCfg.pollinationsModel,
+          prompt,
+          seconds,
+          width: gen.width,
+          height: gen.height,
+          seed,
+          signal: renderSessionSignal(),
+          onStatus: onProgress
+        })
         : generatePuterClip({ prompt, signal: renderSessionSignal(), onStatus: onProgress })
       : generateLocalClip({ prompt, seconds, width: gen.width, height: gen.height, seed, signal: renderSessionSignal(), onStatus: onProgress })
 
@@ -268,7 +268,7 @@ async function renderStoryboardInner(
       if (motionOn && beat.subject.kind !== 'photo' && motionUsed < motionCap && motionFailures < 2) {
         try {
           onProgress?.(`${tag}: generating REAL AI video (${opts.motionEngine === 'ai-free-video' ? 'free cloud' : 'local GPU'})…`)
-          const raw = await generateMotion(sceneImagePrompt(doc.style, `${beat.visual}${subjectNote}`, doc.title), dur, i + 1)
+          const raw = await generateMotion(sceneImagePrompt(doc.style, `Shot ${i + 1}: ${beat.visual}${subjectNote}`, doc.title), dur, i + 1)
           const normalized = join(assetDir, `clip-${i}-motion.mp4`)
           await normalizeClip(raw, layout, dur, normalized)
           cleanupClipTemp(raw)
@@ -303,7 +303,7 @@ async function renderStoryboardInner(
         try {
           // signal: Stop aborts this in-flight generation immediately (no retry-cycle wait).
           await optionalWithTimeout(
-            generateImage(sceneImagePrompt(doc.style, beat.visual, doc.title), bg, {
+            generateImage(sceneImagePrompt(doc.style, `Shot ${i + 1}: ${beat.visual}`, doc.title), bg, {
               width: gen.width,
               height: gen.height,
               seed: i + 1,
@@ -329,7 +329,7 @@ async function renderStoryboardInner(
         }
       } else {
         onProgress?.(`${tag}: generating scene…`)
-        const prompt = sceneImagePrompt(doc.style, `${beat.visual}${subjectNote}`, doc.title)
+        const prompt = sceneImagePrompt(doc.style, `Shot ${i + 1}: ${beat.visual}${subjectNote}`, doc.title)
         const imgPath = join(assetDir, `beat-${i}.jpg`)
         try {
           await generateImage(prompt, imgPath, {
@@ -348,7 +348,7 @@ async function renderStoryboardInner(
             height: gen.height,
             seed: i + 1,
             signal: renderSessionSignal()
-          }).catch(() => {})
+          }).catch(() => { })
           image = existsSync(slate) ? slate : imgPath
         }
       }
@@ -421,9 +421,9 @@ async function renderStoryboardInner(
     const listed = failedBeats.slice(0, 5).map((f) => `${f.tag}: ${f.reason}`).join('; ')
     throw new Error(
       `Refusing to build: ${failedBeats.length} of ${totalBeats} scenes could not get their real image, ` +
-        `so the result would be mostly empty dark frames. First failures — ${listed}` +
-        (failedBeats.length > 5 ? '; …' : '') +
-        '. Usually the free image service is refusing or unreachable right now: check Settings → Setup Health, then build again.'
+      `so the result would be mostly empty dark frames. First failures — ${listed}` +
+      (failedBeats.length > 5 ? '; …' : '') +
+      '. Usually the free image service is refusing or unreachable right now: check Settings → Setup Health, then build again.'
     )
   }
 

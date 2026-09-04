@@ -15,21 +15,25 @@
 Notes:
 - Branch: ci/fix-main-parse-errors. Local verification steps completed: `npm ci`, `npm run lint`, `npm run build`, `npm test` (all unit tests passed).
 - The next automated change will be the updater script and initial electron-updater integration. Each step will be committed and pushed so progress survives session interruptions.
-# QA progress
+# QA Progress
 
-This file is the resumable source of truth for the current debug/router-defensive-scheduling work. Resume from the first item not marked PASSED/FIXED.
+This file is the resumable source of truth for the runtime-aware generation and cross-studio handoff batch.
 
-- [x] Repo status and branch sync check — PASSED
-- [x] CI blocker audit and root-cause mapping — PASSED
-- [x] Fix WriterPage hook ordering violations — PASSED
-- [x] Fix ProducerContext ref scheduling and logging — PASSED
-- [x] Fix empty catch blocks and stray binary file — PASSED
-- [x] Run local lint/test/build/e2e validation — PASSED
-- [ ] Push branch and monitor CI green — IN PROGRESS
-- [ ] Merge to main with merge commit and ship — NOT STARTED
+- [x] Preserve duration-aware script and storyboard prompt contracts.
+- [x] Preserve creator/style instructions through storyboard planning and autosave.
+- [x] Add Pakistan-specific, narration-relevant visual prompting.
+- [x] Add multi-file analysis imports and partial-error handling.
+- [x] Connect Script, Storyboard, Scene, and Video Studio draft handoffs.
+- [x] Run the full Vitest suite.
+- [x] Run the production build.
+- [x] Run lint with zero errors.
+- [ ] Run a clean Windows E2E click-through without debugger injection.
+- [ ] Push the dedicated branch and monitor CI.
+- [ ] Merge the reviewed branch and run release packaging before the next release.
 
-## Current session notes
-- Branch: debug/router-defensive-scheduling
-- Local validation completed: npm run lint (0 errors, warnings only), npm test, npm run build, and npm run test:e2e all passed.
-- The stray binary file at src/renderer/src/store/StudioContext.parent.tsx was removed from the tree.
-- Any time a task is completed, update this file in-place and commit the related work immediately.
+## Current Session Notes
+
+- Branch: `chore/runtime-aware-generation-handoffs`
+- The stale `NihilPointZeroStudio-workshop` copy was confirmed to contain no unique commits or untracked files and was archived outside the repository.
+- Audit exports and local history-scan artifacts were moved outside the repository and their paths are ignored.
+- Lint has zero errors; existing React hook and explicit-`any` warnings remain as non-blocking cleanup debt.

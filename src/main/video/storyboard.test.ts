@@ -3,6 +3,7 @@ import {
   beatStartTimes,
   buildStoryboardPrompt,
   compileStoryboardToTimeline,
+  fitStoryboardDuration,
   sanitizeStoryboard,
   storyboardDuration,
   storyboardFromScript
@@ -11,6 +12,14 @@ import type { ResolvedBeatAsset } from './storyboard'
 import type { StoryboardDoc } from '../../shared/types'
 
 const DEF = { width: 1920, height: 1080, fps: 25 }
+
+describe('fitStoryboardDuration', () => {
+  it('normalizes AI beats to the requested runtime', () => {
+    const doc = sanitizeStoryboard({ title: 'Test', beats: [{ visual: 'A' }, { visual: 'B' }, { visual: 'C' }] }, DEF)
+    const fitted = fitStoryboardDuration(doc, 720)
+    expect(fitted.beats.reduce((sum, beat) => sum + beat.durationSec, 0)).toBe(720)
+  })
+})
 
 describe('sanitizeStoryboard', () => {
   it('keeps valid beats, clamps duration, defaults enums', () => {

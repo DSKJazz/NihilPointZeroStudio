@@ -84,7 +84,7 @@ export default function ScriptPadPage(): React.JSX.Element {
   useEffect(() => {
     const flush = (): void => {
       if (loadedRef.current && dirty.current) {
-        void window.api.scriptpad.save(latest.current.title, latest.current.body).catch(() => {})
+        void window.api.scriptpad.save(latest.current.title, latest.current.body).catch(() => { })
       }
     }
     window.addEventListener('beforeunload', flush)
@@ -98,6 +98,12 @@ export default function ScriptPadPage(): React.JSX.Element {
     // Ensure the very latest text is flushed before we hand off.
     await window.api.scriptpad.save(title, body)
     navigate('/video', { state: { useScriptPad: true } })
+  }
+
+  async function sendToStoryboard(): Promise<void> {
+    await window.api.scriptpad.save(title, body)
+    await window.api.drafts.set('storyboard-project', { mode: 'auto', title, brief: body, creatorInstructions: '' })
+    navigate('/storyboard')
   }
 
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0
@@ -117,6 +123,9 @@ export default function ScriptPadPage(): React.JSX.Element {
           className="shrink-0 rounded-md bg-gold-500 hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed text-ink-950 font-medium px-4 py-2 text-sm transition-colors"
         >
           🎬 Send to Video Generator
+        </button>
+        <button onClick={() => void sendToStoryboard()} disabled={!body.trim()} className="shrink-0 rounded-md border border-gold-700 px-4 py-2 text-sm text-gold-300 hover:bg-ink-800 disabled:opacity-50">
+          🎞 Send to Storyboard
         </button>
       </div>
 

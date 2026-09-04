@@ -149,6 +149,9 @@ export function sceneImagePrompt(style: string, scene: string, title: string): s
   // style string — that override was why images looked mismatched and washed-out/dark.
   const styleText = styleById(style).prompt
   const subject = [scene, title].filter(Boolean).join('. ')
+  const pakistanContext = /\b(pakistan|pakistani|psx|nccpl|rupee|pkr|karachi|lahore|islamabad|faisalabad|gwadar|sbp|state bank)\b/i.test(subject)
+    ? 'Ground the image specifically in Pakistan: authentic Pakistani streets, architecture, institutions, rupee notes, PSX/NCCPL-style financial data, local industries, ports, farms, or documents as relevant. No generic Western stock imagery, India, Dubai, or invented landmarks.'
+    : ''
   // Two guards, chosen by what the scene asks for:
   //  - no person mentioned → people are BANNED, so the model cannot fall back to its
   //    favourite subject instead of the one requested;
@@ -157,7 +160,7 @@ export function sceneImagePrompt(style: string, scene: string, title: string): s
   const peopleClause = sceneWantsPerson(subject)
     ? 'Any people shown are fully and modestly dressed in professional attire appropriate to the setting.'
     : 'No people, no faces, no human figures — the image is about the places, objects, charts, documents and city described.'
-  return `${subject}. Style: ${styleText}. ${peopleClause} Accurate rich colour, high detail, professional, no text, no watermark, no letters, no captions, no subtitles.`
+  return `${subject}. Style: ${styleText}. ${pakistanContext} ${peopleClause} Accurate rich colour, high detail, professional, no text, no watermark, no letters, no captions, no subtitles.`
 }
 
 /** The image endpoint both the desktop renderer and the phone preview call. */

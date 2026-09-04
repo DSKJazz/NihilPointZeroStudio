@@ -14,6 +14,7 @@ export {
   storyboardDuration,
   beatStartTimes,
   compileStoryboardToTimeline,
+  fitStoryboardDuration,
   storyboardFromScript,
   buildStoryboardPrompt
 } from '../../shared/storyboard'
